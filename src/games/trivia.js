@@ -3,6 +3,9 @@ import { generateWithRotation } from '../config/gemini-keys.js';
 import { configOps } from '../database/db.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 
+// Active trivia sessions
+const activeSessions = new Map();
+
 // Note: Trivia uses its own session tracking for complex state, but integrates with game-manager for stats
 
 // Trivia categories
