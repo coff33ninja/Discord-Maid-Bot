@@ -117,6 +117,49 @@ Default login: `admin` / `admin123`
 - **Web:** Express.js, Socket.io
 - **Auth:** JWT, bcrypt
 
+## Personalities
+
+The bot supports 10 unique AI personalities:
+
+| Personality | Style |
+|-------------|-------|
+| 🌸 Maid | Polite, devoted, uses honorifics |
+| 💢 Tsundere | Acts cold but secretly cares |
+| ❄️ Kuudere | Cool, calm, emotionally reserved |
+| 🥺 Dandere | Shy and quiet, warms up over time |
+| 🖤 Yandere | Obsessively devoted (playfully) |
+| ⭐ Genki | Energetic and always positive |
+| 💋 Onee-san | Mature, caring big sister type |
+| 🔮 Chuunibyou | Dramatic with delusions of grandeur |
+| 🎩 Butler | Refined and impeccably proper |
+| 🐱 Catgirl | Playful and cat-like, nya~ |
+
+## Screenshots
+
+*Coming soon*
+
+## Contributing
+
+Contributions are welcome! Feel free to:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Support
+
+- 🐛 [Report bugs](https://github.com/coff33ninja/Discord-Maid-Bot/issues)
+- 💡 [Request features](https://github.com/coff33ninja/Discord-Maid-Bot/issues)
+- ⭐ Star the repo if you find it useful!
+
+## Acknowledgments
+
+- [discord.js](https://discord.js.org/) - Discord API wrapper
+- [Google Gemini](https://ai.google.dev/) - AI capabilities
+- [Home Assistant](https://www.home-assistant.io/) - Home automation platform
+
 ## License
 
-MIT
+MIT - See [LICENSE](./LICENSE) for details
