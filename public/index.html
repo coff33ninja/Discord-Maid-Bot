@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌸 Maid Bot Dashboard</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      color: #667eea;
+      font-size: 2em;
+    }
+
+    .status-badge {
+      background: #10b981;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .stat-card h3 {
+      color: #666;
+      font-size: 0.9em;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 2.5em;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .stat-label {
+      color: #999;
+      font-size: 0.9em;
+      margin-top: 5px;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      color: #667eea;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .device-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .device-item {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .device-item:hover {
+      background: #f9fafb;
+    }
+
+    .device-info {
+      flex: 1;
+    }
+
+    .device-name {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .device-details {
+      font-size: 0.85em;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    .status-online {
+      background: #10b981;
+    }
+
+    .status-offline {
+      background: #ef4444;
+    }
+
+    .task-item {
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .task-info {
+      flex: 1;
+    }
+
+    .task-name {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .task-schedule {
+      font-size: 0.85em;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .task-enabled {
+      background: #10b981;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85em;
+    }
+
+    .task-disabled {
+      background: #9ca3af;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85em;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin-top: 20px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: #666;
+      font-size: 1em;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .tab:hover {
+      color: #667eea;
+    }
+
+    .tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+      font-weight: bold;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #5568d3;
+    }
+
+    .refresh-btn {
+      background: #10b981;
+    }
+
+    .refresh-btn:hover {
+      background: #059669;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-content h3 {
+      margin-top: 0;
+      color: #667eea;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 1em;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .button-group button {
+      flex: 1;
+    }
+
+    .user-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      transition: background 0.3s;
+    }
+
+    .user-item:hover {
+      background: #f9fafb;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: bold;
+      color: white;
+    }
+
+    .role-admin {
+      background: #ef4444;
+    }
+
+    .role-operator {
+      background: #f59e0b;
+    }
+
+    .role-viewer {
+      background: #10b981;
+    }
+
+    .user-actions {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .user-actions select {
+      padding: 5px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+
+    .user-actions button {
+      padding: 5px 10px;
+      font-size: 0.85em;
+    }
+
+    @media (max-width: 768px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .user-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      
+      .user-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🌸 Maid Bot Dashboard</h1>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <div class="status-badge">● ONLINE</div>
+        <button onclick="logout()" style="background: #ef4444; padding: 8px 16px;">Logout</button>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>📡 Network Devices</h3>
+        <div class="stat-value" id="totalDevices">0</div>
+        <div class="stat-label"><span id="onlineDevices">0</span> online</div>
+      </div>
+      <div class="stat-card">
+        <h3>⬇️ Download Speed</h3>
+        <div class="stat-value" id="downloadSpeed">--</div>
+        <div class="stat-label">Mbps</div>
+      </div>
+      <div class="stat-card">
+        <h3>⬆️ Upload Speed</h3>
+        <div class="stat-value" id="uploadSpeed">--</div>
+        <div class="stat-label">Mbps</div>
+      </div>
+      <div class="stat-card">
+        <h3>⏰ Active Tasks</h3>
+        <div class="stat-value" id="activeTasks">0</div>
+        <div class="stat-label"><span id="totalTasks">0</span> total</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('devices')">📡 Devices</button>
+      <button class="tab" onclick="switchTab('tailscale')">🌐 Tailscale</button>
+      <button class="tab" onclick="switchTab('speedtest')">🚀 Speed Tests</button>
+      <button class="tab" onclick="switchTab('tasks')">⏰ Scheduled Tasks</button>
+      <button class="tab" onclick="switchTab('homeassistant')">🏠 Smart Home</button>
+      <button class="tab" onclick="switchTab('plugins')">🔌 Plugins</button>
+      <button class="tab" onclick="switchTab('research')">📚 Research</button>
+      <button class="tab" onclick="switchTab('settings')">⚙️ Settings</button>
+    </div>
+
+    <div id="devices-tab" class="tab-content active">
+      <div class="content-grid">
+        <div class="card">
+          <h2>
+            📡 Network Devices
+            <button class="refresh-btn" onclick="refreshDevices()">🔄 Refresh</button>
+          </h2>
+          <div class="device-list" id="deviceList">
+            <p style="text-align: center; color: #999; padding: 20px;">Loading devices...</p>
+          </div>
+        </div>
+        <div class="card">
+          <h2>📊 Device Status</h2>
+          <canvas id="deviceChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div id="speedtest-tab" class="tab-content">
+      <div class="card">
+        <h2>🚀 Speed Test History</h2>
+        <div class="chart-container">
+          <canvas id="speedChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div id="tasks-tab" class="tab-content">
+      <div class="card">
+        <h2>⏰ Scheduled Tasks</h2>
+        <div id="taskList">
+          <p style="text-align: center; color: #999; padding: 20px;">Loading tasks...</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="tailscale-tab" class="tab-content">
+      <div class="card">
+        <h2>
+          🌐 Tailscale Network
+          <button class="refresh-btn" onclick="refreshTailscale()">🔄 Refresh</button>
+        </h2>
+        <div id="tailscaleStatus" style="margin-bottom: 20px;">
+          <p style="color: #999;">Loading Tailscale status...</p>
+        </div>
+        <div class="device-list" id="tailscaleList">
+          <p style="text-align: center; color: #999; padding: 20px;">Loading devices...</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="homeassistant-tab" class="tab-content">
+      <div class="card">
+        <h2>🏠 Home Assistant</h2>
+        <div id="haStatus" style="margin-bottom: 20px;">
+          <p style="color: #999;">Checking connection...</p>
+        </div>
+        
+        <h3>💡 Lights</h3>
+        <div id="lightsList" class="device-list">
+          <p style="text-align: center; color: #999; padding: 20px;">Loading lights...</p>
+        </div>
+        
+        <h3 style="margin-top: 30px;">🔌 Switches</h3>
+        <div id="switchesList" class="device-list">
+          <p style="text-align: center; color: #999; padding: 20px;">Loading switches...</p>
+        </div>
+        
+        <h3 style="margin-top: 30px;">📊 Sensors</h3>
+        <div id="sensorsList" class="device-list">
+          <p style="text-align: center; color: #999; padding: 20px;">Loading sensors...</p>
+        </div>
+        
+        <h3 style="margin-top: 30px;">🔧 ESP Devices</h3>
+        <div id="espList" class="device-list">
+          <p style="text-align: center; color: #999; padding: 20px;">Loading ESP devices...</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="plugins-tab" class="tab-content">
+      <div class="card">
+        <h2>🔌 Plugins</h2>
+        <div id="pluginStats" style="margin-bottom: 20px;">
+          <p style="color: #999;">Loading plugin stats...</p>
+        </div>
+        <div id="pluginsList">
+          <p style="text-align: center; color: #999; padding: 20px;">Loading plugins...</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="research-tab" class="tab-content">
+      <div class="card">
+        <h2>📚 Research History</h2>
+        <div id="researchList">
+          <p style="text-align: center; color: #999; padding: 20px;">Loading research...</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-tab" class="tab-content">
+      <div class="card">
+        <h2>⚙️ Settings</h2>
+        
+        <h3>👥 Dashboard Users</h3>
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
+          Manage users who can access this web dashboard
+        </p>
+        <div id="userManagement">
+          <button onclick="showAddUserForm()">➕ Add User</button>
+          <button onclick="showChangePasswordForm()" style="background: #f59e0b; margin-left: 10px;">🔑 Change Password</button>
+          
+          <!-- Add User Modal -->
+          <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+            <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%;">
+              <h3 style="margin-top: 0;">Add New User</h3>
+              <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #666;">Username</label>
+                <input type="text" id="newUsername" placeholder="Enter username" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+              </div>
+              <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #666;">Password</label>
+                <input type="password" id="newPassword" placeholder="Enter password" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+              </div>
+              <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; color: #666;">Role</label>
+                <select id="newUserRole" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                  <option value="viewer">Viewer (Read-only)</option>
+                  <option value="operator">Operator (Can execute commands)</option>
+                  <option value="admin">Admin (Full access)</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <button onclick="addUser()" style="flex: 1;">Create User</button>
+                <button onclick="hideAddUserForm()" style="flex: 1; background: #6b7280;">Cancel</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Change Password Modal -->
+          <div id="changePasswordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+            <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%;">
+              <h3 style="margin-top: 0;">Change Password</h3>
+              <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #666;">Current Password</label>
+                <input type="password" id="currentPassword" placeholder="Enter current password" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+              </div>
+              <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #666;">New Password</label>
+                <input type="password" id="newPasswordChange" placeholder="Enter new password" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+              </div>
+              <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; color: #666;">Confirm New Password</label>
+                <input type="password" id="confirmPassword" placeholder="Confirm new password" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <button onclick="changePassword()" style="flex: 1; background: #f59e0b;">Change Password</button>
+                <button onclick="hideChangePasswordForm()" style="flex: 1; background: #6b7280;">Cancel</button>
+              </div>
+            </div>
+          </div>
+          
+          <div id="usersList" style="margin-top: 20px;">
+            <p style="color: #999;">Loading users...</p>
+          </div>
+        </div>
+        
+        <h3 style="margin-top: 40px;">🎮 Discord Users</h3>
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
+          Manage Discord user permissions for bot commands
+        </p>
+        <div id="discordUserManagement">
+          <button onclick="showAddDiscordUserForm()">➕ Add Discord User</button>
+          
+          <!-- Add Discord User Modal -->
+          <div id="addDiscordUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+            <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%;">
+              <h3 style="margin-top: 0;">Add Discord User</h3>
+              <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+                  <strong>💡 How to get Discord User ID:</strong>
+                </p>
+                <ol style="font-size: 0.85em; color: #666; margin: 0; padding-left: 20px; line-height: 1.6;">
+                  <li>Enable Developer Mode: Discord Settings → Advanced → Developer Mode</li>
+                  <li>Right-click the user (in member list or chat) → Copy User ID</li>
+                  <li>Paste the ID below (17-19 digit number)</li>
+                </ol>
+                <p style="font-size: 0.85em; color: #666; margin-top: 12px; margin-bottom: 0;">
+                  <strong>About Discord names:</strong><br>
+                  • <strong>Username</strong>: Unique identifier (@username) - lowercase, no spaces<br>
+                  • <strong>Display Name</strong>: How they appear in Discord - can have uppercase, emojis, spaces<br>
+                  • Either can be entered above for reference (permissions use User ID only)
+                </p>
+              </div>
+              <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #666;">Discord User ID</label>
+                <input type="text" id="newDiscordUserId" placeholder="123456789012345678" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+              </div>
+              <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #666;">Discord Username or Display Name</label>
+                <input type="text" id="newDiscordUsername" placeholder="dragohn, _dragohn_, @username, or Display Name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                <small style="color: #999; font-size: 0.85em;">
+                  Enter username (can include underscores like _dragohn_) or display name for reference. This is just a label - permissions are based on User ID.
+                </small>
+              </div>
+              <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; color: #666;">Role</label>
+                <select id="newDiscordUserRole" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                  <option value="viewer">Viewer (Read-only)</option>
+                  <option value="operator">Operator (Can execute commands)</option>
+                  <option value="admin">Admin (Full access)</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <button onclick="addDiscordUser()" style="flex: 1;">Add User</button>
+                <button onclick="hideAddDiscordUserForm()" style="flex: 1; background: #6b7280;">Cancel</button>
+              </div>
+            </div>
+          </div>
+          
+          <div id="discordUsersList" style="margin-top: 20px;">
+            <p style="color: #999;">Loading Discord users...</p>
+          </div>
+        </div>
+        
+        <h3 style="margin-top: 30px;">🎭 Bot Personality</h3>
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
+          Change the bot's personality for Discord chat interactions. Each Discord user can have their own personality setting.
+        </p>
+        <div id="personalitySection">
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #666;">Discord User ID</label>
+            <input type="text" id="personalityUserId" placeholder="Enter Discord User ID" style="width: 300px; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            <button onclick="loadUserPersonality()" style="margin-left: 10px;">Load</button>
+          </div>
+          <div id="personalityDisplay" style="display: none; margin-bottom: 15px; padding: 15px; background: #f3f4f6; border-radius: 8px;">
+            <p><strong>Current:</strong> <span id="currentPersonalityName">-</span></p>
+          </div>
+          <div id="personalityOptions" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin-top: 15px;">
+            <p style="color: #999;">Enter a Discord User ID and click Load to manage personality</p>
+          </div>
+        </div>
+        
+        <h3 style="margin-top: 30px;">💾 SMB Status</h3>
+        <div id="smbStatus">
+          <p style="color: #999;">Loading SMB status...</p>
+          <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+            ℹ️ SMB is configured via .env file. Edit SMB_HOST, SMB_USERNAME, SMB_PASSWORD, and SMB_SHARE in your .env file.
+          </p>
+        </div>
+        
+        <h3 style="margin-top: 30px;">🏠 Home Assistant Status</h3>
+        <div id="haConfigStatus">
+          <p style="color: #999;">Loading Home Assistant status...</p>
+          <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+            ℹ️ Home Assistant is configured via .env file. Edit HA_URL and HA_TOKEN in your .env file.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/dashboard.js"></script>
+</body>
+</html>

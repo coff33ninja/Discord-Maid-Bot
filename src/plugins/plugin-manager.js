@@ -1,0 +1,348 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import chokidar from 'chokidar';
+import { pathToFileURL } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const PLUGINS_DIR = path.join(__dirname, '../../plugins');
+const loadedPlugins = new Map();
+let watcher = null;
+
+// Plugin interface
+export class Plugin {
+  constructor(name, version, description) {
+    this.name = name;
+    this.version = version;
+    this.description = description;
+    this.enabled = true;
+  }
+  
+  // Lifecycle hooks
+  async onLoad() {}
+  async onUnload() {}
+  async onEnable() {}
+  async onDisable() {}
+  
+  // Command registration
+  registerCommand(command) {
+    return command;
+  }
+  
+  // Event listeners
+  on(event, handler) {
+    // To be implemented by plugin manager
+  }
+}
+
+// Initialize plugin system
+export async function initPluginSystem() {
+  try {
+    // Create plugins directory if it doesn't exist
+    await fs.mkdir(PLUGINS_DIR, { recursive: true });
+    
+    // Create example plugin if none exist
+    const files = await fs.readdir(PLUGINS_DIR);
+    if (files.length === 0) {
+      await createExamplePlugin();
+    }
+    
+    // Load all plugins
+    await loadAllPlugins();
+    
+    // Watch for plugin changes (hot reload)
+    startPluginWatcher();
+    
+    console.log(`✅ Plugin system initialized (${loadedPlugins.size} plugins loaded)`);
+  } catch (error) {
+    console.error('Failed to initialize plugin system:', error);
+  }
+}
+
+// Load all plugins
+export async function loadAllPlugins() {
+  try {
+    const files = await fs.readdir(PLUGINS_DIR);
+    
+    for (const file of files) {
+      if (file.endsWith('.js')) {
+        await loadPlugin(file);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load plugins:', error);
+  }
+}
+
+// Load single plugin
+export async function loadPlugin(filename) {
+  try {
+    const pluginPath = path.join(PLUGINS_DIR, filename);
+    const pluginUrl = pathToFileURL(pluginPath).href;
+    
+    // Add timestamp to bypass cache
+    const module = await import(`${pluginUrl}?t=${Date.now()}`);
+    
+    if (!module.default) {
+      console.error(`Plugin ${filename} has no default export`);
+      return false;
+    }
+    
+    const PluginClass = module.default;
+    const plugin = new PluginClass();
+    
+    // Validate plugin
+    if (!plugin.name) {
+      console.error(`Plugin ${filename} has no name`);
+      return false;
+    }
+    
+    // Unload existing version if present
+    if (loadedPlugins.has(plugin.name)) {
+      await unloadPlugin(plugin.name);
+    }
+    
+    // Load plugin
+    await plugin.onLoad();
+    
+    loadedPlugins.set(plugin.name, {
+      plugin,
+      filename,
+      loadedAt: new Date()
+    });
+    
+    console.log(`✅ Loaded plugin: ${plugin.name} v${plugin.version}`);
+    return true;
+  } catch (error) {
+    console.error(`Failed to load plugin ${filename}:`, error);
+    return false;
+  }
+}
+
+// Unload plugin
+export async function unloadPlugin(pluginName) {
+  const pluginData = loadedPlugins.get(pluginName);
+  if (!pluginData) {
+    return false;
+  }
+  
+  try {
+    await pluginData.plugin.onUnload();
+    loadedPlugins.delete(pluginName);
+    console.log(`✅ Unloaded plugin: ${pluginName}`);
+    return true;
+  } catch (error) {
+    console.error(`Failed to unload plugin ${pluginName}:`, error);
+    return false;
+  }
+}
+
+// Reload plugin
+export async function reloadPlugin(pluginName) {
+  const pluginData = loadedPlugins.get(pluginName);
+  if (!pluginData) {
+    return false;
+  }
+  
+  console.log(`🔄 Reloading plugin: ${pluginName}`);
+  await unloadPlugin(pluginName);
+  return await loadPlugin(pluginData.filename);
+}
+
+// Get all loaded plugins
+export function getLoadedPlugins() {
+  return Array.from(loadedPlugins.values()).map(data => ({
+    name: data.plugin.name,
+    version: data.plugin.version,
+    description: data.plugin.description,
+    enabled: data.plugin.enabled,
+    loadedAt: data.loadedAt
+  }));
+}
+
+// Get plugin by name
+export function getPlugin(pluginName) {
+  const pluginData = loadedPlugins.get(pluginName);
+  return pluginData?.plugin || null;
+}
+
+// Enable plugin
+export async function enablePlugin(pluginName) {
+  const plugin = getPlugin(pluginName);
+  if (!plugin) {
+    return false;
+  }
+  
+  plugin.enabled = true;
+  await plugin.onEnable();
+  console.log(`✅ Enabled plugin: ${pluginName}`);
+  return true;
+}
+
+// Disable plugin
+export async function disablePlugin(pluginName) {
+  const plugin = getPlugin(pluginName);
+  if (!plugin) {
+    return false;
+  }
+  
+  plugin.enabled = false;
+  await plugin.onDisable();
+  console.log(`⏸️  Disabled plugin: ${pluginName}`);
+  return true;
+}
+
+// Watch for plugin changes (hot reload)
+function startPluginWatcher() {
+  if (watcher) {
+    watcher.close();
+  }
+  
+  watcher = chokidar.watch(PLUGINS_DIR, {
+    ignored: /(^|[\/\\])\../, // ignore dotfiles
+    persistent: true,
+    ignoreInitial: true
+  });
+  
+  watcher
+    .on('add', async (filePath) => {
+      const filename = path.basename(filePath);
+      if (filename.endsWith('.js')) {
+        console.log(`📦 New plugin detected: ${filename}`);
+        await loadPlugin(filename);
+      }
+    })
+    .on('change', async (filePath) => {
+      const filename = path.basename(filePath);
+      if (filename.endsWith('.js')) {
+        console.log(`🔄 Plugin changed: ${filename}`);
+        // Find plugin by filename
+        for (const [name, data] of loadedPlugins.entries()) {
+          if (data.filename === filename) {
+            await reloadPlugin(name);
+            break;
+          }
+        }
+      }
+    })
+    .on('unlink', async (filePath) => {
+      const filename = path.basename(filePath);
+      console.log(`🗑️  Plugin removed: ${filename}`);
+      // Find and unload plugin
+      for (const [name, data] of loadedPlugins.entries()) {
+        if (data.filename === filename) {
+          await unloadPlugin(name);
+          break;
+        }
+      }
+    });
+  
+  console.log('👀 Plugin hot-reload enabled');
+}
+
+// Stop plugin watcher
+export function stopPluginWatcher() {
+  if (watcher) {
+    watcher.close();
+    watcher = null;
+  }
+}
+
+// Execute plugin command
+export async function executePluginCommand(pluginName, commandName, ...args) {
+  const plugin = getPlugin(pluginName);
+  if (!plugin || !plugin.enabled) {
+    throw new Error(`Plugin ${pluginName} not found or disabled`);
+  }
+  
+  if (typeof plugin[commandName] !== 'function') {
+    throw new Error(`Command ${commandName} not found in plugin ${pluginName}`);
+  }
+  
+  return await plugin[commandName](...args);
+}
+
+// Emit event to all plugins
+export async function emitToPlugins(eventName, ...args) {
+  const results = [];
+  
+  for (const [name, data] of loadedPlugins.entries()) {
+    if (!data.plugin.enabled) continue;
+    
+    const eventHandler = `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`;
+    if (typeof data.plugin[eventHandler] === 'function') {
+      try {
+        const result = await data.plugin[eventHandler](...args);
+        results.push({ plugin: name, result });
+      } catch (error) {
+        console.error(`Plugin ${name} error on ${eventName}:`, error);
+      }
+    }
+  }
+  
+  return results;
+}
+
+// Create example plugin
+async function createExamplePlugin() {
+  const examplePlugin = `import { Plugin } from '../src/plugins/plugin-manager.js';
+
+export default class ExamplePlugin extends Plugin {
+  constructor() {
+    super('example-plugin', '1.0.0', 'An example plugin demonstrating the plugin system');
+  }
+  
+  async onLoad() {
+    console.log('Example plugin loaded!');
+  }
+  
+  async onUnload() {
+    console.log('Example plugin unloaded!');
+  }
+  
+  async onEnable() {
+    console.log('Example plugin enabled!');
+  }
+  
+  async onDisable() {
+    console.log('Example plugin disabled!');
+  }
+  
+  // Custom command
+  async greet(name) {
+    return \`Hello, \${name}! This is the example plugin.\`;
+  }
+  
+  // Event handlers
+  async onNetworkScan(devices) {
+    console.log(\`Example plugin: Network scan found \${devices.length} devices\`);
+    return { processed: true, deviceCount: devices.length };
+  }
+  
+  async onSpeedTest(results) {
+    console.log(\`Example plugin: Speed test completed - \${results.download} Mbps\`);
+    return { processed: true };
+  }
+}
+`;
+  
+  await fs.writeFile(
+    path.join(PLUGINS_DIR, 'example-plugin.js'),
+    examplePlugin,
+    'utf8'
+  );
+  
+  console.log('✅ Created example plugin');
+}
+
+// Get plugin statistics
+export function getPluginStats() {
+  const plugins = getLoadedPlugins();
+  return {
+    total: plugins.length,
+    enabled: plugins.filter(p => p.enabled).length,
+    disabled: plugins.filter(p => !p.enabled).length
+  };
+}
