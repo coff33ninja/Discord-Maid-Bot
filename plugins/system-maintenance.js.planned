@@ -1,0 +1,142 @@
+import { Plugin } from '../src/plugins/plugin-manager.js';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+/**
+ * System Maintenance Plugin (PLANNED)
+ * Automated system updates, upgrades, and reboots
+ * 
+ * Features:
+ * - Nightly system updates using nala (faster than apt)
+ * - Smart reboot scheduling
+ * - Network connectivity checks before updates
+ * - Retry logic with exponential backoff
+ * - Discord notifications
+ * - Logging to centralized system
+ * 
+ * Schedule:
+ * - Primary: 3:00 AM daily
+ * - Retry: 1 hour intervals if network down
+ * - Reboot: 3:30 AM if updates installed
+ * 
+ * Safety:
+ * - Only updates if Google (8.8.8.8) is pingable
+ * - Verifies connectivity after reboot
+ * - Logs all actions
+ * - Sends alerts on failures
+ */
+export default class SystemMaintenancePlugin extends Plugin {
+  constructor() {
+    super('system-maintenance', '1.0.0', 'Automated system updates and maintenance');
+    this.updateSchedule = '0 3 * * *'; // 3 AM daily
+    this.retryInterval = 60 * 60 * 1000; // 1 hour
+    this.maxRetries = 3;
+  }
+  
+  async onLoad() {
+    console.log('🔧 System Maintenance plugin loaded');
+    
+    // Schedule nightly updates
+    this.scheduleUpdates();
+  }
+  
+  scheduleUpdates() {
+    // Use node-cron or similar to schedule
+    // cron.schedule(this.updateSchedule, () => this.runMaintenance());
+  }
+  
+  async runMaintenance() {
+    const logger = await this.getLogger();
+    
+    try {
+      // 1. Check network connectivity
+      const isOnline = await this.checkConnectivity();
+      
+      if (!isOnline) {
+        logger.warn('Network offline, skipping updates');
+        await this.scheduleRetry();
+        return;
+      }
+      
+      // 2. Check if nala is installed, fallback to apt
+      const useNala = await this.hasNala();
+      const updateCmd = useNala ? 'nala' : 'apt';
+      
+      logger.info(`Running system updates using ${updateCmd}`);
+      
+      // 3. Update package lists
+      await execAsync(`sudo ${updateCmd} update`);
+      
+      // 4. Upgrade packages
+      const { stdout } = await execAsync(`sudo ${updateCmd} upgrade -y`);
+      
+      // 5. Check if reboot needed
+      const needsReboot = await this.needsReboot();
+      
+      if (needsReboot) {
+        logger.info('Updates installed, scheduling reboot for 3:30 AM');
+        await this.scheduleReboot('03:30');
+        await this.notifyDiscord('🔄 System updates installed. Reboot scheduled for 3:30 AM.');
+      } else {
+        logger.info('System up to date, no reboot needed');
+        await this.notifyDiscord('✅ System updates completed. No reboot required.');
+      }
+      
+    } catch (error) {
+      logger.error('Maintenance failed', { error: error.message });
+      await this.notifyDiscord(`❌ System maintenance failed: ${error.message}`);
+      await this.scheduleRetry();
+    }
+  }
+  
+  async checkConnectivity() {
+    try {
+      await execAsync('ping -c 1 -W 2 8.8.8.8');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  
+  async hasNala() {
+    try {
+      await execAsync('which nala');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  
+  async needsReboot() {
+    try {
+      const { stdout } = await execAsync('[ -f /var/run/reboot-required ] && echo "yes" || echo "no"');
+      return stdout.trim() === 'yes';
+    } catch {
+      return false;
+    }
+  }
+  
+  async scheduleReboot(time) {
+    // Schedule reboot using 'at' command or systemd timer
+    await execAsync(`echo "sudo reboot" | at ${time}`);
+  }
+  
+  async scheduleRetry() {
+    setTimeout(() => this.runMaintenance(), this.retryInterval);
+  }
+  
+  async notifyDiscord(message) {
+    // Use bot's notification system
+    await this.requestFromCore('send-notification', {
+      channel: 'system-logs',
+      message
+    });
+  }
+  
+  async getLogger() {
+    const { createLogger } = await import('../src/logging/logger.js');
+    return createLogger('system-maintenance');
+  }
+}
