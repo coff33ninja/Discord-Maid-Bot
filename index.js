@@ -697,8 +697,127 @@ client.on('interactionCreate', async (interaction) => {
     const userId = interaction.user.id;
     const username = interaction.user.username;
     
+    // ============================================
+    // UNIFIED COMMAND ROUTERS
+    // ============================================
+    
+    // /network router
+    if (commandName === 'network') {
+      const subcommand = interaction.options.getSubcommand();
+      
+      // Route to existing handlers by temporarily changing commandName
+      if (subcommand === 'scan') {
+        interaction.commandName = 'scan';
+        // Fall through to scan handler below
+      } else if (subcommand === 'devices') {
+        interaction.commandName = 'devices';
+        // Fall through to devices handler
+      } else if (subcommand === 'wol') {
+        interaction.commandName = 'wol';
+        // Fall through to wol handler
+      } else if (subcommand === 'speedtest') {
+        interaction.commandName = 'speedtest';
+        // Fall through to speedtest handler
+      } else if (subcommand === 'speedhistory') {
+        interaction.commandName = 'speedhistory';
+        // Fall through to speedhistory handler
+      }
+      // Update commandName for routing
+      interaction.commandName = subcommand;
+    }
+    
+    // /device router
+    else if (commandName === 'device') {
+      const subcommand = interaction.options.getSubcommand();
+      const subcommandGroup = interaction.options.getSubcommandGroup(false);
+      
+      if (subcommandGroup === 'group') {
+        // Device group operations
+        interaction.commandName = 'devicegroup';
+        // Subcommand will be handled by devicegroup handler
+      } else if (subcommand === 'config') {
+        interaction.commandName = 'deviceconfig';
+      } else if (subcommand === 'list') {
+        interaction.commandName = 'devices';
+      }
+    }
+    
+    // /automation router
+    else if (commandName === 'automation') {
+      const subcommandGroup = interaction.options.getSubcommandGroup(false);
+      
+      if (subcommandGroup === 'speedalert') {
+        interaction.commandName = 'speedalert';
+      } else if (subcommandGroup === 'devicetrigger') {
+        interaction.commandName = 'devicetrigger';
+      } else if (subcommandGroup === 'schedule') {
+        interaction.commandName = 'schedule';
+      }
+    }
+    
+    // /research router
+    else if (commandName === 'research') {
+      const subcommand = interaction.options.getSubcommand();
+      
+      if (subcommand === 'query') {
+        interaction.commandName = 'research';
+        // Keep as research, handler expects 'topic' option
+        // Need to map 'topic' to 'query' option
+      } else if (subcommand === 'history') {
+        interaction.commandName = 'researchhistory';
+      } else if (subcommand === 'search') {
+        interaction.commandName = 'researchsearch';
+      } else if (subcommand === 'web') {
+        interaction.commandName = 'websearch';
+      }
+    }
+    
+    // /game router
+    else if (commandName === 'game') {
+      const subcommand = interaction.options.getSubcommand();
+      
+      // Map to existing game commands
+      if (subcommand === 'stats' || subcommand === 'stop' || subcommand === 'leaderboard') {
+        interaction.commandName = 'game';
+        // Keep as game for utilities
+      } else {
+        // Individual games
+        interaction.commandName = subcommand;
+      }
+    }
+    
+    // /bot router
+    else if (commandName === 'bot') {
+      const subcommand = interaction.options.getSubcommand();
+      const subcommandGroup = interaction.options.getSubcommandGroup(false);
+      
+      if (subcommandGroup === 'plugin') {
+        interaction.commandName = 'plugin';
+      } else {
+        interaction.commandName = subcommand; // chat, personality, stats, dashboard, help
+      }
+    }
+    
+    // /admin router
+    else if (commandName === 'admin') {
+      const subcommandGroup = interaction.options.getSubcommandGroup(false);
+      
+      if (subcommandGroup === 'permissions') {
+        interaction.commandName = 'permissions';
+      } else if (subcommandGroup === 'config') {
+        interaction.commandName = 'config';
+      }
+    }
+    
+    // Update commandName after routing
+    const routedCommandName = interaction.commandName || commandName;
+    
+    // ============================================
+    // EXISTING COMMAND HANDLERS
+    // ============================================
+    
     // SCAN COMMAND
-    if (commandName === 'scan') {
+    if (routedCommandName === 'scan') {
       // Check permission
       const { PERMISSIONS } = await import('./src/auth/auth.js');
       const hasPermission = await checkUserPermission(userId, PERMISSIONS.SCAN_NETWORK);
