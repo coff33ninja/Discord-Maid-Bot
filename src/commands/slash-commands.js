@@ -357,7 +357,7 @@ export const commands = [
         .setName('query')
         .setDescription('Research a topic with AI')
         .addStringOption(option =>
-          option.setName('topic')
+          option.setName('query')
             .setDescription('What to research')
             .setRequired(true)))
     .addSubcommand(subcommand =>

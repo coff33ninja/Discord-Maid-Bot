@@ -438,7 +438,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       
       // NAMEDEVICE, DEVICEEMOJI, DEVICECONFIG, DEVICEGROUP command - device autocomplete
-      else if (commandName === 'namedevice' || commandName === 'deviceemoji' || commandName === 'deviceconfig' ||
+      else if (routedCommandName === 'namedevice' || commandName === 'deviceemoji' || commandName === 'deviceconfig' ||
                (commandName === 'devicegroup' && (focusedOption.name === 'device' || focusedOption.name.startsWith('device')))) {
         const devices = deviceOps.getAll();
         
@@ -508,7 +508,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       
       // DEVICEGROUP view - group autocomplete
-      else if (commandName === 'devicegroup' && focusedOption.name === 'group') {
+      else if (routedCommandName === 'devicegroup' && focusedOption.name === 'group') {
         const groups = deviceOps.getAllGroups();
         
         const filtered = groups
@@ -524,7 +524,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       
       // DEVICETRIGGER autocomplete
-      else if (commandName === 'devicetrigger') {
+      else if (routedCommandName === 'devicetrigger') {
         if (focusedOption.name === 'device') {
           // Device autocomplete with "any" option
           const devices = deviceOps.getAll();
@@ -600,7 +600,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       
       // Home Assistant entity autocomplete
-      else if (commandName === 'homeassistant') {
+      else if (routedCommandName === 'homeassistant') {
         const subcommand = interaction.options.getSubcommand();
         const { getAllLights, getAllSwitches, getAllSensors, getAllScenes, getAllAutomations, getAllScripts } = await import('./src/integrations/homeassistant.js');
         
@@ -704,30 +704,12 @@ client.on('interactionCreate', async (interaction) => {
     // /network router
     if (commandName === 'network') {
       const subcommand = interaction.options.getSubcommand();
-      
-      // Route to existing handlers by temporarily changing commandName
-      if (subcommand === 'scan') {
-        interaction.commandName = 'scan';
-        // Fall through to scan handler below
-      } else if (subcommand === 'devices') {
-        interaction.commandName = 'devices';
-        // Fall through to devices handler
-      } else if (subcommand === 'wol') {
-        interaction.commandName = 'wol';
-        // Fall through to wol handler
-      } else if (subcommand === 'speedtest') {
-        interaction.commandName = 'speedtest';
-        // Fall through to speedtest handler
-      } else if (subcommand === 'speedhistory') {
-        interaction.commandName = 'speedhistory';
-        // Fall through to speedhistory handler
-      }
-      // Update commandName for routing
+      // Route to existing handlers
       interaction.commandName = subcommand;
     }
     
     // /device router
-    else if (commandName === 'device') {
+    else if (routedCommandName === 'device') {
       const subcommand = interaction.options.getSubcommand();
       const subcommandGroup = interaction.options.getSubcommandGroup(false);
       
@@ -743,7 +725,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /automation router
-    else if (commandName === 'automation') {
+    else if (routedCommandName === 'automation') {
       const subcommandGroup = interaction.options.getSubcommandGroup(false);
       
       if (subcommandGroup === 'speedalert') {
@@ -756,13 +738,11 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /research router
-    else if (commandName === 'research') {
+    else if (routedCommandName === 'research') {
       const subcommand = interaction.options.getSubcommand();
       
       if (subcommand === 'query') {
         interaction.commandName = 'research';
-        // Keep as research, handler expects 'topic' option
-        // Need to map 'topic' to 'query' option
       } else if (subcommand === 'history') {
         interaction.commandName = 'researchhistory';
       } else if (subcommand === 'search') {
@@ -773,7 +753,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /game router
-    else if (commandName === 'game') {
+    else if (routedCommandName === 'game') {
       const subcommand = interaction.options.getSubcommand();
       
       // Map to existing game commands
@@ -787,7 +767,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /bot router
-    else if (commandName === 'bot') {
+    else if (routedCommandName === 'bot') {
       const subcommand = interaction.options.getSubcommand();
       const subcommandGroup = interaction.options.getSubcommandGroup(false);
       
@@ -799,7 +779,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /admin router
-    else if (commandName === 'admin') {
+    else if (routedCommandName === 'admin') {
       const subcommandGroup = interaction.options.getSubcommandGroup(false);
       
       if (subcommandGroup === 'permissions') {
@@ -894,7 +874,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // DEVICES COMMAND
-    else if (commandName === 'devices') {
+    else if (routedCommandName === 'devices') {
       const filter = interaction.options.getString('filter') || 'online';
       let devices;
       
@@ -937,7 +917,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // NAMEDEVICE COMMAND
-    else if (commandName === 'namedevice') {
+    else if (routedCommandName === 'namedevice') {
       const deviceIdentifier = interaction.options.getString('device');
       const friendlyName = interaction.options.getString('name');
       
@@ -977,7 +957,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // DEVICECONFIG COMMAND (Unified device configuration)
-    else if (commandName === 'deviceconfig') {
+    else if (routedCommandName === 'deviceconfig') {
       const deviceIdentifier = interaction.options.getString('device');
       const name = interaction.options.getString('name');
       const emoji = interaction.options.getString('emoji');
@@ -1054,7 +1034,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // DEVICEEMOJI COMMAND
-    else if (commandName === 'deviceemoji') {
+    else if (routedCommandName === 'deviceemoji') {
       const deviceIdentifier = interaction.options.getString('device');
       const emoji = interaction.options.getString('emoji');
       
@@ -1100,7 +1080,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // DEVICEGROUP COMMAND
-    else if (commandName === 'devicegroup') {
+    else if (routedCommandName === 'devicegroup') {
       const subcommand = interaction.options.getSubcommand();
       
       await interaction.deferReply();
@@ -1384,7 +1364,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // SPEEDALERT COMMAND
-    else if (commandName === 'speedalert') {
+    else if (routedCommandName === 'speedalert') {
       const subcommand = interaction.options.getSubcommand();
       
       await interaction.deferReply();
@@ -1449,7 +1429,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // DEVICETRIGGER COMMAND
-    else if (commandName === 'devicetrigger') {
+    else if (routedCommandName === 'devicetrigger') {
       const subcommand = interaction.options.getSubcommand();
       
       await interaction.deferReply();
@@ -1584,7 +1564,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // WOL COMMAND
-    else if (commandName === 'wol') {
+    else if (routedCommandName === 'wol') {
       // Check permission (bot permission system)
       const { PERMISSIONS } = await import('./src/auth/auth.js');
       const hasPermission = await checkUserPermission(userId, PERMISSIONS.WAKE_DEVICE);
@@ -1689,7 +1669,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // SPEEDTEST COMMAND
-    else if (commandName === 'speedtest') {
+    else if (routedCommandName === 'speedtest') {
       // Check permission
       const { PERMISSIONS } = await import('./src/auth/auth.js');
       const hasPermission = await checkUserPermission(userId, PERMISSIONS.RUN_SPEEDTEST);
@@ -1727,7 +1707,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // SPEEDHISTORY COMMAND
-    else if (commandName === 'speedhistory') {
+    else if (routedCommandName === 'speedhistory') {
       const days = interaction.options.getInteger('days') || 7;
       const history = speedTestOps.getHistory(days);
       
@@ -1754,7 +1734,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // RESEARCH COMMAND
-    else if (commandName === 'research') {
+    else if (routedCommandName === 'research') {
       // Check permission
       const { PERMISSIONS } = await import('./src/auth/auth.js');
       const hasPermission = await checkUserPermission(userId, PERMISSIONS.RUN_RESEARCH);
@@ -1852,7 +1832,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // RESEARCHHISTORY COMMAND
-    else if (commandName === 'researchhistory') {
+    else if (routedCommandName === 'researchhistory') {
       const limit = interaction.options.getInteger('limit') || 10;
       const research = researchOps.getRecent(limit);
       
@@ -1880,7 +1860,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // RESEARCHSEARCH COMMAND - Full-text search
-    else if (commandName === 'researchsearch') {
+    else if (routedCommandName === 'researchsearch') {
       const searchQuery = interaction.options.getString('query');
       const viewId = interaction.options.getInteger('id');
       
@@ -1947,7 +1927,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // WEBSEARCH COMMAND - DuckDuckGo search
-    else if (commandName === 'websearch') {
+    else if (routedCommandName === 'websearch') {
       const searchQuery = interaction.options.getString('query');
       const numResults = interaction.options.getInteger('results') || 5;
       
@@ -2008,7 +1988,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // WEATHER COMMAND
-    else if (commandName === 'weather') {
+    else if (routedCommandName === 'weather') {
       const city = interaction.options.getString('city') || 'Cape Town';
       await interaction.deferReply();
       
@@ -2036,7 +2016,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // CHAT COMMAND
-    else if (commandName === 'chat') {
+    else if (routedCommandName === 'chat') {
       const message = interaction.options.getString('message');
       await interaction.deferReply();
       
@@ -2056,7 +2036,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // PERSONALITY COMMAND
-    else if (commandName === 'personality') {
+    else if (routedCommandName === 'personality') {
       const selectedType = interaction.options.getString('type');
       
       if (!selectedType) {
@@ -2095,7 +2075,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // SCHEDULE COMMAND
-    else if (commandName === 'schedule') {
+    else if (routedCommandName === 'schedule') {
       const subcommand = interaction.options.getSubcommand();
       
       if (subcommand === 'list') {
@@ -2164,7 +2144,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // STATS COMMAND
-    else if (commandName === 'stats') {
+    else if (routedCommandName === 'stats') {
       const devices = deviceOps.getAll();
       const onlineDevices = devices.filter(d => d.online);
       const speedStats = speedTestOps.getStats();
@@ -2188,7 +2168,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // DASHBOARD COMMAND
-    else if (commandName === 'dashboard') {
+    else if (routedCommandName === 'dashboard') {
       const embed = new EmbedBuilder()
         .setColor('#667eea')
         .setTitle('🌐 Web Dashboard')
@@ -2205,7 +2185,7 @@ client.on('interactionCreate', async (interaction) => {
 
     
     // HOME ASSISTANT COMMAND
-    else if (commandName === 'homeassistant') {
+    else if (routedCommandName === 'homeassistant') {
       const subcommand = interaction.options.getSubcommand();
       
       if (subcommand === 'lights') {
@@ -2737,7 +2717,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // PLUGIN COMMAND
-    else if (commandName === 'plugin') {
+    else if (routedCommandName === 'plugin') {
       const subcommand = interaction.options.getSubcommand();
       
       if (subcommand === 'list') {
@@ -2819,7 +2799,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // TRIVIA COMMAND
-    else if (commandName === 'trivia') {
+    else if (routedCommandName === 'trivia') {
       const subcommand = interaction.options.getSubcommand();
       const { 
         startAITrivia, 
@@ -2939,14 +2919,14 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // HANGMAN COMMAND
-    else if (commandName === 'hangman') {
+    else if (routedCommandName === 'hangman') {
       const category = interaction.options.getString('category') || 'random';
       const { startHangman } = await import('./src/games/hangman.js');
       await startHangman(interaction, category);
     }
     
     // NUMBER GUESS COMMAND
-    else if (commandName === 'numguess') {
+    else if (routedCommandName === 'numguess') {
       const max = interaction.options.getInteger('max') || 100;
       const attempts = interaction.options.getInteger('attempts') || 10;
       const { startNumberGuess } = await import('./src/games/numguess.js');
@@ -2954,7 +2934,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // ROCK PAPER SCISSORS COMMAND
-    else if (commandName === 'rps') {
+    else if (routedCommandName === 'rps') {
       const subcommand = interaction.options.getSubcommand();
       const { challengeRPS, quickRPS } = await import('./src/games/rps.js');
       
@@ -2968,7 +2948,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // TIC TAC TOE COMMAND
-    else if (commandName === 'tictactoe') {
+    else if (routedCommandName === 'tictactoe') {
       const subcommand = interaction.options.getSubcommand();
       const { challengeTTT, playTTTvsAI } = await import('./src/games/tictactoe.js');
       
@@ -2981,14 +2961,14 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // 20 QUESTIONS COMMAND
-    else if (commandName === '20questions') {
+    else if (routedCommandName === '20questions') {
       const category = interaction.options.getString('category') || 'anything';
       const { start20Questions } = await import('./src/games/twenty-questions.js');
       await start20Questions(interaction, category);
     }
     
     // RIDDLE COMMAND
-    else if (commandName === 'riddle') {
+    else if (routedCommandName === 'riddle') {
       const difficulty = interaction.options.getString('difficulty') || 'medium';
       const rounds = interaction.options.getInteger('rounds') || 5;
       const { startRiddles } = await import('./src/games/riddles.js');
@@ -2996,7 +2976,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // WORD CHAIN COMMAND
-    else if (commandName === 'wordchain') {
+    else if (routedCommandName === 'wordchain') {
       const { startWordChain } = await import('./src/games/wordchain.js');
       await startWordChain(interaction, {
         start: interaction.options.getString('start'),
@@ -3008,7 +2988,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // EMOJI DECODE COMMAND
-    else if (commandName === 'emojidecode') {
+    else if (routedCommandName === 'emojidecode') {
       const category = interaction.options.getString('category') || 'random';
       const rounds = interaction.options.getInteger('rounds') || 5;
       const { startEmojiDecode } = await import('./src/games/emojidecode.js');
@@ -3016,7 +2996,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // WOULD YOU RATHER COMMAND
-    else if (commandName === 'wouldyourather') {
+    else if (routedCommandName === 'wouldyourather') {
       const optionA = interaction.options.getString('option_a');
       const optionB = interaction.options.getString('option_b');
       
@@ -3035,14 +3015,14 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // CAPTION CONTEST COMMAND
-    else if (commandName === 'caption') {
+    else if (routedCommandName === 'caption') {
       const rounds = interaction.options.getInteger('rounds') || 3;
       const { startCaptionContest } = await import('./src/games/caption.js');
       await startCaptionContest(interaction, rounds);
     }
     
     // ACRONYM COMMAND
-    else if (commandName === 'acronym') {
+    else if (routedCommandName === 'acronym') {
       const rounds = interaction.options.getInteger('rounds') || 5;
       const letters = interaction.options.getInteger('letters') || 3;
       const { startAcronymGame } = await import('./src/games/acronym.js');
@@ -3050,7 +3030,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // STORY BUILDER COMMAND
-    else if (commandName === 'story') {
+    else if (routedCommandName === 'story') {
       const theme = interaction.options.getString('theme') || 'adventure';
       const turns = interaction.options.getInteger('turns') || 10;
       const { startStoryBuilder } = await import('./src/games/storybuilder.js');
@@ -3058,7 +3038,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // CONNECT FOUR COMMAND
-    else if (commandName === 'connect4') {
+    else if (routedCommandName === 'connect4') {
       const subcommand = interaction.options.getSubcommand();
       const { challengeConnect4, playConnect4AI } = await import('./src/games/connectfour.js');
       
@@ -3071,7 +3051,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // MATH BLITZ COMMAND
-    else if (commandName === 'mathblitz') {
+    else if (routedCommandName === 'mathblitz') {
       const difficulty = interaction.options.getString('difficulty') || 'medium';
       const problems = interaction.options.getInteger('problems') || 10;
       const { startMathBlitz } = await import('./src/games/mathblitz.js');
@@ -3079,21 +3059,21 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // REACTION RACE COMMAND
-    else if (commandName === 'reaction') {
+    else if (routedCommandName === 'reaction') {
       const rounds = interaction.options.getInteger('rounds') || 5;
       const { startReactionRace } = await import('./src/games/reaction.js');
       await startReactionRace(interaction, rounds);
     }
     
     // MAFIA COMMAND
-    else if (commandName === 'mafia') {
+    else if (routedCommandName === 'mafia') {
       const minPlayers = interaction.options.getInteger('min_players') || 4;
       const { startMafia } = await import('./src/games/mafia.js');
       await startMafia(interaction, minPlayers);
     }
     
     // GAME UTILITIES COMMAND
-    else if (commandName === 'game') {
+    else if (routedCommandName === 'game') {
       const subcommand = interaction.options.getSubcommand();
       
       if (subcommand === 'stop') {
@@ -3205,7 +3185,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // PERMISSIONS COMMAND
-    else if (commandName === 'permissions') {
+    else if (routedCommandName === 'permissions') {
       const subcommand = interaction.options.getSubcommand();
       
       // Only admins can manage permissions
@@ -3296,7 +3276,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // HELP COMMAND
-    else if (commandName === 'help') {
+    else if (routedCommandName === 'help') {
       const embed = new EmbedBuilder()
         .setColor('#FFB6C1')
         .setTitle('🌸 Maid Bot Commands 🌸')
