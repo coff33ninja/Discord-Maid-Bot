@@ -104,33 +104,43 @@ This document lists all available plugins for the Discord Maid Bot.
 
 ---
 
-### 5. ⏰ Smart Reminders
+### 5. ⏰ Smart Reminders & Automation
 **Plugin:** `smart-reminders`  
 **Version:** 1.0.0  
 **Commands:** `/bot reminder`  
-**Description:** Context-aware reminder system with presence detection
+**Description:** Context-aware reminder and automation system with presence detection
 
 **Features:**
-- Time-based reminders (5m, 2h, 1d)
+- Time-based reminders (5m, 2h, 1d, or absolute time like 18:00)
 - Recurring reminders with intervals
 - Presence-based reminders (when device comes online)
+- **Automation actions** (Home Assistant, Wake-on-LAN, Network Scan, Speed Test)
 - Context storage for reminders
 - AI-generated message variations
-- DM or channel delivery
+- DM, channel, or automation-only delivery
 - Enable/disable reminders
 
 **Subcommands:**
 - `/bot reminder add <message> <when>` - Create a time-based reminder
+- `/bot reminder automation <name> <when> <action_type>` - Create automation with actions
 - `/bot reminder recurring <message> <interval>` - Create recurring reminder
 - `/bot reminder presence <message> <device>` - Remind when device comes online
 - `/bot reminder list` - List your reminders
 - `/bot reminder remove <reminder>` - Remove a reminder
 - `/bot reminder toggle <reminder> <active>` - Enable/disable reminder
 
+**Automation Actions:**
+- **Home Assistant** - Control lights, switches, scenes, etc.
+- **Wake-on-LAN** - Wake up devices automatically
+- **Network Scan** - Trigger network scans
+- **Speed Test** - Run speed tests
+
 **Example Use Cases:**
 - "Remind me to check the oven in 30m"
 - "Remind me to take breaks every 2h" (recurring)
-- "Remind me to check the server when my PC comes online" (presence)
+- "Turn on my PC at 18:00 every day" (automation + WOL)
+- "Turn on lights when I get home" (presence + Home Assistant)
+- "Run network scan every morning at 8:00" (automation + scan)
 
 ---
 
