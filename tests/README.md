@@ -2,6 +2,78 @@
 
 This folder contains various test and diagnostic scripts for the Discord Maid Bot.
 
+## Quick Start
+
+Run all tests:
+```bash
+npm test
+```
+
+Run specific test suite:
+```bash
+npm run test:db          # Database tests
+npm run test:network     # Network scanner tests
+npm run test:ha          # Home Assistant tests
+npm run test:esp         # ESP device detection
+```
+
+## Unit Tests
+
+### test-database.js
+Database operations and performance tests.
+
+**Usage:**
+```bash
+npm run test:db
+# or
+node tests/test-database.js
+```
+
+**What it does:**
+- Creates a separate test database
+- Inserts test fixtures (devices, speed tests, research, etc.)
+- Runs queries to verify data integrity
+- Tests performance with bulk inserts
+- Validates all database operations
+
+**Test Coverage:**
+- Device management (CRUD operations)
+- Speed test logging
+- Research history
+- Chat history
+- Scheduled tasks
+- Configuration storage
+- Performance benchmarks
+
+### test-network-scanner.js
+Network scanner logic and device detection tests.
+
+**Usage:**
+```bash
+npm run test:network
+# or
+node tests/test-network-scanner.js
+```
+
+**What it does:**
+- Tests device grouping by network type
+- Validates MAC and IP addresses
+- Tests device naming functionality
+- Compares quick ping vs full scan performance
+- Tests device state transitions
+- Validates network type detection
+- Tests search and filter functionality
+
+**Test Coverage:**
+- Device grouping (local/Tailscale)
+- MAC address validation
+- IP address validation
+- Quick ping performance
+- State management
+- Search functionality
+
+## Integration Tests
+
 ## Home Assistant Tests
 
 ### test-homeassistant.js

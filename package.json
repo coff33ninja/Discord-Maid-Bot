@@ -6,7 +6,12 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "test": "node tests/run-all-tests.js",
+    "test:db": "node tests/test-database.js",
+    "test:network": "node tests/test-network-scanner.js",
+    "test:ha": "node tests/test-homeassistant.js",
+    "test:esp": "node tests/test-esp-detection.js"
   },
   "keywords": [
     "discord",
