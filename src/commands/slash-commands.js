@@ -255,6 +255,70 @@ export const commands = [
             .setRequired(true)))
     .addSubcommand(subcommand =>
       subcommand
+        .setName('addmultiple')
+        .setDescription('Add multiple devices to a group')
+        .addStringOption(option =>
+          option.setName('group')
+            .setDescription('Group name')
+            .setRequired(true))
+        .addStringOption(option =>
+          option.setName('device1')
+            .setDescription('First device')
+            .setRequired(true)
+            .setAutocomplete(true))
+        .addStringOption(option =>
+          option.setName('device2')
+            .setDescription('Second device')
+            .setRequired(false)
+            .setAutocomplete(true))
+        .addStringOption(option =>
+          option.setName('device3')
+            .setDescription('Third device')
+            .setRequired(false)
+            .setAutocomplete(true))
+        .addStringOption(option =>
+          option.setName('device4')
+            .setDescription('Fourth device')
+            .setRequired(false)
+            .setAutocomplete(true))
+        .addStringOption(option =>
+          option.setName('device5')
+            .setDescription('Fifth device')
+            .setRequired(false)
+            .setAutocomplete(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('assignpattern')
+        .setDescription('Assign devices by name pattern')
+        .addStringOption(option =>
+          option.setName('group')
+            .setDescription('Group name')
+            .setRequired(true))
+        .addStringOption(option =>
+          option.setName('pattern')
+            .setDescription('Pattern to match (e.g., "smart" matches smart-light, smart-plug)')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('assignall')
+        .setDescription('Assign all devices matching filter')
+        .addStringOption(option =>
+          option.setName('group')
+            .setDescription('Group name')
+            .setRequired(true))
+        .addStringOption(option =>
+          option.setName('filter')
+            .setDescription('Which devices to add')
+            .setRequired(true)
+            .addChoices(
+              { name: 'All Online Devices', value: 'online' },
+              { name: 'All Offline Devices', value: 'offline' },
+              { name: 'All Devices', value: 'all' },
+              { name: 'Local Network Only', value: 'local' },
+              { name: 'Tailscale Only', value: 'tailscale' }
+            )))
+    .addSubcommand(subcommand =>
+      subcommand
         .setName('list')
         .setDescription('List all groups'))
     .addSubcommand(subcommand =>
@@ -264,6 +328,15 @@ export const commands = [
         .addStringOption(option =>
           option.setName('group')
             .setDescription('Group name')
+            .setRequired(true)
+            .setAutocomplete(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('remove')
+        .setDescription('Remove device from its group')
+        .addStringOption(option =>
+          option.setName('device')
+            .setDescription('Device to remove from group')
             .setRequired(true)
             .setAutocomplete(true))),
 

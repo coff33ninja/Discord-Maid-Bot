@@ -439,7 +439,7 @@ client.on('interactionCreate', async (interaction) => {
       
       // NAMEDEVICE, DEVICEEMOJI, DEVICEGROUP command - device autocomplete
       else if (commandName === 'namedevice' || commandName === 'deviceemoji' || 
-               (commandName === 'devicegroup' && focusedOption.name === 'device')) {
+               (commandName === 'devicegroup' && (focusedOption.name === 'device' || focusedOption.name.startsWith('device')))) {
         const devices = deviceOps.getAll();
         
         // Score-based filtering and sorting
@@ -773,7 +773,7 @@ client.on('interactionCreate', async (interaction) => {
       const embed = new EmbedBuilder()
         .setColor('#87CEEB')
         .setTitle(`💾 ${filter.charAt(0).toUpperCase() + filter.slice(1)} Devices`)
-        .setDescription(`${devices.length} devices found\n\n💡 Use device number with \`/wol <number>\` to wake a device`)
+        .setDescription(`${devices.length} devices found\n\n💡 Use \`/deviceemoji\` and \`/devicegroup\` to organize devices`)
         .setTimestamp();
       
       // Get all devices for proper numbering
@@ -782,10 +782,13 @@ client.on('interactionCreate', async (interaction) => {
       devices.slice(0, 25).forEach((device) => {
         // Find the actual index in the full list
         const deviceNumber = allDevices.findIndex(d => d.mac === device.mac) + 1;
+        const emoji = device.emoji || '';
+        const displayName = device.notes || device.hostname || device.ip;
+        const group = device.device_group ? ` 📁${device.device_group}` : '';
         
         embed.addFields({
-          name: `${deviceNumber}. ${device.hostname || device.ip}`,
-          value: `IP: \`${device.ip}\` | MAC: \`${device.mac}\` ${device.online ? '🟢 Online' : '🔴 Offline'}${device.notes ? `\n📝 ${device.notes}` : ''}`,
+          name: `${deviceNumber}. ${emoji} ${displayName}${group}`,
+          value: `IP: \`${device.ip}\` | MAC: \`${device.mac}\` ${device.online ? '🟢 Online' : '🔴 Offline'}`,
           inline: false
         });
       });
@@ -975,6 +978,189 @@ client.on('interactionCreate', async (interaction) => {
             .setTitle(`📁 Group: ${groupName}`)
             .setDescription(deviceList)
             .setFooter({ text: `${devices.length} devices total, ${onlineCount} online` })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+          
+        } else if (subcommand === 'addmultiple') {
+          const groupName = interaction.options.getString('group');
+          const deviceIdentifiers = [
+            interaction.options.getString('device1'),
+            interaction.options.getString('device2'),
+            interaction.options.getString('device3'),
+            interaction.options.getString('device4'),
+            interaction.options.getString('device5')
+          ].filter(Boolean); // Remove null/undefined values
+          
+          const addedDevices = [];
+          const failedDevices = [];
+          
+          for (const deviceIdentifier of deviceIdentifiers) {
+            // Find device
+            let device = deviceOps.getByMac(deviceIdentifier);
+            if (!device) {
+              device = deviceOps.getAll().find(d => 
+                d.ip === deviceIdentifier || 
+                d.hostname === deviceIdentifier || 
+                d.notes === deviceIdentifier
+              );
+            }
+            
+            if (device) {
+              deviceOps.updateGroup(device.id, groupName);
+              const displayName = device.notes || device.hostname || device.ip;
+              const emoji = device.emoji || '';
+              addedDevices.push(`${emoji} ${displayName}`);
+              broadcastUpdate('device-updated', { device: { ...device, device_group: groupName } });
+            } else {
+              failedDevices.push(deviceIdentifier);
+            }
+          }
+          
+          const embed = new EmbedBuilder()
+            .setColor('#4CAF50')
+            .setTitle('📁 Multiple Devices Added to Group')
+            .setDescription(`Added **${addedDevices.length}** device(s) to group **${groupName}**`)
+            .setTimestamp();
+          
+          if (addedDevices.length > 0) {
+            embed.addFields({
+              name: '✅ Added Devices',
+              value: addedDevices.join('\n'),
+              inline: false
+            });
+          }
+          
+          if (failedDevices.length > 0) {
+            embed.addFields({
+              name: '❌ Failed',
+              value: failedDevices.join('\n'),
+              inline: false
+            });
+          }
+          
+          await interaction.editReply({ embeds: [embed] });
+          
+        } else if (subcommand === 'assignpattern') {
+          const groupName = interaction.options.getString('group');
+          const pattern = interaction.options.getString('pattern').toLowerCase();
+          
+          const allDevices = deviceOps.getAll();
+          const matchingDevices = allDevices.filter(d => {
+            const hostname = (d.hostname || '').toLowerCase();
+            const notes = (d.notes || '').toLowerCase();
+            return hostname.includes(pattern) || notes.includes(pattern);
+          });
+          
+          if (matchingDevices.length === 0) {
+            await interaction.editReply(`❌ No devices found matching pattern: **${pattern}**`);
+            return;
+          }
+          
+          const addedDevices = [];
+          for (const device of matchingDevices) {
+            deviceOps.updateGroup(device.id, groupName);
+            const displayName = device.notes || device.hostname || device.ip;
+            const emoji = device.emoji || '';
+            addedDevices.push(`${emoji} ${displayName}`);
+            broadcastUpdate('device-updated', { device: { ...device, device_group: groupName } });
+          }
+          
+          const embed = new EmbedBuilder()
+            .setColor('#4CAF50')
+            .setTitle('📁 Pattern-Based Group Assignment')
+            .setDescription(`Added **${addedDevices.length}** device(s) matching pattern **"${pattern}"** to group **${groupName}**`)
+            .addFields({
+              name: '✅ Added Devices',
+              value: addedDevices.slice(0, 20).join('\n') + (addedDevices.length > 20 ? `\n... and ${addedDevices.length - 20} more` : ''),
+              inline: false
+            })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+          
+        } else if (subcommand === 'assignall') {
+          const groupName = interaction.options.getString('group');
+          const filter = interaction.options.getString('filter');
+          
+          let devices = deviceOps.getAll();
+          
+          // Apply filter
+          if (filter === 'online') {
+            devices = devices.filter(d => d.online);
+          } else if (filter === 'offline') {
+            devices = devices.filter(d => !d.online);
+          } else if (filter === 'local') {
+            devices = devices.filter(d => !d.mac.startsWith('ts:'));
+          } else if (filter === 'tailscale') {
+            devices = devices.filter(d => d.mac.startsWith('ts:'));
+          }
+          // 'all' = no filter
+          
+          if (devices.length === 0) {
+            await interaction.editReply(`❌ No devices found matching filter: **${filter}**`);
+            return;
+          }
+          
+          const addedDevices = [];
+          for (const device of devices) {
+            deviceOps.updateGroup(device.id, groupName);
+            const displayName = device.notes || device.hostname || device.ip;
+            const emoji = device.emoji || '';
+            addedDevices.push(`${emoji} ${displayName}`);
+            broadcastUpdate('device-updated', { device: { ...device, device_group: groupName } });
+          }
+          
+          const filterName = filter === 'online' ? 'Online' : 
+                             filter === 'offline' ? 'Offline' : 
+                             filter === 'local' ? 'Local Network' : 
+                             filter === 'tailscale' ? 'Tailscale' : 'All';
+          
+          const embed = new EmbedBuilder()
+            .setColor('#4CAF50')
+            .setTitle('📁 Bulk Group Assignment')
+            .setDescription(`Added **${addedDevices.length}** ${filterName} device(s) to group **${groupName}**`)
+            .addFields({
+              name: '✅ Added Devices',
+              value: addedDevices.slice(0, 20).join('\n') + (addedDevices.length > 20 ? `\n... and ${addedDevices.length - 20} more` : ''),
+              inline: false
+            })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+          
+        } else if (subcommand === 'remove') {
+          const deviceIdentifier = interaction.options.getString('device');
+          
+          // Find device
+          let device = deviceOps.getByMac(deviceIdentifier);
+          if (!device) {
+            device = deviceOps.getAll().find(d => 
+              d.ip === deviceIdentifier || 
+              d.hostname === deviceIdentifier || 
+              d.notes === deviceIdentifier
+            );
+          }
+          
+          if (!device) {
+            await interaction.editReply('❌ Device not found.');
+            return;
+          }
+          
+          const oldGroup = device.device_group;
+          if (!oldGroup) {
+            await interaction.editReply('❌ Device is not in any group.');
+            return;
+          }
+          
+          // Remove from group (set to null)
+          deviceOps.updateGroup(device.id, null);
+          
+          const displayName = device.notes || device.hostname || device.ip;
+          const emoji = device.emoji || '';
+          
+          await interaction.editReply(`✅ Removed **${emoji} ${displayName}** from group **${oldGroup}**`);
+          broadcastUpdate('device-updated', { device: { ...device, device_group: null } })
             .setTimestamp();
           
           await interaction.editReply({ embeds: [embed] });
