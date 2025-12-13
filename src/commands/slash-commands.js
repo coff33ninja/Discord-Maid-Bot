@@ -620,7 +620,15 @@ export const commands = [
     .addSubcommand(subcommand =>
       subcommand
         .setName('stats')
-        .setDescription('View your game statistics')),
+        .setDescription('View your game statistics'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('stop')
+        .setDescription('Stop the current game in this channel'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('leaderboard')
+        .setDescription('View the games leaderboard')),
 
   // /bot - Bot Management
   new SlashCommandBuilder()
@@ -826,46 +834,7 @@ export const commands = [
         .setMinValue(1)
         .setMaxValue(30)),
 
-  new SlashCommandBuilder()
-    .setName('research')
-    .setDescription('🔎 Research a topic with AI')
-    .addStringOption(option =>
-      option.setName('query')
-        .setDescription('What to research')
-        .setRequired(true)),
-
-  new SlashCommandBuilder()
-    .setName('researchhistory')
-    .setDescription('📚 View past research')
-    .addIntegerOption(option =>
-      option.setName('limit')
-        .setDescription('Number of results to show')
-        .setMinValue(5)
-        .setMaxValue(50)),
-
-  new SlashCommandBuilder()
-    .setName('researchsearch')
-    .setDescription('🔍 Search through past research with full-text search')
-    .addStringOption(option =>
-      option.setName('query')
-        .setDescription('Search terms')
-        .setRequired(true))
-    .addIntegerOption(option =>
-      option.setName('id')
-        .setDescription('View full result by ID')),
-
-  new SlashCommandBuilder()
-    .setName('websearch')
-    .setDescription('🌐 Search the web (DuckDuckGo)')
-    .addStringOption(option =>
-      option.setName('query')
-        .setDescription('What to search for')
-        .setRequired(true))
-    .addIntegerOption(option =>
-      option.setName('results')
-        .setDescription('Number of results (1-10)')
-        .setMinValue(1)
-        .setMaxValue(10)),
+  // Legacy research commands removed - use /research instead
 
   new SlashCommandBuilder()
     .setName('weather')
@@ -1776,22 +1745,6 @@ export const commands = [
         .setMinValue(4)
         .setMaxValue(10)),
 
-  // Game utilities
-  new SlashCommandBuilder()
-    .setName('game')
-    .setDescription('🎮 Game utilities')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('stop')
-        .setDescription('Stop the current game in this channel'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('stats')
-        .setDescription('View your game statistics'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('leaderboard')
-        .setDescription('View the games leaderboard'))
 ];
 
 // Register commands with Discord
