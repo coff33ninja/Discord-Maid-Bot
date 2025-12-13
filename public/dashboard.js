@@ -692,22 +692,41 @@ async function deleteDiscordUser(userId, username) {
 let unifiedNetworkData = null;
 let currentNetworkFilter = 'all';
 
-// Load devices using unified network scan
+// Load devices using unified network scan (uses cached data from last scan)
 async function loadDevices() {
   try {
-    const response = await authFetch('/api/network/unified');
-    unifiedNetworkData = await response.json();
+    // First, try to load from regular devices endpoint (cached data)
+    const devicesResponse = await authFetch('/api/devices');
+    const cachedDevices = await devicesResponse.json();
     
-    // Update stats
-    document.getElementById('networkTotal').textContent = unifiedNetworkData.stats.total;
-    document.getElementById('networkLocal').textContent = unifiedNetworkData.stats.local;
-    document.getElementById('networkTailscale').textContent = unifiedNetworkData.stats.tailscale;
-    
-    // Display devices based on current filter
-    displayDevices(currentNetworkFilter);
-    
-    // Update chart
-    updateDeviceChart(unifiedNetworkData.all);
+    if (cachedDevices && cachedDevices.length > 0) {
+      // Use cached data immediately
+      unifiedNetworkData = {
+        all: cachedDevices,
+        local: cachedDevices.filter(d => d.network !== 'tailscale'),
+        tailscale: cachedDevices.filter(d => d.network === 'tailscale'),
+        stats: {
+          total: cachedDevices.length,
+          local: cachedDevices.filter(d => d.network !== 'tailscale').length,
+          tailscale: cachedDevices.filter(d => d.network === 'tailscale').length,
+          online: cachedDevices.filter(d => d.online).length
+        }
+      };
+      
+      // Update stats
+      document.getElementById('networkTotal').textContent = unifiedNetworkData.stats.total;
+      document.getElementById('networkLocal').textContent = unifiedNetworkData.stats.local;
+      document.getElementById('networkTailscale').textContent = unifiedNetworkData.stats.tailscale;
+      
+      // Display devices based on current filter
+      displayDevices(currentNetworkFilter);
+      
+      // Update chart
+      updateDeviceChart(unifiedNetworkData.all);
+    } else {
+      // No cached data, trigger a scan
+      await refreshDevices();
+    }
   } catch (error) {
     console.error('Failed to load devices:', error);
     document.getElementById('deviceList').innerHTML = '<p style="text-align: center; color: #ef4444; padding: 20px;">Failed to load devices</p>';
@@ -1120,10 +1139,75 @@ function switchTab(tabName) {
   document.getElementById(`${tabName}-tab`).classList.add('active');
 }
 
-// Refresh devices
+// Refresh devices (force new scan)
 async function refreshDevices() {
-  await loadDevices();
-  await loadStats();
+  try {
+    // Show loading state
+    document.getElementById('deviceList').innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">🔄 Scanning network...</p>';
+    
+    // Trigger unified network scan on server
+    const response = await authFetch('/api/network/unified');
+    unifiedNetworkData = await response.json();
+    
+    // Update stats
+    document.getElementById('networkTotal').textContent = unifiedNetworkData.stats.total;
+    document.getElementById('networkLocal').textContent = unifiedNetworkData.stats.local;
+    document.getElementById('networkTailscale').textContent = unifiedNetworkData.stats.tailscale;
+    
+    // Display devices based on current filter
+    displayDevices(currentNetworkFilter);
+    
+    // Update chart
+    updateDeviceChart(unifiedNetworkData.all);
+    
+    // Update overall stats
+    await loadStats();
+  } catch (error) {
+    console.error('Failed to refresh devices:', error);
+    document.getElementById('deviceList').innerHTML = '<p style="text-align: center; color: #ef4444; padding: 20px;">Failed to scan network</p>';
+  }
+}
+
+// Run speed test
+async function runSpeedTest() {
+  if (!confirm('Run internet speed test? This may take 30-60 seconds.')) {
+    return;
+  }
+  
+  try {
+    // Show loading state
+    const originalDownload = document.getElementById('downloadSpeed').textContent;
+    const originalUpload = document.getElementById('uploadSpeed').textContent;
+    
+    document.getElementById('downloadSpeed').textContent = '...';
+    document.getElementById('uploadSpeed').textContent = '...';
+    
+    // Trigger speed test on server
+    const response = await authFetch('/api/speedtests/run', {
+      method: 'POST'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Speed test failed');
+    }
+    
+    const result = await response.json();
+    
+    // Update display
+    document.getElementById('downloadSpeed').textContent = parseFloat(result.download).toFixed(1);
+    document.getElementById('uploadSpeed').textContent = parseFloat(result.upload).toFixed(1);
+    
+    // Reload speed history chart
+    await loadSpeedHistory();
+    
+    alert(`✅ Speed Test Complete!\n\n⬇️ Download: ${result.download} Mbps\n⬆️ Upload: ${result.upload} Mbps\n📡 Ping: ${result.ping} ms`);
+  } catch (error) {
+    console.error('Speed test error:', error);
+    alert('❌ Speed test failed. Please try again.');
+    
+    // Restore original values
+    await loadStats();
+  }
 }
 
 // Real-time event handlers

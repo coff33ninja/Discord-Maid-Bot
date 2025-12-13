@@ -505,6 +505,37 @@ export function startDashboard(port = 3000) {
     res.json(history);
   });
 
+  // Run speed test on demand
+  app.post('/api/speedtests/run', requireAuth, async (req, res) => {
+    try {
+      // Import speedtest dynamically
+      const speedtest = (await import('speedtest-net')).default;
+      
+      console.log('🚀 Running speedtest from dashboard...');
+      const result = await speedtest({ acceptLicense: true, acceptGdpr: true });
+      
+      const testResult = {
+        download: (result.download.bandwidth * 8 / 1000000).toFixed(2),
+        upload: (result.upload.bandwidth * 8 / 1000000).toFixed(2),
+        ping: result.ping.latency.toFixed(2),
+        server: result.server.name,
+        isp: result.isp,
+        userId: null // Dashboard user
+      };
+      
+      // Save to database
+      speedTestOps.add(testResult);
+      
+      // Broadcast update to all connected clients
+      broadcastUpdate('speedtest-complete', testResult);
+      
+      res.json(testResult);
+    } catch (error) {
+      console.error('Speed test error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Research
   app.get('/api/research', requireAuth, (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
