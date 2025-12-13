@@ -307,19 +307,6 @@ export async function getAllSensors() {
 }
 
 // Execute automation
-export async function triggerAutomation(automationId) {
-  return await callService('automation', 'trigger', {
-    entity_id: automationId
-  });
-}
-
-// Execute scene
-export async function activateScene(sceneId) {
-  return await callService('scene', 'turn_on', {
-    entity_id: sceneId
-  });
-}
-
 // Check Home Assistant connection
 export async function checkConnection() {
   if (!haClient) {
