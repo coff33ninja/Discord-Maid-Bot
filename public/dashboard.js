@@ -15,8 +15,9 @@ async function init() {
     return;
   }
   
+  // Load data (devices will load from cache/database, not trigger new scan)
   await loadStats();
-  await loadDevices();
+  await loadDevices(); // Uses existing data from startup scan
   await loadTasks();
   await loadResearch();
   await loadSpeedHistory();
