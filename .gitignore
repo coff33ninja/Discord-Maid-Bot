@@ -72,6 +72,7 @@ tests/ha-*.json
 tests/ha-*.txt
 tests/*-dump.json
 tests/*-report.txt
+tests/test-database.db
 
 # Native addon build files
 build/Release/
