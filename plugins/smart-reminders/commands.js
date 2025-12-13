@@ -133,6 +133,58 @@ export const commandGroup = new SlashCommandSubcommandGroupBuilder()
       .addBooleanOption(option =>
         option.setName('active')
           .setDescription('Enable or disable')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('for')
+      .setDescription('Create reminder for someone else')
+      .addUserOption(option =>
+        option.setName('user')
+          .setDescription('Who to remind')
+          .setRequired(true))
+      .addStringOption(option =>
+        option.setName('message')
+          .setDescription('What to remind them about')
+          .setRequired(true))
+      .addStringOption(option =>
+        option.setName('when')
+          .setDescription('When to remind (e.g., 5m, 2h, 18:00)')
+          .setRequired(true))
+      .addChannelOption(option =>
+        option.setName('channel')
+          .setDescription('Send reminder to channel (default: DM)')))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('role')
+      .setDescription('Create reminder for a role')
+      .addRoleOption(option =>
+        option.setName('role')
+          .setDescription('Which role to remind')
+          .setRequired(true))
+      .addStringOption(option =>
+        option.setName('message')
+          .setDescription('What to remind them about')
+          .setRequired(true))
+      .addStringOption(option =>
+        option.setName('when')
+          .setDescription('When to remind (e.g., 5m, 2h, 18:00)')
+          .setRequired(true))
+      .addChannelOption(option =>
+        option.setName('channel')
+          .setDescription('Channel to send reminder')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('snooze')
+      .setDescription('Snooze a reminder')
+      .addStringOption(option =>
+        option.setName('reminder')
+          .setDescription('Reminder to snooze')
+          .setRequired(true)
+          .setAutocomplete(true))
+      .addStringOption(option =>
+        option.setName('duration')
+          .setDescription('How long to snooze (e.g., 10m, 1h)')
           .setRequired(true)));
 
 export const parentCommand = 'bot';
@@ -149,12 +201,18 @@ export async function handleCommand(interaction, plugin) {
       return await handleRecurring(interaction, plugin);
     case 'presence':
       return await handlePresence(interaction, plugin);
+    case 'for':
+      return await handleFor(interaction, plugin);
+    case 'role':
+      return await handleRole(interaction, plugin);
     case 'list':
       return await handleList(interaction, plugin);
     case 'remove':
       return await handleRemove(interaction, plugin);
     case 'toggle':
       return await handleToggle(interaction, plugin);
+    case 'snooze':
+      return await handleSnooze(interaction, plugin);
     default:
       await interaction.reply('Unknown subcommand');
   }
@@ -564,5 +622,131 @@ async function handleToggle(interaction, plugin) {
     });
   } catch (error) {
     await interaction.editReply(`❌ Failed to toggle reminder: ${error.message}`);
+  }
+}
+
+async function handleFor(interaction, plugin) {
+  await interaction.deferReply();
+  
+  const targetUser = interaction.options.getUser('user');
+  const message = interaction.options.getString('message');
+  const when = interaction.options.getString('when');
+  const channel = interaction.options.getChannel('channel');
+  const name = `Reminder for ${targetUser.username}`;
+  
+  try {
+    const triggerTime = parseTimeString(when);
+    
+    const reminder = await plugin.addReminder({
+      name,
+      message,
+      type: 'time',
+      target: channel ? 'channel' : 'user',
+      userId: interaction.user.id, // Creator
+      targetUserId: targetUser.id, // Who to remind
+      channelId: channel?.id,
+      triggerTime
+    });
+    
+    const triggerDate = new Date(triggerTime);
+    
+    await interaction.editReply({
+      embeds: [{
+        color: 0x00FF00,
+        title: '✅ Reminder Created',
+        fields: [
+          { name: 'For', value: `<@${targetUser.id}>`, inline: true },
+          { name: 'Message', value: message, inline: false },
+          { name: 'When', value: triggerDate.toLocaleString(), inline: true },
+          { name: 'Where', value: channel ? `<#${channel.id}>` : 'DM', inline: true },
+          { name: 'ID', value: reminder.id, inline: true }
+        ],
+        footer: { text: `Created by ${interaction.user.username}` },
+        timestamp: new Date()
+      }]
+    });
+  } catch (error) {
+    await interaction.editReply(`❌ Failed to create reminder: ${error.message}`);
+  }
+}
+
+async function handleRole(interaction, plugin) {
+  await interaction.deferReply();
+  
+  const role = interaction.options.getRole('role');
+  const message = interaction.options.getString('message');
+  const when = interaction.options.getString('when');
+  const channel = interaction.options.getChannel('channel');
+  const name = `Reminder for @${role.name}`;
+  
+  try {
+    const triggerTime = parseTimeString(when);
+    
+    const reminder = await plugin.addReminder({
+      name,
+      message,
+      type: 'time',
+      target: 'role',
+      userId: interaction.user.id,
+      targetRoleId: role.id,
+      channelId: channel.id,
+      triggerTime
+    });
+    
+    const triggerDate = new Date(triggerTime);
+    
+    await interaction.editReply({
+      embeds: [{
+        color: 0x00FF00,
+        title: '✅ Role Reminder Created',
+        fields: [
+          { name: 'For', value: `<@&${role.id}>`, inline: true },
+          { name: 'Message', value: message, inline: false },
+          { name: 'When', value: triggerDate.toLocaleString(), inline: true },
+          { name: 'Channel', value: `<#${channel.id}>`, inline: true },
+          { name: 'ID', value: reminder.id, inline: true }
+        ],
+        footer: { text: `Created by ${interaction.user.username}` },
+        timestamp: new Date()
+      }]
+    });
+  } catch (error) {
+    await interaction.editReply(`❌ Failed to create reminder: ${error.message}`);
+  }
+}
+
+async function handleSnooze(interaction, plugin) {
+  await interaction.deferReply();
+  
+  const reminderId = interaction.options.getString('reminder');
+  const durationStr = interaction.options.getString('duration');
+  
+  try {
+    // Parse duration
+    const value = parseInt(durationStr);
+    const unit = durationStr.slice(-1);
+    
+    let ms = 0;
+    if (unit === 'm') ms = value * 60 * 1000;
+    else if (unit === 'h') ms = value * 60 * 60 * 1000;
+    else if (unit === 'd') ms = value * 24 * 60 * 60 * 1000;
+    
+    const reminder = await plugin.snoozeReminder(reminderId, ms);
+    const newTime = new Date(reminder.triggerTime);
+    
+    await interaction.editReply({
+      embeds: [{
+        color: 0xFFA500,
+        title: '⏰ Reminder Snoozed',
+        description: `**${reminder.name}** has been snoozed`,
+        fields: [
+          { name: 'New Time', value: newTime.toLocaleString(), inline: true },
+          { name: 'Snoozes Left', value: `${reminder.maxSnoozes - reminder.snoozeCount}`, inline: true }
+        ],
+        timestamp: new Date()
+      }]
+    });
+  } catch (error) {
+    await interaction.editReply(`❌ Failed to snooze reminder: ${error.message}`);
   }
 }

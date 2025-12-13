@@ -127,6 +127,15 @@ export default class SmartRemindersPlugin extends Plugin {
     if (!this.client) return;
     
     try {
+      // Check conditions first
+      if (reminder.conditions && reminder.conditions.length > 0) {
+        const conditionsMet = await this.checkConditions(reminder.conditions);
+        if (!conditionsMet) {
+          console.log(`⏰ Reminder ${reminder.name} conditions not met, skipping`);
+          return;
+        }
+      }
+      
       // Execute automation actions first
       if (reminder.actions && reminder.actions.length > 0) {
         await this.executeActions(reminder.actions, reminder);
@@ -139,38 +148,77 @@ export default class SmartRemindersPlugin extends Plugin {
         message = await this.generateVariation(reminder.message);
       }
       
-      // Send notification (if not automation-only)
-      if (reminder.target === 'dm') {
-        const user = await this.client.users.fetch(reminder.userId);
+      // Build embed
+      const embed = {
+        color: 0xFFA500,
+        title: '⏰ Reminder',
+        description: message,
+        fields: [],
+        footer: { text: reminder.type === 'recurring' ? `Recurring: ${reminder.interval}` : 'One-time reminder' },
+        timestamp: new Date()
+      };
+      
+      if (reminder.context) {
+        embed.fields.push({ name: '📝 Context', value: reminder.context });
+      }
+      
+      if (reminder.messageUrl) {
+        embed.fields.push({ name: '🔗 Original Message', value: `[Jump to message](${reminder.messageUrl})` });
+      }
+      
+      // Add snooze button if applicable
+      const components = [];
+      if (reminder.type !== 'recurring' && reminder.snoozeCount < reminder.maxSnoozes) {
+        components.push({
+          type: 1,
+          components: [
+            {
+              type: 2,
+              style: 2,
+              label: `Snooze 10m (${reminder.maxSnoozes - reminder.snoozeCount} left)`,
+              custom_id: `snooze_${reminder.id}_10`
+            },
+            {
+              type: 2,
+              style: 2,
+              label: 'Snooze 1h',
+              custom_id: `snooze_${reminder.id}_60`
+            }
+          ]
+        });
+      }
+      
+      // Determine who to notify
+      let targetUser = reminder.targetUserId || reminder.userId;
+      let mentionText = `<@${targetUser}>`;
+      
+      if (reminder.targetRoleId) {
+        mentionText = `<@&${reminder.targetRoleId}>`;
+      }
+      
+      // Send notification
+      if (reminder.target === 'dm' || reminder.target === 'user') {
+        const user = await this.client.users.fetch(targetUser);
         await user.send({
-          embeds: [{
-            color: 0xFFA500,
-            title: '⏰ Reminder',
-            description: message,
-            fields: reminder.context ? [
-              { name: '📝 Context', value: reminder.context }
-            ] : [],
-            footer: { text: reminder.type === 'recurring' ? `Recurring: ${reminder.interval}` : 'One-time reminder' },
-            timestamp: new Date()
-          }]
+          embeds: [embed],
+          components
         });
       } else if (reminder.target === 'channel') {
         const channel = await this.client.channels.fetch(reminder.channelId);
         await channel.send({
-          content: `<@${reminder.userId}>`,
-          embeds: [{
-            color: 0xFFA500,
-            title: '⏰ Reminder',
-            description: message,
-            fields: reminder.context ? [
-              { name: '📝 Context', value: reminder.context }
-            ] : [],
-            footer: { text: reminder.type === 'recurring' ? `Recurring: ${reminder.interval}` : 'One-time reminder' },
-            timestamp: new Date()
-          }]
+          content: mentionText,
+          embeds: [embed],
+          components
+        });
+      } else if (reminder.target === 'role') {
+        const channel = await this.client.channels.fetch(reminder.channelId);
+        await channel.send({
+          content: mentionText,
+          embeds: [embed],
+          components
         });
       } else if (reminder.target === 'automation') {
-        // Automation-only, send confirmation to user
+        // Automation-only, send confirmation to creator
         const user = await this.client.users.fetch(reminder.userId);
         await user.send({
           embeds: [{
@@ -190,6 +238,47 @@ export default class SmartRemindersPlugin extends Plugin {
     } catch (error) {
       console.error(`Failed to trigger reminder ${reminder.name}:`, error);
     }
+  }
+  
+  async checkConditions(conditions) {
+    for (const condition of conditions) {
+      try {
+        switch (condition.type) {
+          case 'user_online':
+            // Check if user's device is online
+            const { deviceOps } = await import('../src/database/db.js');
+            const device = deviceOps.getByMac(condition.deviceMac);
+            if (!device || !device.online) return false;
+            break;
+            
+          case 'speed_above':
+            // Check if speed is above threshold
+            const { speedTestOps } = await import('../src/database/db.js');
+            const recentTests = speedTestOps.getRecent(1);
+            if (recentTests.length === 0) return false;
+            if (parseFloat(recentTests[0].download) < condition.threshold) return false;
+            break;
+            
+          case 'time_range':
+            // Check if current time is within range
+            const now = new Date();
+            const currentHour = now.getHours();
+            if (currentHour < condition.startHour || currentHour > condition.endHour) return false;
+            break;
+            
+          case 'weekday':
+            // Check if it's a weekday
+            const day = new Date().getDay();
+            if (day === 0 || day === 6) return false; // Sunday or Saturday
+            break;
+        }
+      } catch (error) {
+        console.error(`Failed to check condition ${condition.type}:`, error);
+        return false;
+      }
+    }
+    
+    return true;
   }
   
   async executeActions(actions, reminder) {
@@ -279,17 +368,26 @@ Variation:`;
       id: Date.now().toString(),
       name: reminderData.name,
       message: reminderData.message,
-      type: reminderData.type, // 'time', 'presence', 'recurring'
-      target: reminderData.target, // 'dm', 'channel', 'automation'
-      userId: reminderData.userId,
+      type: reminderData.type, // 'time', 'presence', 'recurring', 'conditional'
+      target: reminderData.target, // 'dm', 'channel', 'automation', 'user', 'role'
+      userId: reminderData.userId, // Creator
+      targetUserId: reminderData.targetUserId, // Who to remind (if different from creator)
+      targetRoleId: reminderData.targetRoleId, // Role to remind
       channelId: reminderData.channelId,
       triggerTime: reminderData.triggerTime,
       deviceMac: reminderData.deviceMac,
       interval: reminderData.interval,
       context: reminderData.context,
+      messageUrl: reminderData.messageUrl, // Link to original message
       aiVariation: reminderData.aiVariation || false,
       // Automation actions
       actions: reminderData.actions || [], // Array of actions to execute
+      // Conditions
+      conditions: reminderData.conditions || [], // Array of conditions to check
+      // Snooze
+      snoozeCount: 0,
+      maxSnoozes: reminderData.maxSnoozes || 3,
+      // Status
       active: true,
       completed: false,
       createdAt: Date.now(),
@@ -301,6 +399,25 @@ Variation:`;
     await this.saveReminders();
     
     console.log(`✅ Added reminder: ${reminder.name}`);
+    return reminder;
+  }
+  
+  async snoozeReminder(reminderId, duration) {
+    const reminder = this.reminders.find(r => r.id === reminderId);
+    if (!reminder) {
+      throw new Error('Reminder not found');
+    }
+    
+    if (reminder.snoozeCount >= reminder.maxSnoozes) {
+      throw new Error(`Maximum snoozes (${reminder.maxSnoozes}) reached`);
+    }
+    
+    // Add snooze duration to trigger time
+    reminder.triggerTime = Date.now() + duration;
+    reminder.snoozeCount++;
+    reminder.active = true;
+    
+    await this.saveReminders();
     return reminder;
   }
   
