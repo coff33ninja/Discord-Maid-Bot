@@ -86,6 +86,67 @@ Assign a friendly name to a device.
 
 ---
 
+### /deviceemoji
+Add an emoji to a device for visual identification.
+
+```
+/deviceemoji <device> <emoji>
+```
+
+**Options:**
+- `device` (required) - Device MAC, IP, or name (autocomplete)
+- `emoji` (required) - Emoji to display (e.g., 🎮 💻 📱 🖥️)
+
+**Example:**
+```
+/deviceemoji device:Gaming PC emoji:🎮
+```
+
+**Features:**
+- Emojis appear in all device lists and autocomplete
+- Makes devices easier to identify at a glance
+- Supports any Unicode emoji
+
+---
+
+### /devicegroup
+Organize devices into groups for easier management.
+
+```
+/devicegroup <subcommand>
+```
+
+**Subcommands:**
+
+**assign** - Add device to a group
+```
+/devicegroup assign device:<device> group:<group_name>
+```
+
+**list** - Show all groups
+```
+/devicegroup list
+```
+
+**view** - View devices in a group
+```
+/devicegroup view group:<group_name>
+```
+
+**Examples:**
+```
+/devicegroup assign device:Gaming PC group:Family Devices
+/devicegroup assign device:Smart Light group:IoT Devices
+/devicegroup view group:Family Devices
+```
+
+**Features:**
+- Create groups on-the-fly by assigning devices
+- View online/offline status per group
+- Autocomplete for group names
+
+---
+
 ### /wol
 Send Wake-on-LAN magic packet to a device.
 
@@ -494,6 +555,111 @@ Unified Home Assistant control command with multiple subcommands.
 - Shows connection status
 - Lists available entities
 - Detects ESPHome devices
+
+---
+
+## Plugins & Automation
+
+### /speedalert
+Configure automatic alerts when internet speed drops below threshold.
+
+```
+/speedalert <subcommand>
+```
+
+**Subcommands:**
+
+**config** - Set up speed alerts
+```
+/speedalert config threshold:<mbps> channel:<channel>
+```
+
+**status** - View current settings
+```
+/speedalert status
+```
+
+**enable** - Turn on speed alerts
+```
+/speedalert enable
+```
+
+**disable** - Turn off speed alerts
+```
+/speedalert disable
+```
+
+**Examples:**
+```
+/speedalert config threshold:50 channel:#alerts
+/speedalert enable
+```
+
+**Features:**
+- Automatic monitoring during speed tests
+- Customizable threshold
+- Severity levels (warning/critical)
+- Shows percentage of expected speed
+
+---
+
+### /devicetrigger
+Create automation rules based on device network status.
+
+```
+/devicetrigger <subcommand>
+```
+
+**Subcommands:**
+
+**add** - Create a new trigger
+```
+/devicetrigger add name:<name> device:<device> event:<event> action:<action>
+```
+
+**list** - Show all triggers
+```
+/devicetrigger list
+```
+
+**remove** - Delete a trigger
+```
+/devicetrigger remove trigger:<trigger_id>
+```
+
+**toggle** - Enable/disable a trigger
+```
+/devicetrigger toggle trigger:<trigger_id> enabled:<true/false>
+```
+
+**Events:**
+- `online` - Device comes online
+- `offline` - Device goes offline
+- `unknown` - Unknown device detected
+
+**Actions:**
+- `discord_dm` - Send you a direct message
+- `discord_channel` - Post in a channel
+- `homeassistant` - Control Home Assistant device
+
+**Examples:**
+```
+# Get notified when gaming PC comes online
+/devicetrigger add name:PC Online device:Gaming PC event:online action:discord_dm message:Your PC is ready!
+
+# Turn off lights when phone disconnects
+/devicetrigger add name:Phone Left device:My Phone event:offline action:homeassistant ha_entity:light.bedroom ha_service:light.turn_off
+
+# Alert on unknown devices
+/devicetrigger add name:Security Alert device:any event:unknown action:discord_channel channel:#security
+```
+
+**Features:**
+- Trigger on device status changes
+- Multiple action types
+- Custom messages
+- Enable/disable without deleting
+- Track trigger statistics
 
 ---
 

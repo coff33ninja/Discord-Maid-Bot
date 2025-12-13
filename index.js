@@ -306,6 +306,15 @@ client.once('ready', async () => {
   };
   initScheduler(client, handlers);
   
+  // Pass Discord client to plugins
+  const { getLoadedPlugins } = await import('./src/plugins/plugin-manager.js');
+  const plugins = getLoadedPlugins();
+  plugins.forEach(plugin => {
+    if (typeof plugin.setClient === 'function') {
+      plugin.setClient(client);
+    }
+  });
+  
   // Check Tailscale availability
   const tailscaleAvailable = await isTailscaleAvailable();
   if (tailscaleAvailable) {
@@ -495,6 +504,82 @@ client.on('interactionCreate', async (interaction) => {
             value: g.device_group
           }))
         );
+      }
+      
+      // DEVICETRIGGER autocomplete
+      else if (commandName === 'devicetrigger') {
+        if (focusedOption.name === 'device') {
+          // Device autocomplete with "any" option
+          const devices = deviceOps.getAll();
+          
+          const choices = [{ name: '🌐 Any unknown device', value: 'any' }];
+          
+          const filtered = devices
+            .filter(d => {
+              if (!focusedValue) return true;
+              const searchStr = focusedValue.toLowerCase();
+              return (d.notes || '').toLowerCase().includes(searchStr) ||
+                     (d.hostname || '').toLowerCase().includes(searchStr) ||
+                     d.ip.includes(searchStr);
+            })
+            .slice(0, 24)
+            .map(d => {
+              const status = d.online ? '🟢' : '🔴';
+              const emoji = d.emoji || '';
+              const name = d.notes || d.hostname || d.ip;
+              return {
+                name: `${status} ${emoji} ${name}`.substring(0, 100),
+                value: d.mac
+              };
+            });
+          
+          await interaction.respond([...choices, ...filtered]);
+          
+        } else if (focusedOption.name === 'trigger') {
+          // Trigger autocomplete for remove/toggle
+          const { getPlugin } = await import('./src/plugins/plugin-manager.js');
+          const plugin = getPlugin('device-triggers');
+          
+          if (!plugin) {
+            await interaction.respond([{ name: 'Plugin not loaded', value: 'error' }]);
+            return;
+          }
+          
+          const triggers = await plugin.listTriggers();
+          
+          const filtered = triggers
+            .filter(t => !focusedValue || t.name.toLowerCase().includes(focusedValue.toLowerCase()))
+            .slice(0, 25)
+            .map(t => ({
+              name: `${t.enabled ? '✅' : '⚠️'} ${t.name} (${t.event})`,
+              value: t.id
+            }));
+          
+          await interaction.respond(filtered);
+          
+        } else if (focusedOption.name === 'ha_entity') {
+          // Home Assistant entity autocomplete
+          try {
+            const { getEntities } = await import('./src/integrations/homeassistant.js');
+            const entities = await getEntities();
+            
+            const filtered = entities
+              .filter(e => {
+                if (!focusedValue) return true;
+                return e.entity_id.toLowerCase().includes(focusedValue.toLowerCase()) ||
+                       (e.attributes?.friendly_name || '').toLowerCase().includes(focusedValue.toLowerCase());
+              })
+              .slice(0, 25)
+              .map(e => ({
+                name: `${e.attributes?.friendly_name || e.entity_id}`,
+                value: e.entity_id
+              }));
+            
+            await interaction.respond(filtered);
+          } catch (err) {
+            await interaction.respond([{ name: 'Home Assistant not available', value: 'error' }]);
+          }
+        }
       }
       
       // Home Assistant entity autocomplete
@@ -889,6 +974,206 @@ client.on('interactionCreate', async (interaction) => {
             .setTimestamp();
           
           await interaction.editReply({ embeds: [embed] });
+        }
+      } catch (error) {
+        await interaction.editReply(`❌ Error: ${error.message}`);
+      }
+    }
+    
+    // SPEEDALERT COMMAND
+    else if (commandName === 'speedalert') {
+      const subcommand = interaction.options.getSubcommand();
+      
+      await interaction.deferReply();
+      
+      try {
+        const { getPlugin, enablePlugin, disablePlugin } = await import('./src/plugins/plugin-manager.js');
+        const plugin = getPlugin('speed-alerts');
+        
+        if (!plugin) {
+          await interaction.editReply('❌ Speed Alerts plugin not loaded. Check if the plugin file exists in the plugins folder.');
+          return;
+        }
+        
+        if (subcommand === 'config') {
+          const threshold = interaction.options.getNumber('threshold');
+          const channel = interaction.options.getChannel('channel');
+          
+          await plugin.setThreshold(threshold);
+          await plugin.setAlertChannel(channel.id);
+          
+          const embed = new EmbedBuilder()
+            .setColor('#4CAF50')
+            .setTitle('⚡ Speed Alert Configured')
+            .setDescription('Speed alerts will be sent when internet speed drops below threshold')
+            .addFields(
+              { name: 'Threshold', value: `${threshold} Mbps`, inline: true },
+              { name: 'Alert Channel', value: `<#${channel.id}>`, inline: true },
+              { name: 'Status', value: plugin.enabled ? '✅ Enabled' : '⚠️ Disabled', inline: true }
+            )
+            .setFooter({ text: 'Use /speedalert enable to activate alerts' })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+          
+        } else if (subcommand === 'status') {
+          const settings = await plugin.getSettings();
+          
+          const embed = new EmbedBuilder()
+            .setColor(settings.enabled ? '#4CAF50' : '#FFA500')
+            .setTitle('⚡ Speed Alert Status')
+            .addFields(
+              { name: 'Status', value: settings.enabled ? '✅ Enabled' : '⚠️ Disabled', inline: true },
+              { name: 'Threshold', value: `${settings.threshold} Mbps`, inline: true },
+              { name: 'Alert Channel', value: settings.alertChannel ? `<#${settings.alertChannel}>` : 'Not configured', inline: true }
+            )
+            .setFooter({ text: 'Use /speedalert config to change settings' })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+          
+        } else if (subcommand === 'enable') {
+          await enablePlugin('speed-alerts');
+          await interaction.editReply('✅ Speed alerts enabled! You will be notified when internet speed drops below threshold.');
+          
+        } else if (subcommand === 'disable') {
+          await disablePlugin('speed-alerts');
+          await interaction.editReply('⚠️ Speed alerts disabled. No notifications will be sent.');
+        }
+      } catch (error) {
+        await interaction.editReply(`❌ Error: ${error.message}`);
+      }
+    }
+    
+    // DEVICETRIGGER COMMAND
+    else if (commandName === 'devicetrigger') {
+      const subcommand = interaction.options.getSubcommand();
+      
+      await interaction.deferReply();
+      
+      try {
+        const { getPlugin, enablePlugin, disablePlugin } = await import('./src/plugins/plugin-manager.js');
+        const plugin = getPlugin('device-triggers');
+        
+        if (!plugin) {
+          await interaction.editReply('❌ Device Triggers plugin not loaded. Check if the plugin file exists in the plugins folder.');
+          return;
+        }
+        
+        if (subcommand === 'add') {
+          const name = interaction.options.getString('name');
+          const deviceIdentifier = interaction.options.getString('device');
+          const event = interaction.options.getString('event');
+          const action = interaction.options.getString('action');
+          const message = interaction.options.getString('message');
+          const channel = interaction.options.getChannel('channel');
+          const haEntity = interaction.options.getString('ha_entity');
+          const haService = interaction.options.getString('ha_service');
+          
+          // Find device MAC
+          let deviceMac = 'any';
+          if (deviceIdentifier !== 'any') {
+            let device = deviceOps.getByMac(deviceIdentifier);
+            if (!device) {
+              device = deviceOps.getAll().find(d => 
+                d.ip === deviceIdentifier || 
+                d.hostname === deviceIdentifier || 
+                d.notes === deviceIdentifier
+              );
+            }
+            
+            if (!device) {
+              await interaction.editReply('❌ Device not found. Use "any" to trigger on unknown devices.');
+              return;
+            }
+            deviceMac = device.mac;
+          }
+          
+          // Build action data
+          const actionData = {};
+          if (action === 'discord_dm') {
+            actionData.userId = userId;
+            actionData.message = message;
+          } else if (action === 'discord_channel') {
+            if (!channel) {
+              await interaction.editReply('❌ Channel is required for discord_channel action.');
+              return;
+            }
+            actionData.channelId = channel.id;
+            actionData.message = message;
+          } else if (action === 'homeassistant') {
+            if (!haEntity || !haService) {
+              await interaction.editReply('❌ Home Assistant entity and service are required for homeassistant action.');
+              return;
+            }
+            actionData.entityId = haEntity;
+            actionData.service = haService;
+          }
+          
+          const trigger = await plugin.addTrigger({
+            name,
+            deviceMac,
+            event,
+            action,
+            actionData
+          });
+          
+          const deviceName = deviceMac === 'any' ? 'Any unknown device' : (deviceOps.getByMac(deviceMac)?.notes || deviceOps.getByMac(deviceMac)?.hostname || deviceMac);
+          
+          const embed = new EmbedBuilder()
+            .setColor('#4CAF50')
+            .setTitle('🔔 Device Trigger Created')
+            .setDescription(`Trigger **${name}** has been created and is now active`)
+            .addFields(
+              { name: 'Device', value: deviceName, inline: true },
+              { name: 'Event', value: event, inline: true },
+              { name: 'Action', value: action.replace('_', ' '), inline: true }
+            )
+            .setFooter({ text: `Trigger ID: ${trigger.id}` })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+          
+        } else if (subcommand === 'list') {
+          const triggers = await plugin.listTriggers();
+          
+          if (triggers.length === 0) {
+            await interaction.editReply('📋 No device triggers configured yet. Use `/devicetrigger add` to create one.');
+            return;
+          }
+          
+          const embed = new EmbedBuilder()
+            .setColor('#2196F3')
+            .setTitle('🔔 Device Triggers')
+            .setDescription(`${triggers.length} trigger(s) configured`)
+            .setTimestamp();
+          
+          triggers.forEach(t => {
+            const status = t.enabled ? '✅' : '⚠️';
+            const deviceName = t.deviceMac === 'any' ? 'Any unknown device' : (deviceOps.getByMac(t.deviceMac)?.notes || deviceOps.getByMac(t.deviceMac)?.hostname || t.deviceMac);
+            
+            embed.addFields({
+              name: `${status} ${t.name}`,
+              value: `Device: ${deviceName}\nEvent: ${t.event}\nAction: ${t.action}\nTriggered: ${t.triggerCount} times\nID: \`${t.id}\``,
+              inline: false
+            });
+          });
+          
+          await interaction.editReply({ embeds: [embed] });
+          
+        } else if (subcommand === 'remove') {
+          const triggerId = interaction.options.getString('trigger');
+          const removed = await plugin.removeTrigger(triggerId);
+          
+          await interaction.editReply(`🗑️ Removed trigger: **${removed.name}**`);
+          
+        } else if (subcommand === 'toggle') {
+          const triggerId = interaction.options.getString('trigger');
+          const enabled = interaction.options.getBoolean('enabled');
+          
+          const trigger = await plugin.toggleTrigger(triggerId, enabled);
+          
+          await interaction.editReply(`${enabled ? '✅' : '⚠️'} Trigger **${trigger.name}** is now ${enabled ? 'enabled' : 'disabled'}`);
         }
       } catch (error) {
         await interaction.editReply(`❌ Error: ${error.message}`);

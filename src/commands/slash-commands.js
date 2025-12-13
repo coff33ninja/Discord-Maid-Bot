@@ -267,6 +267,112 @@ export const commands = [
             .setRequired(true)
             .setAutocomplete(true))),
 
+  // Speed Alert Plugin Configuration
+  new SlashCommandBuilder()
+    .setName('speedalert')
+    .setDescription('⚡ Configure speed alert notifications')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('config')
+        .setDescription('Configure speed alert settings')
+        .addNumberOption(option =>
+          option.setName('threshold')
+            .setDescription('Alert when speed drops below (Mbps)')
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(1000))
+        .addChannelOption(option =>
+          option.setName('channel')
+            .setDescription('Channel to send alerts')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('status')
+        .setDescription('View current speed alert settings'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('enable')
+        .setDescription('Enable speed alerts'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('disable')
+        .setDescription('Disable speed alerts')),
+
+  // Device Trigger Plugin Configuration
+  new SlashCommandBuilder()
+    .setName('devicetrigger')
+    .setDescription('🔔 Manage device automation triggers')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('add')
+        .setDescription('Create a new device trigger')
+        .addStringOption(option =>
+          option.setName('name')
+            .setDescription('Trigger name')
+            .setRequired(true))
+        .addStringOption(option =>
+          option.setName('device')
+            .setDescription('Device to monitor (or "any" for unknown devices)')
+            .setRequired(true)
+            .setAutocomplete(true))
+        .addStringOption(option =>
+          option.setName('event')
+            .setDescription('When to trigger')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Device comes online', value: 'online' },
+              { name: 'Device goes offline', value: 'offline' },
+              { name: 'Unknown device detected', value: 'unknown' }
+            ))
+        .addStringOption(option =>
+          option.setName('action')
+            .setDescription('What to do')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Send me a DM', value: 'discord_dm' },
+              { name: 'Post in channel', value: 'discord_channel' },
+              { name: 'Control Home Assistant', value: 'homeassistant' }
+            ))
+        .addStringOption(option =>
+          option.setName('message')
+            .setDescription('Custom message (optional)'))
+        .addChannelOption(option =>
+          option.setName('channel')
+            .setDescription('Channel for alerts (if action is discord_channel)'))
+        .addStringOption(option =>
+          option.setName('ha_entity')
+            .setDescription('Home Assistant entity (if action is homeassistant)')
+            .setAutocomplete(true))
+        .addStringOption(option =>
+          option.setName('ha_service')
+            .setDescription('HA service (e.g., light.turn_on, switch.turn_off)')))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('list')
+        .setDescription('List all device triggers'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('remove')
+        .setDescription('Remove a trigger')
+        .addStringOption(option =>
+          option.setName('trigger')
+            .setDescription('Trigger to remove')
+            .setRequired(true)
+            .setAutocomplete(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('toggle')
+        .setDescription('Enable/disable a trigger')
+        .addStringOption(option =>
+          option.setName('trigger')
+            .setDescription('Trigger to toggle')
+            .setRequired(true)
+            .setAutocomplete(true))
+        .addBooleanOption(option =>
+          option.setName('enabled')
+            .setDescription('Enable or disable')
+            .setRequired(true))),
+
   // Home Assistant commands
   new SlashCommandBuilder()
     .setName('homeassistant')
