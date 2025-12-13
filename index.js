@@ -1513,10 +1513,34 @@ client.on('interactionCreate', async (interaction) => {
         
         try {
           const { getESPDevices } = await import('./src/integrations/homeassistant.js');
-          const devices = await getESPDevices();
+          const result = await getESPDevices();
+          
+          // Check if result has warning (no integration or no devices)
+          if (result.warning) {
+            const embed = new EmbedBuilder()
+              .setColor('#FFA500')
+              .setTitle('⚠️ ESP Device Detection')
+              .setDescription(`**${result.warning}**`)
+              .setTimestamp();
+            
+            if (result.instructions) {
+              embed.addFields({
+                name: '📝 Instructions',
+                value: result.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n'),
+                inline: false
+              });
+            }
+            
+            embed.setFooter({ text: 'Use /homeassistant diagnose for detailed analysis' });
+            
+            await interaction.editReply({ embeds: [embed] });
+            return;
+          }
+          
+          const devices = result.devices || [];
           
           if (devices.length === 0) {
-            await interaction.editReply('⚠️ No ESP devices found.');
+            await interaction.editReply('⚠️ No ESP devices found. Use `/homeassistant diagnose` for troubleshooting.');
             return;
           }
           
@@ -1538,7 +1562,106 @@ client.on('interactionCreate', async (interaction) => {
           
           await interaction.editReply({ embeds: [embed] });
         } catch (error) {
-          await interaction.editReply(`❌ Failed to get ESP devices: ${error.message}`);
+          await interaction.editReply(`❌ Failed to get ESP devices: ${error.message}\n\nUse \`/homeassistant diagnose\` for troubleshooting.`);
+        }
+      }
+      else if (subcommand === 'diagnose') {
+        await interaction.deferReply();
+        
+        try {
+          const { checkConnection, getEntities } = await import('./src/integrations/homeassistant.js');
+          const axios = (await import('axios')).default;
+          
+          const embed = new EmbedBuilder()
+            .setColor('#4169E1')
+            .setTitle('🔬 Home Assistant Diagnostics')
+            .setTimestamp();
+          
+          // Test connection
+          const connected = await checkConnection();
+          embed.addFields({
+            name: '📡 Connection',
+            value: connected ? '✅ Connected' : '❌ Not connected',
+            inline: true
+          });
+          
+          if (!connected) {
+            embed.setDescription('❌ Cannot connect to Home Assistant. Check your configuration.');
+            await interaction.editReply({ embeds: [embed] });
+            return;
+          }
+          
+          // Get config
+          const haUrl = process.env.HA_URL || configOps.get('ha_url');
+          const haToken = process.env.HA_TOKEN || configOps.get('ha_token');
+          const haClient = axios.create({
+            baseURL: haUrl,
+            headers: { 'Authorization': `Bearer ${haToken}`, 'Content-Type': 'application/json' }
+          });
+          
+          const config = await haClient.get('/api/config');
+          const components = config.data.components;
+          
+          embed.addFields({
+            name: '🏠 Home Assistant',
+            value: `Version: ${config.data.version}\nComponents: ${components.length}`,
+            inline: true
+          });
+          
+          // Check integrations
+          const integrations = {
+            'ESPHome': components.includes('esphome'),
+            'MQTT': components.includes('mqtt'),
+            'Tasmota': components.includes('tasmota')
+          };
+          
+          const intStatus = Object.entries(integrations)
+            .map(([name, installed]) => `${installed ? '✅' : '❌'} ${name}`)
+            .join('\n');
+          
+          embed.addFields({
+            name: '🔌 IoT Integrations',
+            value: intStatus,
+            inline: true
+          });
+          
+          // Get entities
+          const entities = await getEntities();
+          const lights = entities.filter(e => e.entity_id.startsWith('light.')).length;
+          const switches = entities.filter(e => e.entity_id.startsWith('switch.')).length;
+          const sensors = entities.filter(e => e.entity_id.startsWith('sensor.')).length;
+          
+          embed.addFields({
+            name: '📊 Entities',
+            value: `Total: ${entities.length}\n💡 Lights: ${lights}\n🔌 Switches: ${switches}\n📈 Sensors: ${sensors}`,
+            inline: false
+          });
+          
+          // Recommendations
+          let recommendations = [];
+          if (!integrations.ESPHome) {
+            recommendations.push('Install ESPHome integration for ESP devices');
+          }
+          if (!integrations.MQTT) {
+            recommendations.push('Consider installing MQTT for more device options');
+          }
+          if (lights === 0 && switches === 0) {
+            recommendations.push('No controllable devices found - add smart devices');
+          }
+          
+          if (recommendations.length > 0) {
+            embed.addFields({
+              name: '💡 Recommendations',
+              value: recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n'),
+              inline: false
+            });
+          }
+          
+          embed.setFooter({ text: 'Run test-homeassistant.js on server for detailed analysis' });
+          
+          await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+          await interaction.editReply(`❌ Diagnostic failed: ${error.message}`);
         }
       }
     }

@@ -83,11 +83,63 @@ export async function getESPDevices() {
   }
   
   try {
+    // First check if ESPHome integration is installed
+    const config = await haClient.get('/api/config');
+    const hasESPHome = config.data.components.includes('esphome');
+    
+    if (!hasESPHome) {
+      console.warn('⚠️  ESPHome integration not installed in Home Assistant');
+      return {
+        devices: [],
+        warning: 'ESPHome integration not installed',
+        instructions: [
+          'Go to Settings > Devices & Services in Home Assistant',
+          'Click "+ ADD INTEGRATION"',
+          'Search for "ESPHome"',
+          'Follow the setup wizard'
+        ]
+      };
+    }
+    
     const entities = await getEntities();
-    const espDevices = entities.filter(entity => 
-      entity.entity_id.includes('esphome') || 
-      entity.attributes?.integration === 'esphome'
+    
+    // Method 1: Look for ESPHome platform
+    let espDevices = entities.filter(entity => 
+      entity.attributes?.platform === 'esphome'
     );
+    
+    // Method 2: Look for 'esp' in entity_id or friendly_name
+    if (espDevices.length === 0) {
+      espDevices = entities.filter(entity => 
+        entity.entity_id.toLowerCase().includes('esp') || 
+        entity.attributes?.friendly_name?.toLowerCase().includes('esp')
+      );
+    }
+    
+    // Method 3: Check MQTT devices (ESP might be using MQTT)
+    const hasMQTT = config.data.components.includes('mqtt');
+    if (espDevices.length === 0 && hasMQTT) {
+      const mqttDevices = entities.filter(entity => 
+        entity.attributes?.platform === 'mqtt'
+      );
+      
+      if (mqttDevices.length > 0) {
+        console.log(`ℹ️  Found ${mqttDevices.length} MQTT devices (ESP devices might be using MQTT)`);
+      }
+    }
+    
+    if (espDevices.length === 0) {
+      return {
+        devices: [],
+        warning: 'No ESP devices found',
+        instructions: [
+          'Make sure your ESP devices are flashed with ESPHome firmware',
+          'Ensure they are on the same network as Home Assistant',
+          'Check if devices appear in Settings > Devices & Services > ESPHome',
+          'Alternatively, configure ESP devices to use MQTT'
+        ]
+      };
+    }
     
     // Group by device
     const devices = {};
@@ -103,11 +155,15 @@ export async function getESPDevices() {
         id: entity.entity_id,
         name: entity.attributes?.friendly_name,
         state: entity.state,
-        type: entity.entity_id.split('.')[0]
+        type: entity.entity_id.split('.')[0],
+        platform: entity.attributes?.platform
       });
     }
     
-    return Object.values(devices);
+    return {
+      devices: Object.values(devices),
+      count: Object.keys(devices).length
+    };
   } catch (error) {
     console.error('Failed to get ESP devices:', error.message);
     throw error;

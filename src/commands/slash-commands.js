@@ -281,7 +281,11 @@ export const commands = [
     .addSubcommand(subcommand =>
       subcommand
         .setName('esp')
-        .setDescription('List ESP devices')),
+        .setDescription('List ESP devices'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('diagnose')
+        .setDescription('Run Home Assistant diagnostics')),
 
   // Plugin commands
   new SlashCommandBuilder()
