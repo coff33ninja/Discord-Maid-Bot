@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 
 const PLUGINS_DIR = path.join(__dirname, '../../plugins');
 const loadedPlugins = new Map();
+const pluginCommands = new Map(); // Store plugin commands
 let watcher = null;
 
 // Plugin interface
@@ -106,6 +107,9 @@ export async function loadPlugin(filename) {
     
     // Load plugin
     await plugin.onLoad();
+    
+    // Try to load plugin commands (if they exist)
+    await loadPluginCommands(plugin.name);
     
     loadedPlugins.set(plugin.name, {
       plugin,
@@ -343,6 +347,100 @@ export function getPluginStats() {
   return {
     total: plugins.length,
     enabled: plugins.filter(p => p.enabled).length,
-    disabled: plugins.filter(p => !p.enabled).length
+    disabled: plugins.filter(p => !p.enabled).length,
+    withCommands: pluginCommands.size
   };
+}
+
+// Load plugin commands from plugin folder
+async function loadPluginCommands(pluginName) {
+  try {
+    const commandsPath = path.join(PLUGINS_DIR, pluginName, 'commands.js');
+    const commandsUrl = pathToFileURL(commandsPath).href;
+    
+    // Check if commands file exists
+    try {
+      await fs.access(commandsPath);
+    } catch {
+      // No commands file - that's okay
+      return;
+    }
+    
+    // Load commands module
+    const commandsModule = await import(`${commandsUrl}?t=${Date.now()}`);
+    
+    if (!commandsModule.commandGroup || !commandsModule.handleCommand) {
+      console.warn(`Plugin ${pluginName} commands.js missing required exports`);
+      return;
+    }
+    
+    pluginCommands.set(pluginName, {
+      commandGroup: commandsModule.commandGroup,
+      parentCommand: commandsModule.parentCommand || 'automation',
+      handleCommand: commandsModule.handleCommand,
+      handleAutocomplete: commandsModule.handleAutocomplete || null
+    });
+    
+    console.log(`   📋 Loaded commands for plugin: ${pluginName}`);
+  } catch (error) {
+    // Silently ignore if no commands file exists
+    if (error.code !== 'ENOENT') {
+      console.error(`Failed to load commands for plugin ${pluginName}:`, error);
+    }
+  }
+}
+
+// Get all plugin commands
+export function getPluginCommands() {
+  return Array.from(pluginCommands.entries()).map(([pluginName, commands]) => ({
+    pluginName,
+    parentCommand: commands.parentCommand,
+    commandGroup: commands.commandGroup
+  }));
+}
+
+// Get plugin command handler
+export function getPluginCommandHandler(pluginName) {
+  return pluginCommands.get(pluginName);
+}
+
+// Handle plugin command
+export async function handlePluginCommand(pluginName, interaction) {
+  const commandData = pluginCommands.get(pluginName);
+  if (!commandData) {
+    throw new Error(`No commands found for plugin ${pluginName}`);
+  }
+  
+  const plugin = getPlugin(pluginName);
+  if (!plugin || !plugin.enabled) {
+    throw new Error(`Plugin ${pluginName} not found or disabled`);
+  }
+  
+  return await commandData.handleCommand(interaction, plugin);
+}
+
+// Handle plugin autocomplete
+export async function handlePluginAutocomplete(pluginName, interaction) {
+  const commandData = pluginCommands.get(pluginName);
+  if (!commandData || !commandData.handleAutocomplete) {
+    return;
+  }
+  
+  const plugin = getPlugin(pluginName);
+  if (!plugin || !plugin.enabled) {
+    return;
+  }
+  
+  return await commandData.handleAutocomplete(interaction, plugin);
+}
+
+// Get plugin name by parent command and subcommand group
+export function getPluginCommandByGroup(parentCommand, subcommandGroup) {
+  for (const [pluginName, commandData] of pluginCommands.entries()) {
+    if (commandData.parentCommand === parentCommand && 
+        commandData.commandGroup.name === subcommandGroup) {
+      return pluginName;
+    }
+  }
+  return null;
 }

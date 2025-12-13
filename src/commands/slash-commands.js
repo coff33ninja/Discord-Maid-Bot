@@ -913,6 +913,9 @@ export async function registerCommands(client) {
   try {
     console.log('📝 Registering slash commands...');
     
+    // Inject plugin commands dynamically
+    await injectPluginCommands();
+    
     // Register globally (takes up to 1 hour to propagate)
     // await client.application.commands.set(commands);
     
@@ -925,5 +928,35 @@ export async function registerCommands(client) {
     console.log('✅ All slash commands registered!');
   } catch (error) {
     console.error('❌ Failed to register commands:', error);
+  }
+}
+
+// Inject plugin commands into parent commands
+async function injectPluginCommands() {
+  try {
+    const { getPluginCommands } = await import('../plugins/plugin-manager.js');
+    const pluginCommands = getPluginCommands();
+    
+    if (pluginCommands.length === 0) {
+      return;
+    }
+    
+    console.log(`📦 Injecting ${pluginCommands.length} plugin command(s)...`);
+    
+    for (const { pluginName, parentCommand, commandGroup } of pluginCommands) {
+      // Find the parent command
+      const parentCmd = commands.find(cmd => cmd.name === parentCommand);
+      
+      if (!parentCmd) {
+        console.warn(`   ⚠️  Parent command '${parentCommand}' not found for plugin '${pluginName}'`);
+        continue;
+      }
+      
+      // Add the command group to the parent command
+      parentCmd.addSubcommandGroup(commandGroup);
+      console.log(`   ✅ Injected '${commandGroup.name}' into /${parentCommand} (${pluginName})`);
+    }
+  } catch (error) {
+    console.error('Failed to inject plugin commands:', error);
   }
 }

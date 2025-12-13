@@ -601,6 +601,20 @@ client.on('interactionCreate', async (interaction) => {
         );
       }
       
+      // Check if it's a plugin command autocomplete (works for ANY parent command)
+      if (subcommandGroup) {
+        try {
+          const { getPluginCommandByGroup, handlePluginAutocomplete } = await import('./src/plugins/plugin-manager.js');
+          const pluginName = getPluginCommandByGroup(commandName, subcommandGroup);
+          if (pluginName) {
+            await handlePluginAutocomplete(pluginName, interaction);
+            return;
+          }
+        } catch (error) {
+          // Not a plugin command, continue to regular handlers
+        }
+      }
+      
       // /automation devicetrigger - device/trigger/entity autocomplete
       else if (commandName === 'automation' && subcommandGroup === 'devicetrigger') {
         if (focusedOption.name === 'device') {
@@ -993,6 +1007,18 @@ client.on('interactionCreate', async (interaction) => {
     const username = interaction.user.username;
     
     // ============================================
+    // DYNAMIC PLUGIN COMMAND ROUTER (Priority Check)
+    // ============================================
+    const subcommandGroup = interaction.options.getSubcommandGroup(false);
+    if (subcommandGroup) {
+      const { getPluginCommandByGroup } = await import('./src/plugins/plugin-manager.js');
+      const pluginName = getPluginCommandByGroup(commandName, subcommandGroup);
+      if (pluginName) {
+        interaction.commandName = `plugin:${pluginName}`;
+      }
+    }
+    
+    // ============================================
     // UNIFIED COMMAND ROUTERS
     // ============================================
     
@@ -1030,6 +1056,7 @@ client.on('interactionCreate', async (interaction) => {
       } else if (subcommandGroup === 'schedule') {
         interaction.commandName = 'schedule';
       }
+      // Plugin commands already handled by dynamic router above
     }
     
     // /research router
@@ -1086,6 +1113,28 @@ client.on('interactionCreate', async (interaction) => {
     
     // Update commandName after routing
     const routedCommandName = interaction.commandName || commandName;
+    
+    // ============================================
+    // PLUGIN COMMAND HANDLERS
+    // ============================================
+    
+    // Handle plugin commands (prefixed with "plugin:")
+    if (routedCommandName.startsWith('plugin:')) {
+      const pluginName = routedCommandName.replace('plugin:', '');
+      
+      try {
+        const { handlePluginCommand } = await import('./src/plugins/plugin-manager.js');
+        await handlePluginCommand(pluginName, interaction);
+        return;
+      } catch (error) {
+        console.error(`Plugin command error (${pluginName}):`, error);
+        await interaction.reply({
+          content: `❌ Plugin command failed: ${error.message}`,
+          ephemeral: true
+        });
+        return;
+      }
+    }
     
     // ============================================
     // EXISTING COMMAND HANDLERS
