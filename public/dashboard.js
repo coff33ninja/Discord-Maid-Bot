@@ -20,7 +20,6 @@ async function init() {
   await loadTasks();
   await loadResearch();
   await loadSpeedHistory();
-  await loadTailscale();
   await loadHomeAssistant();
   await loadPlugins();
   await loadSettings();
@@ -112,55 +111,7 @@ async function loadStats() {
   }
 }
 
-// Load Tailscale devices
-async function loadTailscale() {
-  try {
-    const statusResponse = await authFetch('/api/tailscale/status');
-    const statusData = await statusResponse.json();
-    
-    const statusDiv = document.getElementById('tailscaleStatus');
-    if (statusData.available) {
-      statusDiv.innerHTML = `<p style="color: #10b981;">✅ Tailscale Connected</p>`;
-    } else {
-      statusDiv.innerHTML = `<p style="color: #ef4444;">⚠️ Tailscale not available</p>`;
-      return;
-    }
-    
-    const response = await authFetch('/api/tailscale/devices');
-    const devices = await response.json();
-    
-    const list = document.getElementById('tailscaleList');
-    list.innerHTML = '';
-    
-    if (devices.length === 0) {
-      list.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No Tailscale devices found</p>';
-      return;
-    }
-    
-    devices.forEach(device => {
-      const item = document.createElement('div');
-      item.className = 'device-item';
-      item.innerHTML = `
-        <div class="device-info">
-          <div class="device-name">
-            <span class="status-dot ${device.online ? 'status-online' : 'status-offline'}"></span>
-            ${device.hostname}
-          </div>
-          <div class="device-details">
-            IP: ${device.ip} | OS: ${device.os}${device.latency ? ` | ${device.latency}ms` : ''}
-          </div>
-        </div>
-      `;
-      list.appendChild(item);
-    });
-  } catch (error) {
-    console.error('Failed to load Tailscale:', error);
-  }
-}
 
-async function refreshTailscale() {
-  await loadTailscale();
-}
 
 // Load Home Assistant
 async function loadHomeAssistant() {
@@ -736,67 +687,241 @@ async function deleteDiscordUser(userId, username) {
   }
 }
 
-// Load devices
+// Store unified network data
+let unifiedNetworkData = null;
+let currentNetworkFilter = 'all';
+
+// Load devices using unified network scan
 async function loadDevices() {
   try {
-    const response = await authFetch('/api/devices');
-    const devices = await response.json();
+    const response = await authFetch('/api/network/unified');
+    unifiedNetworkData = await response.json();
     
-    const deviceList = document.getElementById('deviceList');
-    deviceList.innerHTML = '';
+    // Update stats
+    document.getElementById('networkTotal').textContent = unifiedNetworkData.stats.total;
+    document.getElementById('networkLocal').textContent = unifiedNetworkData.stats.local;
+    document.getElementById('networkTailscale').textContent = unifiedNetworkData.stats.tailscale;
     
-    if (devices.length === 0) {
-      deviceList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No devices found</p>';
-      return;
-    }
+    // Display devices based on current filter
+    displayDevices(currentNetworkFilter);
     
-    devices.forEach(device => {
-      const item = document.createElement('div');
-      item.className = 'device-item';
-      item.innerHTML = `
-        <div class="device-info">
-          <div class="device-name">
-            <span class="status-dot ${device.online ? 'status-online' : 'status-offline'}"></span>
-            ${device.hostname || device.ip}
-          </div>
-          <div class="device-details">
-            IP: ${device.ip} | MAC: ${device.mac}
-          </div>
-          ${device.notes ? `<div class="device-details">📝 ${device.notes}</div>` : ''}
-        </div>
-        <button onclick="wakeDevice(${device.id}, '${device.hostname || device.ip}')" 
-                style="background: #10b981; padding: 8px 16px; font-size: 0.9em;"
-                ${device.online ? 'disabled title="Device is already online"' : ''}>
-          ⚡ Wake
-        </button>
-      `;
-      deviceList.appendChild(item);
-    });
-    
-    updateDeviceChart(devices);
+    // Update chart
+    updateDeviceChart(unifiedNetworkData.all);
   } catch (error) {
     console.error('Failed to load devices:', error);
+    document.getElementById('deviceList').innerHTML = '<p style="text-align: center; color: #ef4444; padding: 20px;">Failed to load devices</p>';
   }
 }
 
+// Display devices based on filter
+function displayDevices(filter) {
+  if (!unifiedNetworkData) return;
+  
+  let devices = [];
+  if (filter === 'all') {
+    devices = unifiedNetworkData.all;
+  } else if (filter === 'local') {
+    devices = unifiedNetworkData.local;
+  } else if (filter === 'tailscale') {
+    devices = unifiedNetworkData.tailscale;
+  }
+  
+  const deviceList = document.getElementById('deviceList');
+  deviceList.innerHTML = '';
+  
+  if (devices.length === 0) {
+    deviceList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No devices found</p>';
+    return;
+  }
+  
+  devices.forEach(device => {
+    const item = document.createElement('div');
+    item.className = 'device-item';
+    
+    // Determine display name
+    const displayName = device.name || device.hostname || device.ip;
+    
+    // Network badge
+    let networkBadge = '';
+    if (device.network === 'both') {
+      networkBadge = '<span style="background: #8b5cf6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-left: 8px;">🌐 VPN</span>';
+    } else if (device.network === 'tailscale') {
+      networkBadge = '<span style="background: #8b5cf6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-left: 8px;">🌐 Tailscale</span>';
+    }
+    
+    // Build details
+    let details = `IP: ${device.ip}`;
+    if (device.mac && device.mac !== 'N/A (VPN)') {
+      details += ` | MAC: ${device.mac}`;
+    }
+    if (device.latency) {
+      details += ` | ${device.latency}ms`;
+    }
+    if (device.os) {
+      details += ` | ${device.os}`;
+    }
+    
+    item.innerHTML = `
+      <div class="device-info">
+        <div class="device-name">
+          <span class="status-dot ${device.online ? 'status-online' : 'status-offline'}"></span>
+          ${device.name ? `<strong>${device.name}</strong>` : displayName}
+          ${networkBadge}
+        </div>
+        <div class="device-details">${details}</div>
+        ${device.name && device.hostname ? `<div class="device-details" style="color: #999;">Hostname: ${device.hostname}</div>` : ''}
+      </div>
+      <div style="display: flex; gap: 5px;">
+        <button onclick="editDeviceName('${device.mac}', '${(device.name || '').replace(/'/g, "\\'")}')" 
+                style="background: #f59e0b; padding: 8px 12px; font-size: 0.85em;">
+          🏷️
+        </button>
+        ${device.mac !== 'N/A (VPN)' ? `
+          <button onclick="wakeDevice('${device.mac}', '${displayName.replace(/'/g, "\\'")}')" 
+                  style="background: #10b981; padding: 8px 12px; font-size: 0.85em;"
+                  ${device.online ? 'disabled title="Device is already online"' : ''}>
+            ⚡
+          </button>
+        ` : ''}
+      </div>
+    `;
+    deviceList.appendChild(item);
+  });
+}
+
+// Switch network tab
+function switchNetworkTab(filter) {
+  currentNetworkFilter = filter;
+  
+  // Update tab styling
+  document.querySelectorAll('.network-tab').forEach(tab => {
+    tab.style.borderBottomColor = 'transparent';
+    tab.style.color = '#666';
+    tab.style.fontWeight = 'normal';
+  });
+  event.target.style.borderBottomColor = '#667eea';
+  event.target.style.color = '#667eea';
+  event.target.style.fontWeight = 'bold';
+  
+  // Display filtered devices
+  displayDevices(filter);
+}
+
 // Wake device via WOL
-async function wakeDevice(deviceId, deviceName) {
+async function wakeDevice(mac, deviceName) {
   if (!confirm(`Send Wake-on-LAN packet to ${deviceName}?`)) {
     return;
   }
   
   try {
-    const response = await authFetch(`/api/devices/${deviceId}/wake`, {
+    // Find device by MAC
+    const response = await authFetch('/api/devices');
+    const devices = await response.json();
+    const device = devices.find(d => d.mac === mac);
+    
+    if (!device) {
+      alert('❌ Device not found');
+      return;
+    }
+    
+    const wakeResponse = await authFetch(`/api/devices/${device.id}/wake`, {
       method: 'POST'
     });
     
-    const result = await response.json();
+    const result = await wakeResponse.json();
     
-    if (response.ok) {
+    if (wakeResponse.ok) {
       alert(`✅ ${result.message}\n\nThe device should wake up shortly.`);
       await loadDevices();
     } else {
       alert(`❌ Failed to wake device: ${result.error}`);
+    }
+  } catch (error) {
+    alert(`❌ Error: ${error.message}`);
+  }
+}
+
+// Show device naming modal
+function showNameDeviceModal() {
+  const modal = document.getElementById('nameDeviceModal');
+  modal.style.display = 'flex';
+  
+  // Populate device dropdown
+  if (unifiedNetworkData) {
+    const select = document.getElementById('deviceToName');
+    select.innerHTML = '<option value="">Select a device...</option>';
+    
+    unifiedNetworkData.all.forEach(device => {
+      const displayName = device.name || device.hostname || device.ip;
+      const status = device.online ? '🟢' : '🔴';
+      const option = document.createElement('option');
+      option.value = device.mac;
+      option.textContent = `${status} ${displayName} (${device.ip})`;
+      select.appendChild(option);
+    });
+  }
+  
+  document.getElementById('deviceFriendlyName').value = '';
+}
+
+// Hide device naming modal
+function hideNameDeviceModal() {
+  document.getElementById('nameDeviceModal').style.display = 'none';
+}
+
+// Edit device name (quick edit)
+function editDeviceName(mac, currentName) {
+  const newName = prompt('Enter friendly name for this device:', currentName);
+  if (newName === null) return; // Cancelled
+  
+  assignDeviceNameByMac(mac, newName.trim());
+}
+
+// Assign device name from modal
+async function assignDeviceName() {
+  const mac = document.getElementById('deviceToName').value;
+  const name = document.getElementById('deviceFriendlyName').value.trim();
+  
+  if (!mac) {
+    alert('Please select a device');
+    return;
+  }
+  
+  if (!name) {
+    alert('Please enter a friendly name');
+    return;
+  }
+  
+  await assignDeviceNameByMac(mac, name);
+  hideNameDeviceModal();
+}
+
+// Assign device name by MAC address
+async function assignDeviceNameByMac(mac, name) {
+  try {
+    // Find device by MAC
+    const response = await authFetch('/api/devices');
+    const devices = await response.json();
+    const device = devices.find(d => d.mac === mac);
+    
+    if (!device) {
+      alert('❌ Device not found');
+      return;
+    }
+    
+    // Update device notes (name)
+    const updateResponse = await authFetch(`/api/devices/${device.id}/notes`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: name })
+    });
+    
+    if (updateResponse.ok) {
+      alert(`✅ Device named "${name}" successfully!`);
+      await loadDevices();
+    } else {
+      const error = await updateResponse.json();
+      alert(`❌ Failed to name device: ${error.error}`);
     }
   } catch (error) {
     alert(`❌ Error: ${error.message}`);

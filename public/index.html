@@ -429,8 +429,7 @@
     </div>
 
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('devices')">📡 Devices</button>
-      <button class="tab" onclick="switchTab('tailscale')">🌐 Tailscale</button>
+      <button class="tab active" onclick="switchTab('devices')">📡 Network</button>
       <button class="tab" onclick="switchTab('speedtest')">🚀 Speed Tests</button>
       <button class="tab" onclick="switchTab('tasks')">⏰ Scheduled Tasks</button>
       <button class="tab" onclick="switchTab('homeassistant')">🏠 Smart Home</button>
@@ -443,16 +442,56 @@
       <div class="content-grid">
         <div class="card">
           <h2>
-            📡 Network Devices
-            <button class="refresh-btn" onclick="refreshDevices()">🔄 Refresh</button>
+            📡 Unified Network Scan
+            <button class="refresh-btn" onclick="refreshDevices()">🔄 Scan Now</button>
           </h2>
+          
+          <!-- Network Stats -->
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+            <div>
+              <div style="font-size: 0.85em; color: #666;">Total Devices</div>
+              <div style="font-size: 1.5em; font-weight: bold; color: #667eea;" id="networkTotal">0</div>
+            </div>
+            <div>
+              <div style="font-size: 0.85em; color: #666;">🏠 Local Network</div>
+              <div style="font-size: 1.5em; font-weight: bold; color: #10b981;" id="networkLocal">0</div>
+            </div>
+            <div>
+              <div style="font-size: 0.85em; color: #666;">🌐 Tailscale</div>
+              <div style="font-size: 1.5em; font-weight: bold; color: #8b5cf6;" id="networkTailscale">0</div>
+            </div>
+          </div>
+          
+          <!-- Sub-tabs for network types -->
+          <div style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid #e5e7eb;">
+            <button class="network-tab active" onclick="switchNetworkTab('all')" style="padding: 8px 16px; border: none; background: none; cursor: pointer; border-bottom: 3px solid #667eea; color: #667eea; font-weight: bold;">
+              All Devices
+            </button>
+            <button class="network-tab" onclick="switchNetworkTab('local')" style="padding: 8px 16px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #666;">
+              🏠 Local
+            </button>
+            <button class="network-tab" onclick="switchNetworkTab('tailscale')" style="padding: 8px 16px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #666;">
+              🌐 Tailscale
+            </button>
+          </div>
+          
           <div class="device-list" id="deviceList">
             <p style="text-align: center; color: #999; padding: 20px;">Loading devices...</p>
           </div>
         </div>
         <div class="card">
-          <h2>📊 Device Status</h2>
+          <h2>📊 Network Overview</h2>
           <canvas id="deviceChart"></canvas>
+          
+          <div style="margin-top: 30px;">
+            <h3 style="font-size: 1.1em; color: #667eea; margin-bottom: 10px;">💡 Quick Actions</h3>
+            <button onclick="showNameDeviceModal()" style="width: 100%; margin-bottom: 10px;">
+              🏷️ Name a Device
+            </button>
+            <button onclick="refreshDevices()" style="width: 100%; background: #10b981;">
+              🔄 Refresh Network
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -475,17 +514,23 @@
       </div>
     </div>
 
-    <div id="tailscale-tab" class="tab-content">
-      <div class="card">
-        <h2>
-          🌐 Tailscale Network
-          <button class="refresh-btn" onclick="refreshTailscale()">🔄 Refresh</button>
-        </h2>
-        <div id="tailscaleStatus" style="margin-bottom: 20px;">
-          <p style="color: #999;">Loading Tailscale status...</p>
+    <!-- Device Naming Modal -->
+    <div id="nameDeviceModal" class="modal">
+      <div class="modal-content">
+        <h3>�️i Assign Device Name</h3>
+        <div class="form-group">
+          <label>Select Device</label>
+          <select id="deviceToName" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            <option value="">Loading devices...</option>
+          </select>
         </div>
-        <div class="device-list" id="tailscaleList">
-          <p style="text-align: center; color: #999; padding: 20px;">Loading devices...</p>
+        <div class="form-group">
+          <label>Friendly Name</label>
+          <input type="text" id="deviceFriendlyName" placeholder="e.g., Gaming PC, Living Room TV" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        <div class="button-group">
+          <button onclick="assignDeviceName()">Save Name</button>
+          <button onclick="hideNameDeviceModal()" style="background: #6b7280;">Cancel</button>
         </div>
       </div>
     </div>
