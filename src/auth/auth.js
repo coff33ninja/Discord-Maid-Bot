@@ -40,7 +40,15 @@ export const PERMISSIONS = {
   MANAGE_USERS: 'manage_users',
   
   // Dashboard
-  ACCESS_DASHBOARD: 'access_dashboard'
+  ACCESS_DASHBOARD: 'access_dashboard',
+  
+  // Home Assistant
+  CONTROL_LIGHTS: 'control_lights',
+  CONTROL_SWITCHES: 'control_switches',
+  CONTROL_CLIMATE: 'control_climate',
+  TRIGGER_AUTOMATION: 'trigger_automation',
+  ACTIVATE_SCENE: 'activate_scene',
+  RUN_SCRIPT: 'run_script'
 };
 
 // Role permissions mapping
@@ -55,7 +63,10 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_RESEARCH,
     PERMISSIONS.VIEW_TASK,
     PERMISSIONS.VIEW_CONFIG,
-    PERMISSIONS.ACCESS_DASHBOARD
+    PERMISSIONS.ACCESS_DASHBOARD,
+    PERMISSIONS.CONTROL_LIGHTS,
+    PERMISSIONS.CONTROL_SWITCHES,
+    PERMISSIONS.CONTROL_CLIMATE
   ],
   [ROLES.VIEWER]: [
     PERMISSIONS.VIEW_SPEEDTEST,

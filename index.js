@@ -482,7 +482,7 @@ client.on('interactionCreate', async (interaction) => {
       // Home Assistant entity autocomplete
       else if (commandName === 'homeassistant') {
         const subcommand = interaction.options.getSubcommand();
-        const { getAllLights, getAllSwitches, getAllSensors } = await import('./src/integrations/homeassistant.js');
+        const { getAllLights, getAllSwitches, getAllSensors, getAllScenes, getAllAutomations, getAllScripts } = await import('./src/integrations/homeassistant.js');
         
         let entities = [];
         let entityType = '';
@@ -497,6 +497,15 @@ client.on('interactionCreate', async (interaction) => {
           } else if (subcommand === 'sensor') {
             entities = await getAllSensors();
             entityType = 'sensor';
+          } else if (subcommand === 'scene') {
+            entities = await getAllScenes();
+            entityType = 'scene';
+          } else if (subcommand === 'automation') {
+            entities = await getAllAutomations();
+            entityType = 'automation';
+          } else if (subcommand === 'script') {
+            entities = await getAllScripts();
+            entityType = 'script';
           }
         } catch (err) {
           // HA not configured or unavailable
@@ -539,6 +548,12 @@ client.on('interactionCreate', async (interaction) => {
             } else if (entityType === 'sensor') {
               const unit = e.attributes?.unit_of_measurement || '';
               stateIcon = `${state}${unit}`;
+            } else if (entityType === 'scene') {
+              stateIcon = '🎬';
+            } else if (entityType === 'automation') {
+              stateIcon = state === 'on' ? '▶️' : '⏸️';
+            } else if (entityType === 'script') {
+              stateIcon = '📜';
             }
             
             return {
@@ -1662,6 +1677,208 @@ client.on('interactionCreate', async (interaction) => {
           await interaction.editReply({ embeds: [embed] });
         } catch (error) {
           await interaction.editReply(`❌ Diagnostic failed: ${error.message}`);
+        }
+      }
+      else if (subcommand === 'scenes') {
+        await interaction.deferReply();
+        
+        try {
+          const { getAllScenes } = await import('./src/integrations/homeassistant.js');
+          const scenes = await getAllScenes();
+          
+          if (scenes.length === 0) {
+            await interaction.editReply('⚠️ No scenes found.');
+            return;
+          }
+          
+          const embed = new EmbedBuilder()
+            .setColor('#9370DB')
+            .setTitle('🎬 Home Assistant Scenes')
+            .setDescription(`Found **${scenes.length} scenes**`)
+            .setTimestamp();
+          
+          scenes.slice(0, 20).forEach(scene => {
+            embed.addFields({
+              name: scene.attributes?.friendly_name || scene.entity_id,
+              value: `\`${scene.entity_id}\``,
+              inline: true
+            });
+          });
+          
+          if (scenes.length > 20) {
+            embed.setFooter({ text: `Showing 20 of ${scenes.length} scenes` });
+          }
+          
+          await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+          await interaction.editReply(`❌ Failed to get scenes: ${error.message}`);
+        }
+      }
+      else if (subcommand === 'scene') {
+        // Check permission
+        const { PERMISSIONS } = await import('./src/auth/auth.js');
+        const hasPermission = await checkUserPermission(userId, PERMISSIONS.ACTIVATE_SCENE);
+        
+        if (!hasPermission) {
+          await interaction.reply({ 
+            content: '❌ You do not have permission to activate scenes. Admin only.', 
+            ephemeral: true 
+          });
+          return;
+        }
+        
+        const entity = interaction.options.getString('entity');
+        await interaction.deferReply();
+        
+        try {
+          const { activateScene } = await import('./src/integrations/homeassistant.js');
+          await activateScene(entity);
+          
+          const embed = new EmbedBuilder()
+            .setColor('#9370DB')
+            .setTitle('🎬 Scene Activated')
+            .setDescription(`Successfully activated **${entity}**`)
+            .addFields({ name: 'Activated by', value: `${username} (${userId})` })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+          await interaction.editReply(`❌ Failed to activate scene: ${error.message}`);
+        }
+      }
+      else if (subcommand === 'automations') {
+        await interaction.deferReply();
+        
+        try {
+          const { getAllAutomations } = await import('./src/integrations/homeassistant.js');
+          const automations = await getAllAutomations();
+          
+          if (automations.length === 0) {
+            await interaction.editReply('⚠️ No automations found.');
+            return;
+          }
+          
+          const embed = new EmbedBuilder()
+            .setColor('#FF6347')
+            .setTitle('⚙️ Home Assistant Automations')
+            .setDescription(`Found **${automations.length} automations**`)
+            .setTimestamp();
+          
+          automations.slice(0, 20).forEach(auto => {
+            const state = auto.state === 'on' ? '🟢 Enabled' : '⚪ Disabled';
+            embed.addFields({
+              name: auto.attributes?.friendly_name || auto.entity_id,
+              value: `\`${auto.entity_id}\`\n${state}`,
+              inline: true
+            });
+          });
+          
+          if (automations.length > 20) {
+            embed.setFooter({ text: `Showing 20 of ${automations.length} automations` });
+          }
+          
+          await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+          await interaction.editReply(`❌ Failed to get automations: ${error.message}`);
+        }
+      }
+      else if (subcommand === 'automation') {
+        // Check permission
+        const { PERMISSIONS } = await import('./src/auth/auth.js');
+        const hasPermission = await checkUserPermission(userId, PERMISSIONS.TRIGGER_AUTOMATION);
+        
+        if (!hasPermission) {
+          await interaction.reply({ 
+            content: '❌ You do not have permission to trigger automations. Admin only.', 
+            ephemeral: true 
+          });
+          return;
+        }
+        
+        const entity = interaction.options.getString('entity');
+        await interaction.deferReply();
+        
+        try {
+          const { triggerAutomation } = await import('./src/integrations/homeassistant.js');
+          await triggerAutomation(entity);
+          
+          const embed = new EmbedBuilder()
+            .setColor('#FF6347')
+            .setTitle('⚙️ Automation Triggered')
+            .setDescription(`Successfully triggered **${entity}**`)
+            .addFields({ name: 'Triggered by', value: `${username} (${userId})` })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+          await interaction.editReply(`❌ Failed to trigger automation: ${error.message}`);
+        }
+      }
+      else if (subcommand === 'scripts') {
+        await interaction.deferReply();
+        
+        try {
+          const { getAllScripts } = await import('./src/integrations/homeassistant.js');
+          const scripts = await getAllScripts();
+          
+          if (scripts.length === 0) {
+            await interaction.editReply('⚠️ No scripts found.');
+            return;
+          }
+          
+          const embed = new EmbedBuilder()
+            .setColor('#4169E1')
+            .setTitle('📜 Home Assistant Scripts')
+            .setDescription(`Found **${scripts.length} scripts**`)
+            .setTimestamp();
+          
+          scripts.slice(0, 20).forEach(script => {
+            embed.addFields({
+              name: script.attributes?.friendly_name || script.entity_id,
+              value: `\`${script.entity_id}\``,
+              inline: true
+            });
+          });
+          
+          if (scripts.length > 20) {
+            embed.setFooter({ text: `Showing 20 of ${scripts.length} scripts` });
+          }
+          
+          await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+          await interaction.editReply(`❌ Failed to get scripts: ${error.message}`);
+        }
+      }
+      else if (subcommand === 'script') {
+        // Check permission
+        const { PERMISSIONS } = await import('./src/auth/auth.js');
+        const hasPermission = await checkUserPermission(userId, PERMISSIONS.RUN_SCRIPT);
+        
+        if (!hasPermission) {
+          await interaction.reply({ 
+            content: '❌ You do not have permission to run scripts. Admin only.', 
+            ephemeral: true 
+          });
+          return;
+        }
+        
+        const entity = interaction.options.getString('entity');
+        await interaction.deferReply();
+        
+        try {
+          const { runScript } = await import('./src/integrations/homeassistant.js');
+          await runScript(entity);
+          
+          const embed = new EmbedBuilder()
+            .setColor('#4169E1')
+            .setTitle('📜 Script Executed')
+            .setDescription(`Successfully ran **${entity}**`)
+            .addFields({ name: 'Executed by', value: `${username} (${userId})` })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+          await interaction.editReply(`❌ Failed to run script: ${error.message}`);
         }
       }
     }

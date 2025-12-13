@@ -333,3 +333,72 @@ export async function checkConnection() {
     return false;
   }
 }
+
+// Get all scenes
+export async function getAllScenes() {
+  const entities = await getEntities();
+  return entities.filter(e => e.entity_id.startsWith('scene.'));
+}
+
+// Get all automations
+export async function getAllAutomations() {
+  const entities = await getEntities();
+  return entities.filter(e => e.entity_id.startsWith('automation.'));
+}
+
+// Get all scripts
+export async function getAllScripts() {
+  const entities = await getEntities();
+  return entities.filter(e => e.entity_id.startsWith('script.'));
+}
+
+// Activate a scene
+export async function activateScene(sceneId) {
+  return await callService('scene', 'turn_on', {
+    entity_id: sceneId
+  });
+}
+
+// Trigger an automation
+export async function triggerAutomation(automationId) {
+  return await callService('automation', 'trigger', {
+    entity_id: automationId
+  });
+}
+
+// Toggle automation on/off
+export async function toggleAutomation(automationId, state) {
+  const service = state ? 'turn_on' : 'turn_off';
+  return await callService('automation', service, {
+    entity_id: automationId
+  });
+}
+
+// Run a script
+export async function runScript(scriptId) {
+  return await callService('script', 'turn_on', {
+    entity_id: scriptId
+  });
+}
+
+// Get climate devices
+export async function getAllClimate() {
+  const entities = await getEntities();
+  return entities.filter(e => e.entity_id.startsWith('climate.'));
+}
+
+// Set climate temperature
+export async function setClimateTemperature(entityId, temperature) {
+  return await callService('climate', 'set_temperature', {
+    entity_id: entityId,
+    temperature
+  });
+}
+
+// Set climate mode
+export async function setClimateMode(entityId, hvacMode) {
+  return await callService('climate', 'set_hvac_mode', {
+    entity_id: entityId,
+    hvac_mode: hvacMode
+  });
+}

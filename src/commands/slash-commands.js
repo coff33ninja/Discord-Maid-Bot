@@ -285,7 +285,46 @@ export const commands = [
     .addSubcommand(subcommand =>
       subcommand
         .setName('diagnose')
-        .setDescription('Run Home Assistant diagnostics')),
+        .setDescription('Run Home Assistant diagnostics'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('scenes')
+        .setDescription('List all scenes'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('scene')
+        .setDescription('Activate a scene (Admin only)')
+        .addStringOption(option =>
+          option.setName('entity')
+            .setDescription('Scene entity ID (e.g., scene.movie_time)')
+            .setRequired(true)
+            .setAutocomplete(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('automations')
+        .setDescription('List all automations'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('automation')
+        .setDescription('Trigger an automation (Admin only)')
+        .addStringOption(option =>
+          option.setName('entity')
+            .setDescription('Automation entity ID (e.g., automation.lights_on)')
+            .setRequired(true)
+            .setAutocomplete(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('scripts')
+        .setDescription('List all scripts'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('script')
+        .setDescription('Run a script (Admin only)')
+        .addStringOption(option =>
+          option.setName('entity')
+            .setDescription('Script entity ID (e.g., script.goodnight)')
+            .setRequired(true)
+            .setAutocomplete(true))),
 
   // Plugin commands
   new SlashCommandBuilder()
