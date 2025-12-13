@@ -1,0 +1,2253 @@
+[
+  {
+    "entity_id": "conversation.home_assistant",
+    "state": "2025-11-26T15:16:18.132869+00:00",
+    "attributes": {
+      "friendly_name": "Home Assistant",
+      "supported_features": 1
+    },
+    "last_changed": "2025-12-12T23:30:05.151112+00:00",
+    "last_reported": "2025-12-12T23:30:05.151112+00:00",
+    "last_updated": "2025-12-12T23:30:05.151112+00:00",
+    "context": {
+      "id": "01KCAECW6ZSANQAZM5FTRWF7P8",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "event.backup_automatic_backup",
+    "state": "2025-12-13T03:07:05.004+00:00",
+    "attributes": {
+      "event_types": [
+        "completed",
+        "failed",
+        "in_progress"
+      ],
+      "event_type": "failed",
+      "backup_stage": null,
+      "failed_reason": "backup_manager_error",
+      "friendly_name": "Backup Automatic backup"
+    },
+    "last_changed": "2025-12-13T03:07:05.004242+00:00",
+    "last_reported": "2025-12-13T03:07:05.004242+00:00",
+    "last_updated": "2025-12-13T03:07:05.004242+00:00",
+    "context": {
+      "id": "01KCATT6XC4ETSEK9KMVCF3944",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.backup_backup_manager_state",
+    "state": "idle",
+    "attributes": {
+      "options": [
+        "idle",
+        "create_backup",
+        "blocked",
+        "receive_backup",
+        "restore_backup"
+      ],
+      "device_class": "enum",
+      "friendly_name": "Backup Backup Manager state"
+    },
+    "last_changed": "2025-12-13T03:07:05.005143+00:00",
+    "last_reported": "2025-12-13T03:07:05.005143+00:00",
+    "last_updated": "2025-12-13T03:07:05.005143+00:00",
+    "context": {
+      "id": "01KCATT6XDBTQWY399YY76ZP4Z",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.backup_next_scheduled_automatic_backup",
+    "state": "2025-12-14T02:46:47+00:00",
+    "attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Backup Next scheduled automatic backup"
+    },
+    "last_changed": "2025-12-13T03:07:05.003368+00:00",
+    "last_reported": "2025-12-13T03:07:05.005370+00:00",
+    "last_updated": "2025-12-13T03:07:05.003368+00:00",
+    "context": {
+      "id": "01KCATT6XB7PCKWY36CG9HEGCS",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.backup_last_successful_automatic_backup",
+    "state": "2025-12-12T02:57:29+00:00",
+    "attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Backup Last successful automatic backup"
+    },
+    "last_changed": "2025-12-12T23:30:09.521017+00:00",
+    "last_reported": "2025-12-12T23:31:39.034631+00:00",
+    "last_updated": "2025-12-12T23:30:09.521017+00:00",
+    "context": {
+      "id": "01KCAED0FHMVGYVT717C1956GP",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.backup_last_attempted_automatic_backup",
+    "state": "2025-12-13T03:07:05+00:00",
+    "attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Backup Last attempted automatic backup"
+    },
+    "last_changed": "2025-12-13T03:07:05.003777+00:00",
+    "last_reported": "2025-12-13T03:07:05.005489+00:00",
+    "last_updated": "2025-12-13T03:07:05.003777+00:00",
+    "context": {
+      "id": "01KCATT6XBWG9619TDKDQG3JFS",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "zone.work",
+    "state": "0",
+    "attributes": {
+      "latitude": -33.00513968878063,
+      "longitude": 17.94468123065202,
+      "radius": 100,
+      "passive": false,
+      "persons": [],
+      "editable": true,
+      "icon": "mdi:server",
+      "friendly_name": "Work"
+    },
+    "last_changed": "2025-12-12T23:30:14.339695+00:00",
+    "last_reported": "2025-12-12T23:30:14.339695+00:00",
+    "last_updated": "2025-12-12T23:30:14.339695+00:00",
+    "context": {
+      "id": "01KCAED563HPN40W0RPNYT5DBF",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "zone.home_2",
+    "state": "0",
+    "attributes": {
+      "latitude": -32.9945067,
+      "longitude": 17.9679533,
+      "radius": 46.47027521391891,
+      "passive": true,
+      "persons": [],
+      "editable": true,
+      "icon": "mdi:map-marker",
+      "friendly_name": "HOME"
+    },
+    "last_changed": "2025-12-12T23:30:14.340027+00:00",
+    "last_reported": "2025-12-12T23:30:14.340027+00:00",
+    "last_updated": "2025-12-12T23:30:14.340027+00:00",
+    "context": {
+      "id": "01KCAED5644B12M9D7YNXK4KC4",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "zone.home",
+    "state": "0",
+    "attributes": {
+      "latitude": 52.3731339,
+      "longitude": 4.8903147,
+      "radius": 100,
+      "passive": false,
+      "persons": [],
+      "editable": true,
+      "icon": "mdi:home",
+      "friendly_name": "Home"
+    },
+    "last_changed": "2025-12-12T23:30:14.341986+00:00",
+    "last_reported": "2025-12-12T23:30:14.341986+00:00",
+    "last_updated": "2025-12-12T23:30:14.341986+00:00",
+    "context": {
+      "id": "01KCAED565MCYT93KB8RE2BS66",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "person.dj",
+    "state": "not_home",
+    "attributes": {
+      "editable": true,
+      "id": "dj",
+      "device_trackers": [
+        "device_tracker.xiaomi_redmi_note_12_pro",
+        "device_tracker.sm_j320fn"
+      ],
+      "latitude": -32.9944916,
+      "longitude": 17.9679539,
+      "gps_accuracy": 100,
+      "source": "device_tracker.xiaomi_redmi_note_12_pro",
+      "user_id": "b8d5bcf21b074d78b542ae7d1e530879",
+      "friendly_name": "DJ"
+    },
+    "last_changed": "2025-12-12T23:30:14.345388+00:00",
+    "last_reported": "2025-12-13T18:15:32.813731+00:00",
+    "last_updated": "2025-12-13T18:15:32.813492+00:00",
+    "context": {
+      "id": "01KCCESN6DMAWZX2XNFQ63D57S",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "calendar.llm_vision_timeline",
+    "state": "off",
+    "attributes": {
+      "events": [],
+      "starts": [],
+      "ends": [],
+      "summaries": [],
+      "key_frames": [],
+      "camera_names": [],
+      "today_summary": "",
+      "icon": "mdi:timeline-outline",
+      "friendly_name": "LLM Vision Timeline",
+      "supported_features": 2
+    },
+    "last_changed": "2025-12-12T23:31:27.981635+00:00",
+    "last_reported": "2025-12-12T23:37:28.006280+00:00",
+    "last_updated": "2025-12-12T23:31:27.981635+00:00",
+    "context": {
+      "id": "01KCAEFD3DQ30S4CJBWWTY6BET",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sun.sun",
+    "state": "below_horizon",
+    "attributes": {
+      "next_dawn": "2025-12-14T07:01:40.206992+00:00",
+      "next_dusk": "2025-12-14T16:08:36.662131+00:00",
+      "next_midnight": "2025-12-13T23:35:13+00:00",
+      "next_noon": "2025-12-14T11:34:58+00:00",
+      "next_rising": "2025-12-14T07:43:46.085019+00:00",
+      "next_setting": "2025-12-14T15:26:31.261116+00:00",
+      "elevation": -23.99,
+      "azimuth": 262.61,
+      "rising": false,
+      "friendly_name": "Sun"
+    },
+    "last_changed": "2025-12-13T15:30:27.937901+00:00",
+    "last_reported": "2025-12-13T18:13:51.385901+00:00",
+    "last_updated": "2025-12-13T18:13:46.622891+00:00",
+    "context": {
+      "id": "01KCCEPDFYDYFWFB91MZNY2S8K",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_dawn",
+    "state": "2025-12-14T07:01:40+00:00",
+    "attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next dawn"
+    },
+    "last_changed": "2025-12-13T07:00:48.781719+00:00",
+    "last_reported": "2025-12-13T07:00:48.781719+00:00",
+    "last_updated": "2025-12-13T07:00:48.781719+00:00",
+    "context": {
+      "id": "01KCB8660DE513MF01CPV94FBJ",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_dusk",
+    "state": "2025-12-14T16:08:36+00:00",
+    "attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next dusk"
+    },
+    "last_changed": "2025-12-13T16:08:29.918799+00:00",
+    "last_reported": "2025-12-13T16:08:29.918799+00:00",
+    "last_updated": "2025-12-13T16:08:29.918799+00:00",
+    "context": {
+      "id": "01KCC7H0YY2ATFDRSDYNNM1N3H",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_midnight",
+    "state": "2025-12-13T23:35:13+00:00",
+    "attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next midnight"
+    },
+    "last_changed": "2025-12-12T23:34:44.006874+00:00",
+    "last_reported": "2025-12-12T23:34:44.006874+00:00",
+    "last_updated": "2025-12-12T23:34:44.006874+00:00",
+    "context": {
+      "id": "01KCAENCH6AVPKQPHG1SY6TBJN",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_noon",
+    "state": "2025-12-14T11:34:58+00:00",
+    "attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next noon"
+    },
+    "last_changed": "2025-12-13T11:34:30.007510+00:00",
+    "last_reported": "2025-12-13T13:36:27.768471+00:00",
+    "last_updated": "2025-12-13T11:34:30.007510+00:00",
+    "context": {
+      "id": "01KCBQVABQS9NAH0EF3CE5J68R",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_rising",
+    "state": "2025-12-14T07:43:46+00:00",
+    "attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next rising"
+    },
+    "last_changed": "2025-12-13T07:42:51.310088+00:00",
+    "last_reported": "2025-12-13T13:36:27.768574+00:00",
+    "last_updated": "2025-12-13T07:42:51.310088+00:00",
+    "context": {
+      "id": "01KCBAK5DE9DT26651DV2A2YWE",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_setting",
+    "state": "2025-12-14T15:26:31+00:00",
+    "attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next setting"
+    },
+    "last_changed": "2025-12-13T15:26:27.935333+00:00",
+    "last_reported": "2025-12-13T16:08:29.937517+00:00",
+    "last_updated": "2025-12-13T15:26:27.935333+00:00",
+    "context": {
+      "id": "01KCC5422Z4QFZ5303P9N0476A",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "device_tracker.xiaomi_redmi_note_12_pro",
+    "state": "not_home",
+    "attributes": {
+      "source_type": "gps",
+      "latitude": -32.9944916,
+      "longitude": 17.9679539,
+      "gps_accuracy": 100,
+      "altitude": 44,
+      "course": 0,
+      "speed": 0,
+      "vertical_accuracy": 100,
+      "friendly_name": "Xiaomi Redmi note 12 Pro"
+    },
+    "last_changed": "2025-12-13T18:15:32.812887+00:00",
+    "last_reported": "2025-12-13T18:15:32.812887+00:00",
+    "last_updated": "2025-12-13T18:15:32.812887+00:00",
+    "context": {
+      "id": "01KCCESN6CKWRW7VJDBYYSSMVZ",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.xiaomi_redmi_note_12_pro_battery_level",
+    "state": "60",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "%",
+      "device_class": "battery",
+      "icon": "mdi:battery-60",
+      "friendly_name": "Xiaomi Redmi note 12 Pro Battery level"
+    },
+    "last_changed": "2025-12-13T18:10:13.630019+00:00",
+    "last_reported": "2025-12-13T18:10:13.630019+00:00",
+    "last_updated": "2025-12-13T18:10:13.630019+00:00",
+    "context": {
+      "id": "01KCCEFXFYR82YN4M4TYCYEC9P",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.xiaomi_redmi_note_12_pro_battery_state",
+    "state": "discharging",
+    "attributes": {
+      "options": [
+        "charging",
+        "discharging",
+        "full",
+        "not_charging"
+      ],
+      "device_class": "enum",
+      "icon": "mdi:battery-minus",
+      "friendly_name": "Xiaomi Redmi note 12 Pro Battery state"
+    },
+    "last_changed": "2025-12-13T07:09:04.744714+00:00",
+    "last_reported": "2025-12-13T07:09:04.744714+00:00",
+    "last_updated": "2025-12-13T07:09:04.744714+00:00",
+    "context": {
+      "id": "01KCB8NAB8B7XE958AYMG9CDFB",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.xiaomi_redmi_note_12_pro_charger_type",
+    "state": "none",
+    "attributes": {
+      "options": [
+        "ac",
+        "usb",
+        "wireless",
+        "dock",
+        "none"
+      ],
+      "device_class": "enum",
+      "icon": "mdi:battery",
+      "friendly_name": "Xiaomi Redmi note 12 Pro Charger type"
+    },
+    "last_changed": "2025-12-13T07:09:04.744836+00:00",
+    "last_reported": "2025-12-13T07:09:04.744836+00:00",
+    "last_updated": "2025-12-13T07:09:04.744836+00:00",
+    "context": {
+      "id": "01KCB8NAB8A59PFETX4PKNH4BR",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "device_tracker.sm_j320fn",
+    "state": "not_home",
+    "attributes": {
+      "source_type": "gps",
+      "latitude": -32.994522,
+      "longitude": 17.9679954,
+      "gps_accuracy": 100,
+      "altitude": 44,
+      "course": 0,
+      "speed": 0,
+      "vertical_accuracy": 0,
+      "friendly_name": "SM-J320FN"
+    },
+    "last_changed": "2025-12-12T23:31:35.173062+00:00",
+    "last_reported": "2025-12-12T23:31:35.173062+00:00",
+    "last_updated": "2025-12-12T23:31:35.173062+00:00",
+    "context": {
+      "id": "01KCAEFM4514M8ERF4T50S9BV8",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.sm_j320fn_battery_level",
+    "state": "57",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "%",
+      "device_class": "battery",
+      "icon": "mdi:battery-50",
+      "friendly_name": "SM-J320FN Battery level"
+    },
+    "last_changed": "2025-12-12T23:31:35.174745+00:00",
+    "last_reported": "2025-12-12T23:31:35.174745+00:00",
+    "last_updated": "2025-12-12T23:31:35.174745+00:00",
+    "context": {
+      "id": "01KCAEFM46V4395YF96K50TFVR",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.sm_j320fn_battery_state",
+    "state": "discharging",
+    "attributes": {
+      "options": [
+        "charging",
+        "discharging",
+        "full",
+        "not_charging"
+      ],
+      "device_class": "enum",
+      "icon": "mdi:battery-minus",
+      "friendly_name": "SM-J320FN Battery state"
+    },
+    "last_changed": "2025-12-12T23:31:35.175487+00:00",
+    "last_reported": "2025-12-12T23:31:35.175487+00:00",
+    "last_updated": "2025-12-12T23:31:35.175487+00:00",
+    "context": {
+      "id": "01KCAEFM4759T45RNRP3KH5GJP",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.sm_j320fn_charger_type",
+    "state": "none",
+    "attributes": {
+      "options": [
+        "ac",
+        "usb",
+        "wireless",
+        "dock",
+        "none"
+      ],
+      "device_class": "enum",
+      "icon": "mdi:battery",
+      "friendly_name": "SM-J320FN Charger type"
+    },
+    "last_changed": "2025-12-12T23:31:35.176194+00:00",
+    "last_reported": "2025-12-12T23:31:35.176194+00:00",
+    "last_updated": "2025-12-12T23:31:35.176194+00:00",
+    "context": {
+      "id": "01KCAEFM48XGWXQ74Y0K4GVZ82",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "conversation.google_ai_conversation_2",
+    "state": "2025-11-30T07:26:39.827169+00:00",
+    "attributes": {
+      "friendly_name": "Google AI Conversation",
+      "supported_features": 1
+    },
+    "last_changed": "2025-12-12T23:31:35.804805+00:00",
+    "last_reported": "2025-12-12T23:31:35.804805+00:00",
+    "last_updated": "2025-12-12T23:31:35.804805+00:00",
+    "context": {
+      "id": "01KCAEFMQW6XEFR1MVQHADWEHP",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "stt.google_ai_stt",
+    "state": "unknown",
+    "attributes": {
+      "friendly_name": "Google AI STT"
+    },
+    "last_changed": "2025-12-12T23:31:35.806149+00:00",
+    "last_reported": "2025-12-12T23:31:35.806149+00:00",
+    "last_updated": "2025-12-12T23:31:35.806149+00:00",
+    "context": {
+      "id": "01KCAEFMQYM4NNFDRKB5H9S3EN",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "tts.google_ai_tts",
+    "state": "2025-11-30T07:26:41.960672+00:00",
+    "attributes": {
+      "friendly_name": "Google AI TTS"
+    },
+    "last_changed": "2025-12-12T23:31:35.807321+00:00",
+    "last_reported": "2025-12-12T23:31:35.807321+00:00",
+    "last_updated": "2025-12-12T23:31:35.807321+00:00",
+    "context": {
+      "id": "01KCAEFMQZYTGEHFW4NC111GSP",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "ai_task.google_ai_task",
+    "state": "unknown",
+    "attributes": {
+      "friendly_name": "Google AI Task",
+      "supported_features": 7
+    },
+    "last_changed": "2025-12-12T23:31:35.841102+00:00",
+    "last_reported": "2025-12-12T23:31:35.841102+00:00",
+    "last_updated": "2025-12-12T23:31:35.841102+00:00",
+    "context": {
+      "id": "01KCAEFMS1VNQCRW9CT7V5M5P7",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.auto_backup_update",
+    "state": "off",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "v1.8.1",
+      "in_progress": false,
+      "latest_version": "v1.8.1",
+      "release_summary": null,
+      "release_url": "https://github.com/jcwillox/hass-auto-backup/releases/v1.8.1",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "entity_picture": "https://brands.home-assistant.io/_/auto_backup/icon.png",
+      "friendly_name": "Auto Backup update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:36.000184+00:00",
+    "last_reported": "2025-12-12T23:31:36.000184+00:00",
+    "last_updated": "2025-12-12T23:31:36.000184+00:00",
+    "context": {
+      "id": "01KCAEFMY0HD60857F7R566RKH",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.mqtt_discoverystream_update",
+    "state": "off",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "v1.5.2",
+      "in_progress": false,
+      "latest_version": "v1.5.2",
+      "release_summary": null,
+      "release_url": "https://github.com/koying/mqtt_discoverystream_ha/releases/v1.5.2",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "entity_picture": "https://brands.home-assistant.io/_/mqtt_discoverystream/icon.png",
+      "friendly_name": "MQTT DiscoveryStream update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:36.001056+00:00",
+    "last_reported": "2025-12-12T23:31:36.001056+00:00",
+    "last_updated": "2025-12-12T23:31:36.001056+00:00",
+    "context": {
+      "id": "01KCAEFMY14V5F7C30EAY02AA4",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.google_home_update",
+    "state": "off",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "v1.13.1",
+      "in_progress": false,
+      "latest_version": "v1.13.1",
+      "release_summary": null,
+      "release_url": "https://github.com/leikoilja/ha-google-home/releases/v1.13.1",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "entity_picture": "https://brands.home-assistant.io/_/google_home/icon.png",
+      "friendly_name": "Google Home update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:36.001863+00:00",
+    "last_reported": "2025-12-12T23:31:36.001863+00:00",
+    "last_updated": "2025-12-12T23:31:36.001863+00:00",
+    "context": {
+      "id": "01KCAEFMY1FNNV5GXA5BZQWNP2",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.google_assistant_sdk_custom_update",
+    "state": "off",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "v0.1.4",
+      "in_progress": false,
+      "latest_version": "v0.1.4",
+      "release_summary": null,
+      "release_url": "https://github.com/tronikos/google_assistant_sdk_custom/releases/v0.1.4",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "entity_picture": "https://brands.home-assistant.io/_/google_assistant_sdk_custom/icon.png",
+      "friendly_name": "Google Assistant SDK Custom update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:36.002542+00:00",
+    "last_reported": "2025-12-12T23:31:36.002542+00:00",
+    "last_updated": "2025-12-12T23:31:36.002542+00:00",
+    "context": {
+      "id": "01KCAEFMY2F0EWSFTNFKK051QG",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.llm_vision_update",
+    "state": "off",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "v1.5.2",
+      "in_progress": false,
+      "latest_version": "v1.5.2",
+      "release_summary": null,
+      "release_url": "https://github.com/valentinfrlch/ha-llmvision/releases/v1.5.2",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "entity_picture": "https://brands.home-assistant.io/_/llmvision/icon.png",
+      "friendly_name": "LLM Vision update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:36.003109+00:00",
+    "last_reported": "2025-12-12T23:31:36.003109+00:00",
+    "last_updated": "2025-12-12T23:31:36.003109+00:00",
+    "context": {
+      "id": "01KCAEFMY30PX4KPHRDDJ872WK",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.custom_areas_integration_update",
+    "state": "off",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "v1.2.2",
+      "in_progress": false,
+      "latest_version": "v1.2.2",
+      "release_summary": null,
+      "release_url": "https://github.com/DefinitelyADev/custom-areas-integration/releases/v1.2.2",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "entity_picture": "https://brands.home-assistant.io/_/custom_areas/icon.png",
+      "friendly_name": "Custom Areas Integration update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:36.003746+00:00",
+    "last_reported": "2025-12-12T23:31:36.003746+00:00",
+    "last_updated": "2025-12-12T23:31:36.003746+00:00",
+    "context": {
+      "id": "01KCAEFMY3KPZH6WVK8TSE7FXD",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.comfortable_environment_card_update",
+    "state": "off",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "1.7.11",
+      "in_progress": false,
+      "latest_version": "1.7.11",
+      "release_summary": null,
+      "release_url": "https://github.com/argaar/comfortable-environment-card/releases/1.7.11",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "friendly_name": "Comfortable Environment Card update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:36.004483+00:00",
+    "last_reported": "2025-12-12T23:31:36.004483+00:00",
+    "last_updated": "2025-12-12T23:31:36.004483+00:00",
+    "context": {
+      "id": "01KCAEFMY48HDHYN9FBBEQM5Q0",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.custom_attributes_update",
+    "state": "off",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "v1.0.0",
+      "in_progress": false,
+      "latest_version": "v1.0.0",
+      "release_summary": null,
+      "release_url": "https://github.com/Mariusthvdb/custom-attributes/releases/v1.0.0",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "friendly_name": "Custom-Attributes update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:36.005085+00:00",
+    "last_reported": "2025-12-12T23:31:36.005085+00:00",
+    "last_updated": "2025-12-12T23:31:36.005085+00:00",
+    "context": {
+      "id": "01KCAEFMY502H5PQKHT3S691E5",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.cloudflare_speed_test_update",
+    "state": "on",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "0.0.6",
+      "in_progress": false,
+      "latest_version": "0.0.9",
+      "release_summary": null,
+      "release_url": "https://github.com/DigitallyRefined/ha-cloudflare-speed-test/releases/0.0.9",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "entity_picture": "https://brands.home-assistant.io/_/cloudflare_speed_test/icon.png",
+      "friendly_name": "Cloudflare Speed Test update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:39.021524+00:00",
+    "last_reported": "2025-12-12T23:31:39.021524+00:00",
+    "last_updated": "2025-12-12T23:31:39.021524+00:00",
+    "context": {
+      "id": "01KCAEFQWDR8AXZ2B0JX95ZF43",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.ai_agent_ha_update",
+    "state": "on",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "v1.02",
+      "in_progress": false,
+      "latest_version": "v1.06",
+      "release_summary": null,
+      "release_url": "https://github.com/sbenodiz/ai_agent_ha/releases/v1.06",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "entity_picture": "https://brands.home-assistant.io/_/ai_agent_ha/icon.png",
+      "friendly_name": "AI Agent HA update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:36.006580+00:00",
+    "last_reported": "2025-12-12T23:31:36.006580+00:00",
+    "last_updated": "2025-12-12T23:31:36.006580+00:00",
+    "context": {
+      "id": "01KCAEFMY6HKSMAJ6HH03NTCFX",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.hacs_update",
+    "state": "off",
+    "attributes": {
+      "auto_update": false,
+      "display_precision": 0,
+      "installed_version": "2.0.5",
+      "in_progress": false,
+      "latest_version": "2.0.5",
+      "release_summary": null,
+      "release_url": "https://github.com/hacs/integration/releases/2.0.5",
+      "skipped_version": null,
+      "title": null,
+      "update_percentage": null,
+      "entity_picture": "https://brands.home-assistant.io/_/hacs/icon.png",
+      "friendly_name": "HACS update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:36.007101+00:00",
+    "last_reported": "2025-12-12T23:31:36.007101+00:00",
+    "last_updated": "2025-12-12T23:31:36.007101+00:00",
+    "context": {
+      "id": "01KCAEFMY7W92DNCMGY6C9R8CX",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "binary_sensor.cudy_router_wan_status",
+    "state": "on",
+    "attributes": {
+      "device_class": "connectivity",
+      "friendly_name": "Cudy router WAN status"
+    },
+    "last_changed": "2025-12-12T23:31:36.082875+00:00",
+    "last_reported": "2025-12-12T23:38:06.193471+00:00",
+    "last_updated": "2025-12-12T23:31:36.082875+00:00",
+    "context": {
+      "id": "01KCAEFN0JR0S0HKXYMZ1AGZTK",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cudy_router_external_ip",
+    "state": "192.168.1.254",
+    "attributes": {
+      "friendly_name": "Cudy router External IP"
+    },
+    "last_changed": "2025-12-12T23:31:36.086186+00:00",
+    "last_reported": "2025-12-12T23:38:06.193634+00:00",
+    "last_updated": "2025-12-12T23:31:36.086186+00:00",
+    "context": {
+      "id": "01KCAEFN0P98DD6JZS272R8XFG",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cudy_router_download_speed",
+    "state": "0.0",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "KiB/s",
+      "device_class": "data_rate",
+      "friendly_name": "Cudy router Download speed"
+    },
+    "last_changed": "2025-12-12T23:32:06.192945+00:00",
+    "last_reported": "2025-12-12T23:38:06.193765+00:00",
+    "last_updated": "2025-12-12T23:32:06.192945+00:00",
+    "context": {
+      "id": "01KCAEGJDGY1T2W77DK0296249",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cudy_router_upload_speed",
+    "state": "0.0",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "KiB/s",
+      "device_class": "data_rate",
+      "friendly_name": "Cudy router Upload speed"
+    },
+    "last_changed": "2025-12-12T23:32:06.193196+00:00",
+    "last_reported": "2025-12-12T23:38:06.193908+00:00",
+    "last_updated": "2025-12-12T23:32:06.193196+00:00",
+    "context": {
+      "id": "01KCAEGJDHSEEVZBPH8PC6NHQJ",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "binary_sensor.emg3525_t50b_wan_status",
+    "state": "on",
+    "attributes": {
+      "device_class": "connectivity",
+      "friendly_name": "EMG3525-T50B WAN status"
+    },
+    "last_changed": "2025-12-12T23:31:36.091725+00:00",
+    "last_reported": "2025-12-12T23:38:06.716141+00:00",
+    "last_updated": "2025-12-12T23:31:36.091725+00:00",
+    "context": {
+      "id": "01KCAEFN0VYTZW3PRV3RWTNY2V",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.emg3525_t50b_external_ip",
+    "state": "192.168.88.232",
+    "attributes": {
+      "friendly_name": "EMG3525-T50B External IP"
+    },
+    "last_changed": "2025-12-12T23:31:36.094370+00:00",
+    "last_reported": "2025-12-12T23:38:06.716331+00:00",
+    "last_updated": "2025-12-12T23:31:36.094370+00:00",
+    "context": {
+      "id": "01KCAEFN0Y02D5WEYDK79HD4CF",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.emg3525_t50b_download_speed",
+    "state": "0.0",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "KiB/s",
+      "device_class": "data_rate",
+      "friendly_name": "EMG3525-T50B Download speed"
+    },
+    "last_changed": "2025-12-13T16:53:30.772206+00:00",
+    "last_reported": "2025-12-13T18:12:30.771123+00:00",
+    "last_updated": "2025-12-13T16:53:30.772206+00:00",
+    "context": {
+      "id": "01KCCA3EGMGBBT0Y9HKVZ557BR",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.emg3525_t50b_upload_speed",
+    "state": "16.489418019157",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "KiB/s",
+      "device_class": "data_rate",
+      "friendly_name": "EMG3525-T50B Upload speed"
+    },
+    "last_changed": "2025-12-13T18:18:30.682461+00:00",
+    "last_reported": "2025-12-13T18:18:30.682461+00:00",
+    "last_updated": "2025-12-13T18:18:30.682461+00:00",
+    "context": {
+      "id": "01KCCEZ2WTDEGXN68VVFKE52QD",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "todo.shopping_list",
+    "state": "0",
+    "attributes": {
+      "friendly_name": "Shopping List",
+      "supported_features": 15
+    },
+    "last_changed": "2025-12-12T23:31:36.515118+00:00",
+    "last_reported": "2025-12-12T23:31:36.515118+00:00",
+    "last_updated": "2025-12-12T23:31:36.515118+00:00",
+    "context": {
+      "id": "01KCAEFNE3YS6Y8V1WT502BEMT",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_weather",
+    "state": "clear sky",
+    "attributes": {
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap Weather"
+    },
+    "last_changed": "2025-12-13T16:41:51.672144+00:00",
+    "last_reported": "2025-12-13T18:11:51.632155+00:00",
+    "last_updated": "2025-12-13T16:41:51.672144+00:00",
+    "context": {
+      "id": "01KCC9E3SRZT68ATHFZP0KSFF8",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_dew_point",
+    "state": "unknown",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "°C",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "temperature",
+      "friendly_name": "OpenWeatherMap Dew Point"
+    },
+    "last_changed": "2025-12-13T16:21:51.669425+00:00",
+    "last_reported": "2025-12-13T18:11:51.632313+00:00",
+    "last_updated": "2025-12-13T16:21:51.669425+00:00",
+    "context": {
+      "id": "01KCC89FXNW17D3WYP20SBD3KM",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_temperature",
+    "state": "6.53",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "°C",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "temperature",
+      "friendly_name": "OpenWeatherMap Temperature"
+    },
+    "last_changed": "2025-12-13T18:11:51.632442+00:00",
+    "last_reported": "2025-12-13T18:11:51.632442+00:00",
+    "last_updated": "2025-12-13T18:11:51.632442+00:00",
+    "context": {
+      "id": "01KCCEJX6GJEF7KKVYN394A3C8",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_feels_like_temperature",
+    "state": "4.28",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "°C",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "temperature",
+      "friendly_name": "OpenWeatherMap Feels like temperature"
+    },
+    "last_changed": "2025-12-13T18:11:51.632666+00:00",
+    "last_reported": "2025-12-13T18:11:51.632666+00:00",
+    "last_updated": "2025-12-13T18:11:51.632666+00:00",
+    "context": {
+      "id": "01KCCEJX6GDY39Q1CX4D0TJEE4",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_wind_speed",
+    "state": "11.124",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "km/h",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "wind_speed",
+      "friendly_name": "OpenWeatherMap Wind speed"
+    },
+    "last_changed": "2025-12-13T17:41:51.626067+00:00",
+    "last_reported": "2025-12-13T18:11:51.632828+00:00",
+    "last_updated": "2025-12-13T17:41:51.626067+00:00",
+    "context": {
+      "id": "01KCCCVZCA9RDQXCP1AY6D6KX6",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_wind_gust",
+    "state": "unknown",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "km/h",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "wind_speed",
+      "friendly_name": "OpenWeatherMap Wind gust"
+    },
+    "last_changed": "2025-12-13T16:21:51.669995+00:00",
+    "last_reported": "2025-12-13T18:11:51.632908+00:00",
+    "last_updated": "2025-12-13T16:21:51.669995+00:00",
+    "context": {
+      "id": "01KCC89FXNBYP5Y3J2WBCSC9PH",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_wind_bearing",
+    "state": "220",
+    "attributes": {
+      "state_class": "measurement_angle",
+      "unit_of_measurement": "°",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "wind_direction",
+      "friendly_name": "OpenWeatherMap Wind bearing"
+    },
+    "last_changed": "2025-12-13T17:41:51.626181+00:00",
+    "last_reported": "2025-12-13T18:11:51.632996+00:00",
+    "last_updated": "2025-12-13T17:41:51.626181+00:00",
+    "context": {
+      "id": "01KCCCVZCA4RG843KPN23JK3EE",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_humidity",
+    "state": "88",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "%",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "humidity",
+      "friendly_name": "OpenWeatherMap Humidity"
+    },
+    "last_changed": "2025-12-13T18:01:51.674468+00:00",
+    "last_reported": "2025-12-13T18:11:51.633081+00:00",
+    "last_updated": "2025-12-13T18:01:51.674468+00:00",
+    "context": {
+      "id": "01KCCE0K9TFQ2AQX4VR9J7X8Q6",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_pressure",
+    "state": "1027",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "hPa",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "pressure",
+      "friendly_name": "OpenWeatherMap Pressure"
+    },
+    "last_changed": "2025-12-13T16:21:51.670404+00:00",
+    "last_reported": "2025-12-13T18:11:51.633165+00:00",
+    "last_updated": "2025-12-13T16:21:51.670404+00:00",
+    "context": {
+      "id": "01KCC89FXPMA8NGEGKE6F6YSV9",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_cloud_coverage",
+    "state": "0",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "%",
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap Cloud coverage"
+    },
+    "last_changed": "2025-12-13T16:41:51.672516+00:00",
+    "last_reported": "2025-12-13T18:11:51.633243+00:00",
+    "last_updated": "2025-12-13T16:41:51.672516+00:00",
+    "context": {
+      "id": "01KCC9E3SR4YH0TNY9AQ88A9YJ",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_rain",
+    "state": "0",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "mm/h",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "precipitation_intensity",
+      "friendly_name": "OpenWeatherMap Rain"
+    },
+    "last_changed": "2025-12-13T16:21:51.670638+00:00",
+    "last_reported": "2025-12-13T18:11:51.633354+00:00",
+    "last_updated": "2025-12-13T16:21:51.670638+00:00",
+    "context": {
+      "id": "01KCC89FXPTHGHD8SXG61WY6CS",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_snow",
+    "state": "0",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "mm/h",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "precipitation_intensity",
+      "friendly_name": "OpenWeatherMap Snow"
+    },
+    "last_changed": "2025-12-13T16:21:51.670751+00:00",
+    "last_reported": "2025-12-13T18:11:51.633431+00:00",
+    "last_updated": "2025-12-13T16:21:51.670751+00:00",
+    "context": {
+      "id": "01KCC89FXPHBPNHFWWFE13CEWY",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_precipitation_kind",
+    "state": "None",
+    "attributes": {
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap Precipitation kind"
+    },
+    "last_changed": "2025-12-13T16:21:51.670853+00:00",
+    "last_reported": "2025-12-13T18:11:51.633502+00:00",
+    "last_updated": "2025-12-13T16:21:51.670853+00:00",
+    "context": {
+      "id": "01KCC89FXPAZXBA4W5JNH3T3V4",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_uv_index",
+    "state": "unknown",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "UV index",
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap UV Index"
+    },
+    "last_changed": "2025-12-13T16:21:51.670950+00:00",
+    "last_reported": "2025-12-13T18:11:51.633569+00:00",
+    "last_updated": "2025-12-13T16:21:51.670950+00:00",
+    "context": {
+      "id": "01KCC89FXPT6ABJH1FNPCMYT38",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_visibility",
+    "state": "10000",
+    "attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "m",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "distance",
+      "friendly_name": "OpenWeatherMap Visibility"
+    },
+    "last_changed": "2025-12-13T16:21:51.671059+00:00",
+    "last_reported": "2025-12-13T18:11:51.633651+00:00",
+    "last_updated": "2025-12-13T16:21:51.671059+00:00",
+    "context": {
+      "id": "01KCC89FXQ06NM20DD9GFQT272",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_condition",
+    "state": "clear-night",
+    "attributes": {
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap Condition"
+    },
+    "last_changed": "2025-12-13T16:41:51.672659+00:00",
+    "last_reported": "2025-12-13T18:11:51.633720+00:00",
+    "last_updated": "2025-12-13T16:41:51.672659+00:00",
+    "context": {
+      "id": "01KCC9E3SRCPYBQ4P6CB67R6WF",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_weather_code",
+    "state": "800",
+    "attributes": {
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap Weather Code"
+    },
+    "last_changed": "2025-12-13T16:41:51.672688+00:00",
+    "last_reported": "2025-12-13T18:11:51.633790+00:00",
+    "last_updated": "2025-12-13T16:41:51.672688+00:00",
+    "context": {
+      "id": "01KCC9E3SRY44CY8RR64FR4P10",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "weather.openweathermap",
+    "state": "clear-night",
+    "attributes": {
+      "temperature": 6.5,
+      "apparent_temperature": 4.3,
+      "temperature_unit": "°C",
+      "humidity": 88,
+      "cloud_coverage": 0,
+      "pressure": 1027,
+      "pressure_unit": "hPa",
+      "wind_bearing": 220,
+      "wind_speed": 11.12,
+      "wind_speed_unit": "km/h",
+      "visibility": 10,
+      "visibility_unit": "km",
+      "precipitation_unit": "mm",
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap"
+    },
+    "last_changed": "2025-12-13T16:41:51.672778+00:00",
+    "last_reported": "2025-12-13T18:11:51.634023+00:00",
+    "last_updated": "2025-12-13T18:11:51.634023+00:00",
+    "context": {
+      "id": "01KCCEJX6JZE9H33W3JR5NH7FE",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_messages_published",
+    "state": "0",
+    "attributes": {
+      "unit_of_measurement": "messages",
+      "friendly_name": "192.168.0.250 Messages published"
+    },
+    "last_changed": "2025-12-12T23:31:36.762133+00:00",
+    "last_reported": "2025-12-12T23:31:36.762133+00:00",
+    "last_updated": "2025-12-12T23:31:36.762133+00:00",
+    "context": {
+      "id": "01KCAEFNNTE5D58Y0KSNNHB4XJ",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_messages_usage_limit",
+    "state": "17280",
+    "attributes": {
+      "unit_of_measurement": "messages",
+      "friendly_name": "192.168.0.250 Messages usage limit"
+    },
+    "last_changed": "2025-12-12T23:31:36.763175+00:00",
+    "last_reported": "2025-12-12T23:31:36.763175+00:00",
+    "last_updated": "2025-12-12T23:31:36.763175+00:00",
+    "context": {
+      "id": "01KCAEFNNVXMYF64EG9D8EW0DR",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_messages_expiry_duration",
+    "state": "12.0",
+    "attributes": {
+      "unit_of_measurement": "h",
+      "device_class": "duration",
+      "friendly_name": "192.168.0.250 Messages expiry duration"
+    },
+    "last_changed": "2025-12-12T23:31:36.764020+00:00",
+    "last_reported": "2025-12-12T23:31:36.764020+00:00",
+    "last_updated": "2025-12-12T23:31:36.764020+00:00",
+    "context": {
+      "id": "01KCAEFNNWFFQDXSSS5KEFXYAB",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_emails_sent",
+    "state": "0",
+    "attributes": {
+      "unit_of_measurement": "emails",
+      "friendly_name": "192.168.0.250 Emails sent"
+    },
+    "last_changed": "2025-12-12T23:31:36.764696+00:00",
+    "last_reported": "2025-12-12T23:31:36.764696+00:00",
+    "last_updated": "2025-12-12T23:31:36.764696+00:00",
+    "context": {
+      "id": "01KCAEFNNW713N45898G11NXVB",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_email_usage_limit",
+    "state": "24",
+    "attributes": {
+      "unit_of_measurement": "emails",
+      "friendly_name": "192.168.0.250 Email usage limit"
+    },
+    "last_changed": "2025-12-12T23:31:36.765642+00:00",
+    "last_reported": "2025-12-12T23:31:36.765642+00:00",
+    "last_updated": "2025-12-12T23:31:36.765642+00:00",
+    "context": {
+      "id": "01KCAEFNNXHW63AR012RDBRCJC",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_phone_calls_made",
+    "state": "0",
+    "attributes": {
+      "unit_of_measurement": "calls",
+      "friendly_name": "192.168.0.250 Phone calls made"
+    },
+    "last_changed": "2025-12-12T23:31:36.767289+00:00",
+    "last_reported": "2025-12-12T23:31:36.767289+00:00",
+    "last_updated": "2025-12-12T23:31:36.767289+00:00",
+    "context": {
+      "id": "01KCAEFNNZYAS7JERJASZZ90SF",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_phone_calls_usage_limit",
+    "state": "0",
+    "attributes": {
+      "unit_of_measurement": "calls",
+      "friendly_name": "192.168.0.250 Phone calls usage limit"
+    },
+    "last_changed": "2025-12-12T23:31:36.768235+00:00",
+    "last_reported": "2025-12-12T23:31:36.768235+00:00",
+    "last_updated": "2025-12-12T23:31:36.768235+00:00",
+    "context": {
+      "id": "01KCAEFNP056NEXVMFCXD4WXM6",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_reserved_topics",
+    "state": "0",
+    "attributes": {
+      "unit_of_measurement": "topics",
+      "friendly_name": "192.168.0.250 Reserved topics"
+    },
+    "last_changed": "2025-12-12T23:31:36.769089+00:00",
+    "last_reported": "2025-12-12T23:31:36.769089+00:00",
+    "last_updated": "2025-12-12T23:31:36.769089+00:00",
+    "context": {
+      "id": "01KCAEFNP17G2GKRF25NHCAYGT",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_reserved_topics_limit",
+    "state": "0",
+    "attributes": {
+      "unit_of_measurement": "topics",
+      "friendly_name": "192.168.0.250 Reserved topics limit"
+    },
+    "last_changed": "2025-12-12T23:31:36.770771+00:00",
+    "last_reported": "2025-12-12T23:31:36.770771+00:00",
+    "last_updated": "2025-12-12T23:31:36.770771+00:00",
+    "context": {
+      "id": "01KCAEFNP2XB5SA9K8F15VGZ0S",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_attachment_expiry_duration",
+    "state": "3.0",
+    "attributes": {
+      "unit_of_measurement": "h",
+      "device_class": "duration",
+      "friendly_name": "192.168.0.250 Attachment expiry duration"
+    },
+    "last_changed": "2025-12-12T23:31:36.771729+00:00",
+    "last_reported": "2025-12-12T23:31:36.771729+00:00",
+    "last_updated": "2025-12-12T23:31:36.771729+00:00",
+    "context": {
+      "id": "01KCAEFNP3SXB9BRRXAE2377FF",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_attachment_storage",
+    "state": "0.0",
+    "attributes": {
+      "unit_of_measurement": "MiB",
+      "device_class": "data_size",
+      "friendly_name": "192.168.0.250 Attachment storage"
+    },
+    "last_changed": "2025-12-12T23:31:36.772551+00:00",
+    "last_reported": "2025-12-12T23:31:36.772551+00:00",
+    "last_updated": "2025-12-12T23:31:36.772551+00:00",
+    "context": {
+      "id": "01KCAEFNP4718EAPSFFNMCWBWM",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_attachment_storage_limit",
+    "state": "100.0",
+    "attributes": {
+      "unit_of_measurement": "MiB",
+      "device_class": "data_size",
+      "friendly_name": "192.168.0.250 Attachment storage limit"
+    },
+    "last_changed": "2025-12-12T23:31:36.773602+00:00",
+    "last_reported": "2025-12-12T23:31:36.773602+00:00",
+    "last_updated": "2025-12-12T23:31:36.773602+00:00",
+    "context": {
+      "id": "01KCAEFNP5RACZ411V354ES5NY",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_attachment_file_size_limit",
+    "state": "15.0",
+    "attributes": {
+      "unit_of_measurement": "MiB",
+      "device_class": "data_size",
+      "friendly_name": "192.168.0.250 Attachment file size limit"
+    },
+    "last_changed": "2025-12-12T23:31:36.774402+00:00",
+    "last_reported": "2025-12-12T23:31:36.774402+00:00",
+    "last_updated": "2025-12-12T23:31:36.774402+00:00",
+    "context": {
+      "id": "01KCAEFNP665QXGYRDH4D7TRBQ",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_attachment_bandwidth_limit",
+    "state": "500.0",
+    "attributes": {
+      "unit_of_measurement": "MiB",
+      "device_class": "data_size",
+      "friendly_name": "192.168.0.250 Attachment bandwidth limit"
+    },
+    "last_changed": "2025-12-12T23:31:36.775110+00:00",
+    "last_reported": "2025-12-12T23:31:36.775110+00:00",
+    "last_updated": "2025-12-12T23:31:36.775110+00:00",
+    "context": {
+      "id": "01KCAEFNP72XCBNB0PKVXKTMW9",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_ip_address",
+    "state": "unknown",
+    "attributes": {
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "friendly_name": "Cloudflare Speed Test IP address"
+    },
+    "last_changed": "2025-12-13T17:38:25.061541+00:00",
+    "last_reported": "2025-12-13T17:38:25.061541+00:00",
+    "last_updated": "2025-12-13T17:38:25.061541+00:00",
+    "context": {
+      "id": "01KCCCNNN5P5A1KQS4WAW8T79K",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_isp",
+    "state": "unknown",
+    "attributes": {
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "friendly_name": "Cloudflare Speed Test ISP"
+    },
+    "last_changed": "2025-12-13T17:38:25.061638+00:00",
+    "last_reported": "2025-12-13T17:38:25.061638+00:00",
+    "last_updated": "2025-12-13T17:38:25.061638+00:00",
+    "context": {
+      "id": "01KCCCNNN5X33V5MJ5V8P2A7AK",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_latency",
+    "state": "9",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "ms",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "duration",
+      "friendly_name": "Cloudflare Speed Test Latency"
+    },
+    "last_changed": "2025-12-13T17:38:25.061712+00:00",
+    "last_reported": "2025-12-13T17:38:25.061712+00:00",
+    "last_updated": "2025-12-13T17:38:25.061712+00:00",
+    "context": {
+      "id": "01KCCCNNN5H9Z49ZPKP730GN0Z",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_jitter",
+    "state": "3",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "ms",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "duration",
+      "friendly_name": "Cloudflare Speed Test Jitter"
+    },
+    "last_changed": "2025-12-13T17:38:25.061766+00:00",
+    "last_reported": "2025-12-13T17:38:25.061766+00:00",
+    "last_updated": "2025-12-13T17:38:25.061766+00:00",
+    "context": {
+      "id": "01KCCCNNN58ZA02QPECSW8PZ43",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_100kb_down",
+    "state": "45.33",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 100kB down"
+    },
+    "last_changed": "2025-12-13T17:38:25.061834+00:00",
+    "last_reported": "2025-12-13T17:38:25.061834+00:00",
+    "last_updated": "2025-12-13T17:38:25.061834+00:00",
+    "context": {
+      "id": "01KCCCNNN5Y6CA1VSRMPZDD34G",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_100kb_up",
+    "state": "54.84",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 100kB up"
+    },
+    "last_changed": "2025-12-13T17:38:25.061892+00:00",
+    "last_reported": "2025-12-13T17:38:25.061892+00:00",
+    "last_updated": "2025-12-13T17:38:25.061892+00:00",
+    "context": {
+      "id": "01KCCCNNN5XHYKVG7ARE9E07PH",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_1mb_down",
+    "state": "84.84",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 1MB down"
+    },
+    "last_changed": "2025-12-13T17:38:25.061949+00:00",
+    "last_reported": "2025-12-13T17:38:25.061949+00:00",
+    "last_updated": "2025-12-13T17:38:25.061949+00:00",
+    "context": {
+      "id": "01KCCCNNN577ZPRM9J1RTJF2YX",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_1mb_up",
+    "state": "88.02",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 1MB up"
+    },
+    "last_changed": "2025-12-13T17:38:25.062020+00:00",
+    "last_reported": "2025-12-13T17:38:25.062020+00:00",
+    "last_updated": "2025-12-13T17:38:25.062020+00:00",
+    "context": {
+      "id": "01KCCCNNN689MZS2W9FRXG7VE0",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_10mb_down",
+    "state": "91.19",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 10MB down"
+    },
+    "last_changed": "2025-12-13T17:38:25.062079+00:00",
+    "last_reported": "2025-12-13T17:38:25.062079+00:00",
+    "last_updated": "2025-12-13T17:38:25.062079+00:00",
+    "context": {
+      "id": "01KCCCNNN6TXVPGETDQCHBWJ33",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_10mb_up",
+    "state": "89.39",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 10MB up"
+    },
+    "last_changed": "2025-12-13T17:38:25.062138+00:00",
+    "last_reported": "2025-12-13T17:38:25.062138+00:00",
+    "last_updated": "2025-12-13T17:38:25.062138+00:00",
+    "context": {
+      "id": "01KCCCNNN6W6C9K7JD7EA3AVGM",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_25mb_down",
+    "state": "90.39",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 25MB down"
+    },
+    "last_changed": "2025-12-13T17:38:25.062197+00:00",
+    "last_reported": "2025-12-13T17:38:25.062197+00:00",
+    "last_updated": "2025-12-13T17:38:25.062197+00:00",
+    "context": {
+      "id": "01KCCCNNN6P52EAQQ2698AX337",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_90th_percentile_down",
+    "state": "92.09",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 90th percentile down"
+    },
+    "last_changed": "2025-12-13T17:38:25.062268+00:00",
+    "last_reported": "2025-12-13T17:38:25.062268+00:00",
+    "last_updated": "2025-12-13T17:38:25.062268+00:00",
+    "context": {
+      "id": "01KCCCNNN6FJABG9F3NDNFBRJW",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_90th_percentile_up",
+    "state": "93.02",
+    "attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 90th percentile up"
+    },
+    "last_changed": "2025-12-13T17:38:25.062335+00:00",
+    "last_reported": "2025-12-13T17:38:25.062335+00:00",
+    "last_updated": "2025-12-13T17:38:25.062335+00:00",
+    "context": {
+      "id": "01KCCCNNN6TKJAFDRY36XZX4VH",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "todo.inbox",
+    "state": "0",
+    "attributes": {
+      "friendly_name": "Inbox",
+      "supported_features": 119
+    },
+    "last_changed": "2025-12-13T14:40:37.209588+00:00",
+    "last_reported": "2025-12-13T14:41:38.214163+00:00",
+    "last_updated": "2025-12-13T14:40:37.209588+00:00",
+    "context": {
+      "id": "01KCC2G3TS115T2RFHMJMM4D3K",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "todo.home_automation",
+    "state": "16",
+    "attributes": {
+      "friendly_name": "HOME AUTOMATION",
+      "supported_features": 119
+    },
+    "last_changed": "2025-12-13T14:40:37.209719+00:00",
+    "last_reported": "2025-12-13T14:41:38.214273+00:00",
+    "last_updated": "2025-12-13T14:40:37.209719+00:00",
+    "context": {
+      "id": "01KCC2G3TSGHMGGHPRT7AB9Y0R",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "automation.zone_notification",
+    "state": "on",
+    "attributes": {
+      "id": "1760298433784",
+      "last_triggered": null,
+      "mode": "single",
+      "current": 0,
+      "friendly_name": "Zone Notification"
+    },
+    "last_changed": "2025-12-12T23:31:37.398730+00:00",
+    "last_reported": "2025-12-12T23:31:37.398730+00:00",
+    "last_updated": "2025-12-12T23:31:37.398730+00:00",
+    "context": {
+      "id": "01KCAEFP9PSNH3AT8FN5ADH828",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "automation.voice_memory_tool",
+    "state": "on",
+    "attributes": {
+      "id": "1760298556871",
+      "last_triggered": null,
+      "mode": "single",
+      "current": 0,
+      "friendly_name": "Voice - Memory Tool"
+    },
+    "last_changed": "2025-12-12T23:31:37.398898+00:00",
+    "last_reported": "2025-12-12T23:31:37.398898+00:00",
+    "last_updated": "2025-12-12T23:31:37.398898+00:00",
+    "context": {
+      "id": "01KCAEFP9P855T0Y9KQXX4VWB5",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "automation.wake_pc_on_arrival",
+    "state": "on",
+    "attributes": {
+      "id": "1760300071358",
+      "last_triggered": "2025-12-13T15:47:24.728460+00:00",
+      "mode": "single",
+      "current": 0,
+      "friendly_name": "Wake PC on Arrival"
+    },
+    "last_changed": "2025-12-12T23:31:37.399045+00:00",
+    "last_reported": "2025-12-13T15:47:24.728976+00:00",
+    "last_updated": "2025-12-13T15:47:24.728976+00:00",
+    "context": {
+      "id": "01KCC6ADDR71GWMZRMM534SYSF",
+      "parent_id": "01KCC6ADDRQN2VD5J9XR9SD561",
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "calendar.inbox",
+    "state": "off",
+    "attributes": {
+      "friendly_name": "Inbox"
+    },
+    "last_changed": "2025-12-13T14:40:37.209760+00:00",
+    "last_reported": "2025-12-13T14:41:38.214313+00:00",
+    "last_updated": "2025-12-13T14:40:37.209760+00:00",
+    "context": {
+      "id": "01KCC2G3TSGB4NCRFZSKBEK4NE",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "calendar.home_automation",
+    "state": "on",
+    "attributes": {
+      "message": "Better navigation with sidebar",
+      "all_day": true,
+      "start_time": "2025-12-13 00:00:00",
+      "end_time": "2025-12-14 00:00:00",
+      "location": "",
+      "description": "",
+      "due_today": false,
+      "overdue": false,
+      "all_tasks": [
+        "Better navigation with sidebar",
+        "Drag-and-drop reordering",
+        "File embed",
+        "iOS app",
+        "Speed improvements",
+        "Public view",
+        "New onboarding flow",
+        "Android app",
+        "Better comments",
+        "New editor",
+        "Permissions",
+        "macOS app",
+        "Shortcuts",
+        "Chrome extension",
+        "APIs",
+        "Zapier integration"
+      ],
+      "priority": 1,
+      "labels": [],
+      "friendly_name": "HOME AUTOMATION"
+    },
+    "last_changed": "2025-12-13T14:40:37.210143+00:00",
+    "last_reported": "2025-12-13T14:41:38.214706+00:00",
+    "last_updated": "2025-12-13T14:40:37.210143+00:00",
+    "context": {
+      "id": "01KCC2G3TT44BSGNYGJKDZQPF5",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "update.pipeless_agents_update",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "friendly_name": "Pipeless Agents update",
+      "supported_features": 23
+    },
+    "last_changed": "2025-12-12T23:31:38.067710+00:00",
+    "last_reported": "2025-12-12T23:31:38.067710+00:00",
+    "last_updated": "2025-12-12T23:31:38.067710+00:00",
+    "context": {
+      "id": "01KCAEFPYKX223H8B5G2KG5TEE",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "todo.grocery_list",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "friendly_name": "Grocery List",
+      "supported_features": 119
+    },
+    "last_changed": "2025-12-12T23:31:38.067778+00:00",
+    "last_reported": "2025-12-12T23:31:38.067778+00:00",
+    "last_updated": "2025-12-12T23:31:38.067778+00:00",
+    "context": {
+      "id": "01KCAEFPYK8ZAK92Q7CVBRJ53J",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "todo.project_tracker",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "friendly_name": "Project Tracker",
+      "supported_features": 119
+    },
+    "last_changed": "2025-12-12T23:31:38.067813+00:00",
+    "last_reported": "2025-12-12T23:31:38.067813+00:00",
+    "last_updated": "2025-12-12T23:31:38.067813+00:00",
+    "context": {
+      "id": "01KCAEFPYKZHMV1H3PC4QN71YP",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "calendar.grocery_list",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "friendly_name": "Grocery List",
+      "supported_features": 0
+    },
+    "last_changed": "2025-12-12T23:31:38.067835+00:00",
+    "last_reported": "2025-12-12T23:31:38.067835+00:00",
+    "last_updated": "2025-12-12T23:31:38.067835+00:00",
+    "context": {
+      "id": "01KCAEFPYKD84E0N5WVSTSK3QE",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "calendar.project_tracker",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "friendly_name": "Project Tracker",
+      "supported_features": 0
+    },
+    "last_changed": "2025-12-12T23:31:38.067855+00:00",
+    "last_reported": "2025-12-12T23:31:38.067855+00:00",
+    "last_updated": "2025-12-12T23:31:38.067855+00:00",
+    "context": {
+      "id": "01KCAEFPYK17CWAEGYXR1BRDDD",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "button.pc_controller_kusanagi_wake_on_lan",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "friendly_name": "KUSANAGI Wake on LAN",
+      "supported_features": 0
+    },
+    "last_changed": "2025-12-12T23:31:38.067883+00:00",
+    "last_reported": "2025-12-12T23:31:38.067883+00:00",
+    "last_updated": "2025-12-12T23:31:38.067883+00:00",
+    "context": {
+      "id": "01KCAEFPYKDA99QGNW3FBQVAKJ",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "button.pc_controller_kusanagi_shutdown",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "friendly_name": "KUSANAGI Shutdown",
+      "supported_features": 0
+    },
+    "last_changed": "2025-12-12T23:31:38.067909+00:00",
+    "last_reported": "2025-12-12T23:31:38.067909+00:00",
+    "last_updated": "2025-12-12T23:31:38.067909+00:00",
+    "context": {
+      "id": "01KCAEFPYK6WAPE63KN16DNCS6",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "button.pc_controller_madara_wake_on_lan",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "friendly_name": "MADARA Wake on LAN",
+      "supported_features": 0
+    },
+    "last_changed": "2025-12-12T23:31:38.067928+00:00",
+    "last_reported": "2025-12-12T23:31:38.067928+00:00",
+    "last_updated": "2025-12-12T23:31:38.067928+00:00",
+    "context": {
+      "id": "01KCAEFPYK094MWQJV4T6GES1E",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "button.pc_controller_madara_shutdown",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "friendly_name": "MADARA Shutdown",
+      "supported_features": 0
+    },
+    "last_changed": "2025-12-12T23:31:38.067945+00:00",
+    "last_reported": "2025-12-12T23:31:38.067945+00:00",
+    "last_updated": "2025-12-12T23:31:38.067945+00:00",
+    "context": {
+      "id": "01KCAEFPYKRBSWMN6HSE25EG4A",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.pc_controller_kusanagi_status",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "icon": "mdi:desktop-tower",
+      "friendly_name": "KUSANAGI Status",
+      "supported_features": 0
+    },
+    "last_changed": "2025-12-12T23:31:38.067963+00:00",
+    "last_reported": "2025-12-12T23:31:38.067963+00:00",
+    "last_updated": "2025-12-12T23:31:38.067963+00:00",
+    "context": {
+      "id": "01KCAEFPYKJHCK309J3428J184",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "sensor.pc_controller_madara_status",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "icon": "mdi:desktop-tower",
+      "friendly_name": "MADARA Status",
+      "supported_features": 0
+    },
+    "last_changed": "2025-12-12T23:31:38.067983+00:00",
+    "last_reported": "2025-12-12T23:31:38.067983+00:00",
+    "last_updated": "2025-12-12T23:31:38.067983+00:00",
+    "context": {
+      "id": "01KCAEFPYK9BEJBECBC25TAVSQ",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "binary_sensor.controller_kusanagi_online",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "device_class": "connectivity",
+      "friendly_name": "KUSANAGI Online",
+      "supported_features": 0
+    },
+    "last_changed": "2025-12-12T23:31:38.068003+00:00",
+    "last_reported": "2025-12-12T23:31:38.068003+00:00",
+    "last_updated": "2025-12-12T23:31:38.068003+00:00",
+    "context": {
+      "id": "01KCAEFPYMAJC6K1P9F02DP99Y",
+      "parent_id": null,
+      "user_id": null
+    }
+  },
+  {
+    "entity_id": "binary_sensor.controller_madara_online",
+    "state": "unavailable",
+    "attributes": {
+      "restored": true,
+      "device_class": "connectivity",
+      "friendly_name": "MADARA Online",
+      "supported_features": 0
+    },
+    "last_changed": "2025-12-12T23:31:38.068029+00:00",
+    "last_reported": "2025-12-12T23:31:38.068029+00:00",
+    "last_updated": "2025-12-12T23:31:38.068029+00:00",
+    "context": {
+      "id": "01KCAEFPYMZFH0032SMSPPSGZ9",
+      "parent_id": null,
+      "user_id": null
+    }
+  }
+]

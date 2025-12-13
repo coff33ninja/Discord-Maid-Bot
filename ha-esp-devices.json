@@ -1,0 +1,1244 @@
+[
+  {
+    "entity_id": "sensor.backup_backup_manager_state",
+    "friendly_name": "Backup Backup Manager state",
+    "state": "idle",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "enum",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "options": [
+        "idle",
+        "create_backup",
+        "blocked",
+        "receive_backup",
+        "restore_backup"
+      ],
+      "device_class": "enum",
+      "friendly_name": "Backup Backup Manager state"
+    }
+  },
+  {
+    "entity_id": "sensor.backup_next_scheduled_automatic_backup",
+    "friendly_name": "Backup Next scheduled automatic backup",
+    "state": "2025-12-14T02:46:47+00:00",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "timestamp",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Backup Next scheduled automatic backup"
+    }
+  },
+  {
+    "entity_id": "sensor.backup_last_successful_automatic_backup",
+    "friendly_name": "Backup Last successful automatic backup",
+    "state": "2025-12-12T02:57:29+00:00",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "timestamp",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Backup Last successful automatic backup"
+    }
+  },
+  {
+    "entity_id": "sensor.backup_last_attempted_automatic_backup",
+    "friendly_name": "Backup Last attempted automatic backup",
+    "state": "2025-12-13T03:07:05+00:00",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "timestamp",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Backup Last attempted automatic backup"
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_dawn",
+    "friendly_name": "Sun Next dawn",
+    "state": "2025-12-14T07:01:40+00:00",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "timestamp",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next dawn"
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_dusk",
+    "friendly_name": "Sun Next dusk",
+    "state": "2025-12-14T16:08:36+00:00",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "timestamp",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next dusk"
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_midnight",
+    "friendly_name": "Sun Next midnight",
+    "state": "2025-12-13T23:35:13+00:00",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "timestamp",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next midnight"
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_noon",
+    "friendly_name": "Sun Next noon",
+    "state": "2025-12-14T11:34:58+00:00",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "timestamp",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next noon"
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_rising",
+    "friendly_name": "Sun Next rising",
+    "state": "2025-12-14T07:43:46+00:00",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "timestamp",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next rising"
+    }
+  },
+  {
+    "entity_id": "sensor.sun_next_setting",
+    "friendly_name": "Sun Next setting",
+    "state": "2025-12-14T15:26:31+00:00",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "timestamp",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "timestamp",
+      "friendly_name": "Sun Next setting"
+    }
+  },
+  {
+    "entity_id": "sensor.xiaomi_redmi_note_12_pro_battery_level",
+    "friendly_name": "Xiaomi Redmi note 12 Pro Battery level",
+    "state": "60",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "battery",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "%",
+      "device_class": "battery",
+      "icon": "mdi:battery-60",
+      "friendly_name": "Xiaomi Redmi note 12 Pro Battery level"
+    }
+  },
+  {
+    "entity_id": "sensor.xiaomi_redmi_note_12_pro_battery_state",
+    "friendly_name": "Xiaomi Redmi note 12 Pro Battery state",
+    "state": "discharging",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "enum",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "options": [
+        "charging",
+        "discharging",
+        "full",
+        "not_charging"
+      ],
+      "device_class": "enum",
+      "icon": "mdi:battery-minus",
+      "friendly_name": "Xiaomi Redmi note 12 Pro Battery state"
+    }
+  },
+  {
+    "entity_id": "sensor.xiaomi_redmi_note_12_pro_charger_type",
+    "friendly_name": "Xiaomi Redmi note 12 Pro Charger type",
+    "state": "none",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "enum",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "options": [
+        "ac",
+        "usb",
+        "wireless",
+        "dock",
+        "none"
+      ],
+      "device_class": "enum",
+      "icon": "mdi:battery",
+      "friendly_name": "Xiaomi Redmi note 12 Pro Charger type"
+    }
+  },
+  {
+    "entity_id": "sensor.sm_j320fn_battery_level",
+    "friendly_name": "SM-J320FN Battery level",
+    "state": "57",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "battery",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "%",
+      "device_class": "battery",
+      "icon": "mdi:battery-50",
+      "friendly_name": "SM-J320FN Battery level"
+    }
+  },
+  {
+    "entity_id": "sensor.sm_j320fn_battery_state",
+    "friendly_name": "SM-J320FN Battery state",
+    "state": "discharging",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "enum",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "options": [
+        "charging",
+        "discharging",
+        "full",
+        "not_charging"
+      ],
+      "device_class": "enum",
+      "icon": "mdi:battery-minus",
+      "friendly_name": "SM-J320FN Battery state"
+    }
+  },
+  {
+    "entity_id": "sensor.sm_j320fn_charger_type",
+    "friendly_name": "SM-J320FN Charger type",
+    "state": "none",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "enum",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "options": [
+        "ac",
+        "usb",
+        "wireless",
+        "dock",
+        "none"
+      ],
+      "device_class": "enum",
+      "icon": "mdi:battery",
+      "friendly_name": "SM-J320FN Charger type"
+    }
+  },
+  {
+    "entity_id": "binary_sensor.cudy_router_wan_status",
+    "friendly_name": "Cudy router WAN status",
+    "state": "on",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "connectivity",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "connectivity",
+      "friendly_name": "Cudy router WAN status"
+    }
+  },
+  {
+    "entity_id": "sensor.cudy_router_download_speed",
+    "friendly_name": "Cudy router Download speed",
+    "state": "0.0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "KiB/s",
+      "device_class": "data_rate",
+      "friendly_name": "Cudy router Download speed"
+    }
+  },
+  {
+    "entity_id": "sensor.cudy_router_upload_speed",
+    "friendly_name": "Cudy router Upload speed",
+    "state": "0.0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "KiB/s",
+      "device_class": "data_rate",
+      "friendly_name": "Cudy router Upload speed"
+    }
+  },
+  {
+    "entity_id": "binary_sensor.emg3525_t50b_wan_status",
+    "friendly_name": "EMG3525-T50B WAN status",
+    "state": "on",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "connectivity",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "device_class": "connectivity",
+      "friendly_name": "EMG3525-T50B WAN status"
+    }
+  },
+  {
+    "entity_id": "sensor.emg3525_t50b_download_speed",
+    "friendly_name": "EMG3525-T50B Download speed",
+    "state": "0.0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "KiB/s",
+      "device_class": "data_rate",
+      "friendly_name": "EMG3525-T50B Download speed"
+    }
+  },
+  {
+    "entity_id": "sensor.emg3525_t50b_upload_speed",
+    "friendly_name": "EMG3525-T50B Upload speed",
+    "state": "16.489418019157",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "KiB/s",
+      "device_class": "data_rate",
+      "friendly_name": "EMG3525-T50B Upload speed"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_weather",
+    "friendly_name": "OpenWeatherMap Weather",
+    "state": "clear sky",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap Weather"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_dew_point",
+    "friendly_name": "OpenWeatherMap Dew Point",
+    "state": "unknown",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "temperature",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "°C",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "temperature",
+      "friendly_name": "OpenWeatherMap Dew Point"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_temperature",
+    "friendly_name": "OpenWeatherMap Temperature",
+    "state": "6.53",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "temperature",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "°C",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "temperature",
+      "friendly_name": "OpenWeatherMap Temperature"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_feels_like_temperature",
+    "friendly_name": "OpenWeatherMap Feels like temperature",
+    "state": "4.28",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "temperature",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "°C",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "temperature",
+      "friendly_name": "OpenWeatherMap Feels like temperature"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_wind_speed",
+    "friendly_name": "OpenWeatherMap Wind speed",
+    "state": "11.124",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "wind_speed",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "km/h",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "wind_speed",
+      "friendly_name": "OpenWeatherMap Wind speed"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_wind_gust",
+    "friendly_name": "OpenWeatherMap Wind gust",
+    "state": "unknown",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "wind_speed",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "km/h",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "wind_speed",
+      "friendly_name": "OpenWeatherMap Wind gust"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_wind_bearing",
+    "friendly_name": "OpenWeatherMap Wind bearing",
+    "state": "220",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "wind_direction",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement_angle",
+      "unit_of_measurement": "°",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "wind_direction",
+      "friendly_name": "OpenWeatherMap Wind bearing"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_humidity",
+    "friendly_name": "OpenWeatherMap Humidity",
+    "state": "88",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "humidity",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "%",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "humidity",
+      "friendly_name": "OpenWeatherMap Humidity"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_pressure",
+    "friendly_name": "OpenWeatherMap Pressure",
+    "state": "1027",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "pressure",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "hPa",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "pressure",
+      "friendly_name": "OpenWeatherMap Pressure"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_cloud_coverage",
+    "friendly_name": "OpenWeatherMap Cloud coverage",
+    "state": "0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "%",
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap Cloud coverage"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_rain",
+    "friendly_name": "OpenWeatherMap Rain",
+    "state": "0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "precipitation_intensity",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "mm/h",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "precipitation_intensity",
+      "friendly_name": "OpenWeatherMap Rain"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_snow",
+    "friendly_name": "OpenWeatherMap Snow",
+    "state": "0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "precipitation_intensity",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "mm/h",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "precipitation_intensity",
+      "friendly_name": "OpenWeatherMap Snow"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_precipitation_kind",
+    "friendly_name": "OpenWeatherMap Precipitation kind",
+    "state": "None",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap Precipitation kind"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_uv_index",
+    "friendly_name": "OpenWeatherMap UV Index",
+    "state": "unknown",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "UV index",
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap UV Index"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_visibility",
+    "friendly_name": "OpenWeatherMap Visibility",
+    "state": "10000",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "distance",
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "unit_of_measurement": "m",
+      "attribution": "Data provided by OpenWeatherMap",
+      "device_class": "distance",
+      "friendly_name": "OpenWeatherMap Visibility"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_condition",
+    "friendly_name": "OpenWeatherMap Condition",
+    "state": "clear-night",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap Condition"
+    }
+  },
+  {
+    "entity_id": "sensor.openweathermap_weather_code",
+    "friendly_name": "OpenWeatherMap Weather Code",
+    "state": "800",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap Weather Code"
+    }
+  },
+  {
+    "entity_id": "weather.openweathermap",
+    "friendly_name": "OpenWeatherMap",
+    "state": "clear-night",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "has_device_id": false,
+      "attribution": "Data provided by OpenWeatherMap"
+    },
+    "all_attributes": {
+      "temperature": 6.5,
+      "apparent_temperature": 4.3,
+      "temperature_unit": "°C",
+      "humidity": 88,
+      "cloud_coverage": 0,
+      "pressure": 1027,
+      "pressure_unit": "hPa",
+      "wind_bearing": 220,
+      "wind_speed": 11.12,
+      "wind_speed_unit": "km/h",
+      "visibility": 10,
+      "visibility_unit": "km",
+      "precipitation_unit": "mm",
+      "attribution": "Data provided by OpenWeatherMap",
+      "friendly_name": "OpenWeatherMap"
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_messages_expiry_duration",
+    "friendly_name": "192.168.0.250 Messages expiry duration",
+    "state": "12.0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "duration",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "unit_of_measurement": "h",
+      "device_class": "duration",
+      "friendly_name": "192.168.0.250 Messages expiry duration"
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_attachment_expiry_duration",
+    "friendly_name": "192.168.0.250 Attachment expiry duration",
+    "state": "3.0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "duration",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "unit_of_measurement": "h",
+      "device_class": "duration",
+      "friendly_name": "192.168.0.250 Attachment expiry duration"
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_attachment_storage",
+    "friendly_name": "192.168.0.250 Attachment storage",
+    "state": "0.0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_size",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "unit_of_measurement": "MiB",
+      "device_class": "data_size",
+      "friendly_name": "192.168.0.250 Attachment storage"
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_attachment_storage_limit",
+    "friendly_name": "192.168.0.250 Attachment storage limit",
+    "state": "100.0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_size",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "unit_of_measurement": "MiB",
+      "device_class": "data_size",
+      "friendly_name": "192.168.0.250 Attachment storage limit"
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_attachment_file_size_limit",
+    "friendly_name": "192.168.0.250 Attachment file size limit",
+    "state": "15.0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_size",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "unit_of_measurement": "MiB",
+      "device_class": "data_size",
+      "friendly_name": "192.168.0.250 Attachment file size limit"
+    }
+  },
+  {
+    "entity_id": "sensor.192_168_0_250_attachment_bandwidth_limit",
+    "friendly_name": "192.168.0.250 Attachment bandwidth limit",
+    "state": "500.0",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_size",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "unit_of_measurement": "MiB",
+      "device_class": "data_size",
+      "friendly_name": "192.168.0.250 Attachment bandwidth limit"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_ip_address",
+    "friendly_name": "Cloudflare Speed Test IP address",
+    "state": "unknown",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "friendly_name": "Cloudflare Speed Test IP address"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_isp",
+    "friendly_name": "Cloudflare Speed Test ISP",
+    "state": "unknown",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "friendly_name": "Cloudflare Speed Test ISP"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_latency",
+    "friendly_name": "Cloudflare Speed Test Latency",
+    "state": "9",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "duration",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "ms",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "duration",
+      "friendly_name": "Cloudflare Speed Test Latency"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_jitter",
+    "friendly_name": "Cloudflare Speed Test Jitter",
+    "state": "3",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "duration",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "ms",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "duration",
+      "friendly_name": "Cloudflare Speed Test Jitter"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_100kb_down",
+    "friendly_name": "Cloudflare Speed Test 100kB down",
+    "state": "45.33",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 100kB down"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_100kb_up",
+    "friendly_name": "Cloudflare Speed Test 100kB up",
+    "state": "54.84",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 100kB up"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_1mb_down",
+    "friendly_name": "Cloudflare Speed Test 1MB down",
+    "state": "84.84",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 1MB down"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_1mb_up",
+    "friendly_name": "Cloudflare Speed Test 1MB up",
+    "state": "88.02",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 1MB up"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_10mb_down",
+    "friendly_name": "Cloudflare Speed Test 10MB down",
+    "state": "91.19",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 10MB down"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_10mb_up",
+    "friendly_name": "Cloudflare Speed Test 10MB up",
+    "state": "89.39",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 10MB up"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_25mb_down",
+    "friendly_name": "Cloudflare Speed Test 25MB down",
+    "state": "90.39",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 25MB down"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_90th_percentile_down",
+    "friendly_name": "Cloudflare Speed Test 90th percentile down",
+    "state": "92.09",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 90th percentile down"
+    }
+  },
+  {
+    "entity_id": "sensor.cloudflare_speed_test_90th_percentile_up",
+    "friendly_name": "Cloudflare Speed Test 90th percentile up",
+    "state": "93.02",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "data_rate",
+      "has_device_id": false,
+      "attribution": "Data retrieved from Cloudflare Speed Test"
+    },
+    "all_attributes": {
+      "state_class": "measurement",
+      "server_city": null,
+      "server_region": null,
+      "server_code": null,
+      "unit_of_measurement": "Mbit/s",
+      "attribution": "Data retrieved from Cloudflare Speed Test",
+      "device_class": "data_rate",
+      "friendly_name": "Cloudflare Speed Test 90th percentile up"
+    }
+  },
+  {
+    "entity_id": "binary_sensor.controller_kusanagi_online",
+    "friendly_name": "KUSANAGI Online",
+    "state": "unavailable",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "connectivity",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "restored": true,
+      "device_class": "connectivity",
+      "friendly_name": "KUSANAGI Online",
+      "supported_features": 0
+    }
+  },
+  {
+    "entity_id": "binary_sensor.controller_madara_online",
+    "friendly_name": "MADARA Online",
+    "state": "unavailable",
+    "checks": {
+      "entity_id_has_esp": false,
+      "friendly_name_has_esp": false,
+      "platform_is_esphome": false,
+      "integration_is_esphome": false,
+      "device_class_indicator": "connectivity",
+      "has_device_id": false
+    },
+    "all_attributes": {
+      "restored": true,
+      "device_class": "connectivity",
+      "friendly_name": "MADARA Online",
+      "supported_features": 0
+    }
+  }
+]
