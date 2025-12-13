@@ -383,11 +383,306 @@ async function setUserRole(userId, username, role) {
 client.on('interactionCreate', async (interaction) => {
   if (interaction.isAutocomplete()) {
     const { commandName } = interaction;
-    const focusedValue = interaction.options.getFocused().toLowerCase();
+    const focusedOption = interaction.options.getFocused(true);
+    const focusedValue = focusedOption.value.toLowerCase();
+    const subcommand = interaction.options.getSubcommand(false);
+    const subcommandGroup = interaction.options.getSubcommandGroup(false);
     
     try {
+      // ============================================
+      // UNIFIED COMMAND AUTOCOMPLETE
+      // ============================================
+      
+      // /network wol - device autocomplete
+      if (commandName === 'network' && subcommand === 'wol') {
+        const devices = deviceOps.getAll();
+        
+        // Score-based filtering and sorting
+        const scored = devices.map(d => {
+          const hostname = (d.hostname || '').toLowerCase();
+          const ip = d.ip.toLowerCase();
+          const mac = d.mac.toLowerCase();
+          const notes = (d.notes || '').toLowerCase();
+          
+          let score = 0;
+          if (!focusedValue) {
+            // No input - prioritize online devices and those with hostnames
+            score = (d.online ? 100 : 0) + (d.hostname ? 50 : 0);
+          } else {
+            // Exact match gets highest score
+            if (hostname === focusedValue) score = 1000;
+            else if (hostname.startsWith(focusedValue)) score = 500;
+            else if (hostname.includes(focusedValue)) score = 200;
+            else if (ip.startsWith(focusedValue)) score = 150;
+            else if (ip.includes(focusedValue)) score = 100;
+            else if (mac.includes(focusedValue)) score = 80;
+            else if (notes.includes(focusedValue)) score = 50;
+            else return null; // No match
+            
+            // Bonus for online devices
+            if (d.online) score += 25;
+          }
+          return { device: d, score };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 25);
+        
+        await interaction.respond(
+          scored.map(({ device: d }) => {
+            // Enhanced display with more info
+            const status = d.online ? '🟢' : '🔴';
+            const name = d.hostname || 'Unknown';
+            const lastSeen = d.last_seen ? new Date(d.last_seen).toLocaleDateString() : '';
+            const notePreview = d.notes ? ` 📝` : '';
+            
+            return {
+              name: `${status} ${name} | ${d.ip} | ${d.mac.substring(0, 8)}...${notePreview}`,
+              value: d.mac
+            };
+          })
+        );
+      }
+      
+      // /device config - device autocomplete
+      else if (commandName === 'device' && subcommand === 'config' && focusedOption.name === 'device') {
+        const devices = deviceOps.getAll();
+        
+        // If no devices found, prompt user to scan
+        if (devices.length === 0) {
+          await interaction.respond([
+            { name: '⚠️ No devices found - Run /network scan first', value: 'no_devices' }
+          ]);
+          return;
+        }
+        
+        // Score-based filtering and sorting
+        const scored = devices.map(d => {
+          const hostname = (d.hostname || '').toLowerCase();
+          const ip = d.ip.toLowerCase();
+          const mac = d.mac.toLowerCase();
+          const notes = (d.notes || '').toLowerCase();
+          
+          let score = 0;
+          if (!focusedValue) {
+            // No input - show all devices, prioritize devices with names, then online devices
+            score = (d.notes ? 200 : 0) + (d.online ? 100 : 0) + (d.hostname ? 50 : 0);
+            return { device: d, score };
+          } else {
+            // Exact match gets highest score
+            if (notes === focusedValue) score = 1000;
+            else if (notes.startsWith(focusedValue)) score = 800;
+            else if (hostname === focusedValue) score = 600;
+            else if (hostname.startsWith(focusedValue)) score = 500;
+            else if (notes.includes(focusedValue)) score = 400;
+            else if (hostname.includes(focusedValue)) score = 200;
+            else if (ip.startsWith(focusedValue)) score = 150;
+            else if (ip.includes(focusedValue)) score = 100;
+            else if (mac.includes(focusedValue)) score = 80;
+            else return null; // No match
+            
+            // Bonus for online devices
+            if (d.online) score += 25;
+            return { device: d, score };
+          }
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 25);
+        
+        // If no matches after filtering, show message
+        if (scored.length === 0) {
+          await interaction.respond([
+            { name: `❌ No devices match "${focusedValue}"`, value: 'no_match' }
+          ]);
+          return;
+        }
+        
+        await interaction.respond(
+          scored.map(({ device: d }) => {
+            // Enhanced display with emoji and more info
+            const status = d.online ? '🟢' : '🔴';
+            const emoji = d.emoji || '';
+            const displayName = d.notes ? `${d.notes} (${d.hostname || d.ip})` : (d.hostname || d.ip);
+            
+            return {
+              name: `${status} ${emoji} ${displayName} | ${d.ip}`.substring(0, 100),
+              value: d.mac
+            };
+          })
+        );
+      }
+      
+      // /device group * - device autocomplete
+      else if (commandName === 'device' && subcommandGroup === 'group' && 
+               (focusedOption.name === 'device' || focusedOption.name.startsWith('device'))) {
+        const devices = deviceOps.getAll();
+        
+        // If no devices found, prompt user to scan
+        if (devices.length === 0) {
+          await interaction.respond([
+            { name: '⚠️ No devices found - Run /network scan first', value: 'no_devices' }
+          ]);
+          return;
+        }
+        
+        // Score-based filtering and sorting
+        const scored = devices.map(d => {
+          const hostname = (d.hostname || '').toLowerCase();
+          const ip = d.ip.toLowerCase();
+          const mac = d.mac.toLowerCase();
+          const notes = (d.notes || '').toLowerCase();
+          
+          let score = 0;
+          if (!focusedValue) {
+            // No input - show all devices, prioritize devices with names, then online devices
+            score = (d.notes ? 200 : 0) + (d.online ? 100 : 0) + (d.hostname ? 50 : 0);
+            return { device: d, score };
+          } else {
+            // Exact match gets highest score
+            if (notes === focusedValue) score = 1000;
+            else if (notes.startsWith(focusedValue)) score = 800;
+            else if (hostname === focusedValue) score = 600;
+            else if (hostname.startsWith(focusedValue)) score = 500;
+            else if (notes.includes(focusedValue)) score = 400;
+            else if (hostname.includes(focusedValue)) score = 200;
+            else if (ip.startsWith(focusedValue)) score = 150;
+            else if (ip.includes(focusedValue)) score = 100;
+            else if (mac.includes(focusedValue)) score = 80;
+            else return null; // No match
+            
+            // Bonus for online devices
+            if (d.online) score += 25;
+            return { device: d, score };
+          }
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 25);
+        
+        // If no matches after filtering, show message
+        if (scored.length === 0) {
+          await interaction.respond([
+            { name: `❌ No devices match "${focusedValue}"`, value: 'no_match' }
+          ]);
+          return;
+        }
+        
+        await interaction.respond(
+          scored.map(({ device: d }) => {
+            // Enhanced display with emoji and more info
+            const status = d.online ? '🟢' : '🔴';
+            const emoji = d.emoji || '';
+            const displayName = d.notes ? `${d.notes} (${d.hostname || d.ip})` : (d.hostname || d.ip);
+            const group = d.device_group ? ` 📁${d.device_group}` : '';
+            
+            return {
+              name: `${status} ${emoji} ${displayName}${group} | ${d.ip}`.substring(0, 100),
+              value: d.mac
+            };
+          })
+        );
+      }
+      
+      // /device group view - group autocomplete
+      else if (commandName === 'device' && subcommandGroup === 'group' && 
+               subcommand === 'view' && focusedOption.name === 'group') {
+        const groups = deviceOps.getAllGroups();
+        
+        const filtered = groups
+          .filter(g => !focusedValue || g.device_group.toLowerCase().includes(focusedValue))
+          .slice(0, 25);
+        
+        await interaction.respond(
+          filtered.map(g => ({
+            name: `📁 ${g.device_group} (${g.count} devices)`,
+            value: g.device_group
+          }))
+        );
+      }
+      
+      // /automation devicetrigger - device/trigger/entity autocomplete
+      else if (commandName === 'automation' && subcommandGroup === 'devicetrigger') {
+        if (focusedOption.name === 'device') {
+          // Device autocomplete with "any" option
+          const devices = deviceOps.getAll();
+          
+          const choices = [{ name: '🌐 Any unknown device', value: 'any' }];
+          
+          const filtered = devices
+            .filter(d => {
+              if (!focusedValue) return true;
+              const searchStr = focusedValue;
+              return (d.notes || '').toLowerCase().includes(searchStr) ||
+                     (d.hostname || '').toLowerCase().includes(searchStr) ||
+                     d.ip.includes(searchStr);
+            })
+            .slice(0, 24)
+            .map(d => {
+              const status = d.online ? '🟢' : '🔴';
+              const emoji = d.emoji || '';
+              const name = d.notes || d.hostname || d.ip;
+              return {
+                name: `${status} ${emoji} ${name}`.substring(0, 100),
+                value: d.mac
+              };
+            });
+          
+          await interaction.respond([...choices, ...filtered]);
+          
+        } else if (focusedOption.name === 'trigger') {
+          // Trigger autocomplete for remove/toggle
+          const { getPlugin } = await import('./src/plugins/plugin-manager.js');
+          const plugin = getPlugin('device-triggers');
+          
+          if (!plugin) {
+            await interaction.respond([{ name: 'Plugin not loaded', value: 'error' }]);
+            return;
+          }
+          
+          const triggers = await plugin.listTriggers();
+          
+          const filtered = triggers
+            .filter(t => !focusedValue || t.name.toLowerCase().includes(focusedValue))
+            .slice(0, 25)
+            .map(t => ({
+              name: `${t.enabled ? '✅' : '⚠️'} ${t.name} (${t.event})`,
+              value: t.id.toString()
+            }));
+          
+          await interaction.respond(filtered);
+          
+        } else if (focusedOption.name === 'ha_entity') {
+          // Home Assistant entity autocomplete
+          try {
+            const { getEntities } = await import('./src/integrations/homeassistant.js');
+            const entities = await getEntities();
+            
+            const filtered = entities
+              .filter(e => {
+                if (!focusedValue) return true;
+                return e.entity_id.toLowerCase().includes(focusedValue) ||
+                       (e.attributes?.friendly_name || '').toLowerCase().includes(focusedValue);
+              })
+              .slice(0, 25)
+              .map(e => ({
+                name: `${e.attributes?.friendly_name || e.entity_id}`,
+                value: e.entity_id
+              }));
+            
+            await interaction.respond(filtered);
+          } catch (err) {
+            await interaction.respond([{ name: 'Home Assistant not available', value: 'error' }]);
+          }
+        }
+      }
+      
+      // ============================================
+      // LEGACY COMMAND AUTOCOMPLETE (Backwards Compatibility)
+      // ============================================
+      
       // WOL command - device autocomplete with improved sorting
-      if (commandName === 'wol') {
+      else if (commandName === 'wol') {
         const devices = deviceOps.getAll();
         
         // Score-based filtering and sorting
@@ -438,7 +733,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       
       // NAMEDEVICE, DEVICEEMOJI, DEVICECONFIG, DEVICEGROUP command - device autocomplete
-      else if (routedCommandName === 'namedevice' || commandName === 'deviceemoji' || commandName === 'deviceconfig' ||
+      else if (commandName === 'namedevice' || commandName === 'deviceemoji' || commandName === 'deviceconfig' ||
                (commandName === 'devicegroup' && (focusedOption.name === 'device' || focusedOption.name.startsWith('device')))) {
         const devices = deviceOps.getAll();
         
@@ -508,7 +803,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       
       // DEVICEGROUP view - group autocomplete
-      else if (routedCommandName === 'devicegroup' && focusedOption.name === 'group') {
+      else if (commandName === 'devicegroup' && focusedOption.name === 'group') {
         const groups = deviceOps.getAllGroups();
         
         const filtered = groups
@@ -524,7 +819,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       
       // DEVICETRIGGER autocomplete
-      else if (routedCommandName === 'devicetrigger') {
+      else if (commandName === 'devicetrigger') {
         if (focusedOption.name === 'device') {
           // Device autocomplete with "any" option
           const devices = deviceOps.getAll();
@@ -600,30 +895,30 @@ client.on('interactionCreate', async (interaction) => {
       }
       
       // Home Assistant entity autocomplete
-      else if (routedCommandName === 'homeassistant') {
-        const subcommand = interaction.options.getSubcommand();
+      else if (commandName === 'homeassistant') {
+        const haSubcommand = interaction.options.getSubcommand();
         const { getAllLights, getAllSwitches, getAllSensors, getAllScenes, getAllAutomations, getAllScripts } = await import('./src/integrations/homeassistant.js');
         
         let entities = [];
         let entityType = '';
         
         try {
-          if (subcommand === 'light') {
+          if (haSubcommand === 'light') {
             entities = await getAllLights();
             entityType = 'light';
-          } else if (subcommand === 'switch') {
+          } else if (haSubcommand === 'switch') {
             entities = await getAllSwitches();
             entityType = 'switch';
-          } else if (subcommand === 'sensor') {
+          } else if (haSubcommand === 'sensor') {
             entities = await getAllSensors();
             entityType = 'sensor';
-          } else if (subcommand === 'scene') {
+          } else if (haSubcommand === 'scene') {
             entities = await getAllScenes();
             entityType = 'scene';
-          } else if (subcommand === 'automation') {
+          } else if (haSubcommand === 'automation') {
             entities = await getAllAutomations();
             entityType = 'automation';
-          } else if (subcommand === 'script') {
+          } else if (haSubcommand === 'script') {
             entities = await getAllScripts();
             entityType = 'script';
           }
