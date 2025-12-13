@@ -442,6 +442,14 @@ client.on('interactionCreate', async (interaction) => {
                (commandName === 'devicegroup' && (focusedOption.name === 'device' || focusedOption.name.startsWith('device')))) {
         const devices = deviceOps.getAll();
         
+        // If no devices found, prompt user to scan
+        if (devices.length === 0) {
+          await interaction.respond([
+            { name: '⚠️ No devices found - Run /scan first', value: 'no_devices' }
+          ]);
+          return;
+        }
+        
         // Score-based filtering and sorting
         const scored = devices.map(d => {
           const hostname = (d.hostname || '').toLowerCase();
@@ -474,6 +482,14 @@ client.on('interactionCreate', async (interaction) => {
         .filter(Boolean)
         .sort((a, b) => b.score - a.score)
         .slice(0, 25);
+        
+        // If no matches after filtering, show message
+        if (scored.length === 0) {
+          await interaction.respond([
+            { name: `❌ No devices match "${focusedValue}"`, value: 'no_match' }
+          ]);
+          return;
+        }
         
         await interaction.respond(
           scored.map(({ device: d }) => {
