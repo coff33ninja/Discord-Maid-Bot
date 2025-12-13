@@ -49,8 +49,25 @@
 - New module: `src/network/unified-scanner.js`
 - Updated: `index.js`, `src/commands/slash-commands.js`, `src/dashboard/server.js`
 - Updated: `public/index.html`, `public/dashboard.js`
-- New documentation: `docs/NETWORK_SCANNING.md`
+- Updated: `src/config/smb-config.js` for cross-platform support
+- New documentation: `docs/NETWORK_SCANNING.md`, `docs/SMB_SETUP.md`
 - Database: Uses existing `devices.notes` field for friendly names
+
+### Platform-Specific Implementations
+
+**Network Scanning:**
+- Windows: `ping -n 1 -w 5000 <ip>`
+- Linux/Mac: `ping -c 1 -W 5 <ip>`
+
+**SMB/CIFS:**
+- Windows: `net use`, `copy`, `dir` commands
+- Linux/Mac: `smbclient` package (requires installation)
+
+**Speed Test:**
+- Cross-platform via `speedtest-net` npm package
+
+**Tailscale:**
+- Cross-platform via `tailscale` CLI (same on all platforms)
 
 ### Documentation
 - Added comprehensive network scanning guide

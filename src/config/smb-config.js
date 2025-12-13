@@ -1,3 +1,14 @@
+/**
+ * SMB/CIFS Configuration Module
+ * 
+ * Cross-platform SMB file sharing support
+ * 
+ * Requirements:
+ * - Windows: Built-in (net use, copy, dir commands)
+ * - Linux: smbclient package (install: sudo apt-get install smbclient)
+ * - macOS: smbclient (usually pre-installed)
+ */
+
 import { configOps } from '../database/db.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -40,7 +51,7 @@ export function setSMBConfig(host, username, password, share = 'share') {
   };
 }
 
-// Test SMB connection
+// Test SMB connection (cross-platform)
 export async function testSMBConnection() {
   const config = getSMBConfig();
   
@@ -57,13 +68,21 @@ export async function testSMBConnection() {
     const password = configOps.get('smb_password') || process.env.SMB_PASSWORD;
     const share = configOps.get('smb_share') || process.env.SMB_SHARE || 'share';
     
-    // Try to mount/connect
-    const mountCmd = `net use \\\\${host}\\${share} ${password} /user:${username}`;
-    await execAsync(mountCmd);
+    const isWindows = process.platform === 'win32';
     
-    // Try to list files
-    const listCmd = `dir \\\\${host}\\${share}`;
-    await execAsync(listCmd);
+    if (isWindows) {
+      // Windows: Use net use
+      const mountCmd = `net use \\\\${host}\\${share} ${password} /user:${username}`;
+      await execAsync(mountCmd);
+      
+      // Try to list files
+      const listCmd = `dir \\\\${host}\\${share}`;
+      await execAsync(listCmd);
+    } else {
+      // Linux/Mac: Use smbclient
+      const testCmd = `smbclient //${host}/${share} -U ${username}%${password} -c "ls"`;
+      await execAsync(testCmd);
+    }
     
     return {
       success: true,
@@ -77,7 +96,7 @@ export async function testSMBConnection() {
   }
 }
 
-// Save file to SMB
+// Save file to SMB (cross-platform)
 export async function saveToSMB(filename, content, localTempDir = './temp') {
   const config = getSMBConfig();
   
@@ -104,22 +123,39 @@ export async function saveToSMB(filename, content, localTempDir = './temp') {
     const localPath = path.join(localTempDir, filename);
     await fs.writeFile(localPath, content, 'utf8');
     
-    // Mount SMB share
-    const mountCmd = `net use \\\\${host}\\${share} ${password} /user:${username}`;
-    await execAsync(mountCmd).catch(() => {}); // Ignore if already mounted
+    const isWindows = process.platform === 'win32';
     
-    // Copy to SMB
-    const smbPath = `\\\\${host}\\${share}\\${filename}`;
-    await execAsync(`copy "${localPath}" "${smbPath}"`);
-    
-    // Clean up local file
-    await fs.unlink(localPath);
-    
-    return {
-      success: true,
-      savedToSMB: true,
-      smbPath
-    };
+    if (isWindows) {
+      // Windows: Use net use and copy
+      const mountCmd = `net use \\\\${host}\\${share} ${password} /user:${username}`;
+      await execAsync(mountCmd).catch(() => {}); // Ignore if already mounted
+      
+      // Copy to SMB
+      const smbPath = `\\\\${host}\\${share}\\${filename}`;
+      await execAsync(`copy "${localPath}" "${smbPath}"`);
+      
+      // Clean up local file
+      await fs.unlink(localPath);
+      
+      return {
+        success: true,
+        savedToSMB: true,
+        smbPath
+      };
+    } else {
+      // Linux/Mac: Use smbclient
+      const uploadCmd = `smbclient //${host}/${share} -U ${username}%${password} -c "put \\"${localPath}\\" \\"${filename}\\"" 2>&1`;
+      await execAsync(uploadCmd);
+      
+      // Clean up local file
+      await fs.unlink(localPath);
+      
+      return {
+        success: true,
+        savedToSMB: true,
+        smbPath: `//${host}/${share}/${filename}`
+      };
+    }
   } catch (error) {
     console.error('SMB save error:', error.message);
     
@@ -153,7 +189,7 @@ export function getSMBStatus() {
   };
 }
 
-// List files on SMB share
+// List files on SMB share (cross-platform)
 export async function listSMBFiles() {
   const config = getSMBConfig();
   
@@ -170,15 +206,34 @@ export async function listSMBFiles() {
     const password = configOps.get('smb_password') || process.env.SMB_PASSWORD;
     const share = configOps.get('smb_share') || process.env.SMB_SHARE || 'share';
     
-    // Mount share
-    const mountCmd = `net use \\\\${host}\\${share} ${password} /user:${username}`;
-    await execAsync(mountCmd).catch(() => {});
+    const isWindows = process.platform === 'win32';
+    let files = [];
     
-    // List files
-    const listCmd = `dir /b \\\\${host}\\${share}`;
-    const { stdout } = await execAsync(listCmd);
-    
-    const files = stdout.trim().split('\n').filter(f => f.trim());
+    if (isWindows) {
+      // Windows: Use net use and dir
+      const mountCmd = `net use \\\\${host}\\${share} ${password} /user:${username}`;
+      await execAsync(mountCmd).catch(() => {});
+      
+      // List files
+      const listCmd = `dir /b \\\\${host}\\${share}`;
+      const { stdout } = await execAsync(listCmd);
+      
+      files = stdout.trim().split('\n').filter(f => f.trim());
+    } else {
+      // Linux/Mac: Use smbclient
+      const listCmd = `smbclient //${host}/${share} -U ${username}%${password} -c "ls" 2>&1`;
+      const { stdout } = await execAsync(listCmd);
+      
+      // Parse smbclient output (format: "  filename    A    size  date")
+      files = stdout
+        .split('\n')
+        .filter(line => line.trim() && !line.includes('blocks of size') && !line.includes('blocks available'))
+        .map(line => {
+          const match = line.trim().match(/^(.+?)\s+[A-Z]+\s+\d+/);
+          return match ? match[1].trim() : null;
+        })
+        .filter(Boolean);
+    }
     
     return {
       success: true,

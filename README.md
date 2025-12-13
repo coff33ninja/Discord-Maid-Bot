@@ -45,9 +45,10 @@ npm start
 
 - ✅ **Windows** - Fully supported
 - ✅ **Linux** - Fully supported (Ubuntu, Debian, etc.)
+  - For SMB features: `sudo apt-get install smbclient`
 - ✅ **macOS** - Should work (untested)
 
-Network scanning features automatically detect the platform and use appropriate commands.
+Network scanning and SMB features automatically detect the platform and use appropriate commands.
 
 ## Configuration
 
