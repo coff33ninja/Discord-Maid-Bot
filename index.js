@@ -887,6 +887,134 @@ client.on('interactionCreate', async (interaction) => {
       await interaction.reply({ embeds: [embed] });
     }
     
+    // RESEARCHSEARCH COMMAND - Full-text search
+    else if (commandName === 'researchsearch') {
+      const searchQuery = interaction.options.getString('query');
+      const viewId = interaction.options.getInteger('id');
+      
+      // If ID provided, show full result
+      if (viewId) {
+        const result = researchOps.getById(viewId);
+        if (!result) {
+          await interaction.reply({ content: '❌ Research not found with that ID.', ephemeral: true });
+          return;
+        }
+        
+        const embed = new EmbedBuilder()
+          .setColor('#9370DB')
+          .setTitle(`📚 Research #${viewId}: ${result.query}`)
+          .setDescription(result.result.substring(0, 4000))
+          .setFooter({ text: `${new Date(result.timestamp).toLocaleString()} | ${result.saved_to_smb ? 'Saved to SMB' : 'Local'}` })
+          .setTimestamp();
+        
+        await interaction.reply({ embeds: [embed] });
+        
+        // If result is longer, send follow-ups
+        if (result.result.length > 4000) {
+          const remaining = result.result.substring(4000);
+          const chunks = remaining.match(/[\s\S]{1,4000}/g) || [];
+          for (const chunk of chunks.slice(0, 3)) {
+            await interaction.followUp({ embeds: [new EmbedBuilder().setColor('#9370DB').setDescription(chunk)] });
+          }
+        }
+        return;
+      }
+      
+      // Full-text search
+      await interaction.deferReply();
+      
+      const results = researchOps.fullTextSearch(searchQuery);
+      
+      if (results.length === 0) {
+        await interaction.editReply(`🔍 No results found for "${searchQuery}"`);
+        return;
+      }
+      
+      const embed = new EmbedBuilder()
+        .setColor('#9370DB')
+        .setTitle(`🔍 Search Results: "${searchQuery}"`)
+        .setDescription(`Found ${results.length} matching research entries\n\nUse \`/researchsearch query:${searchQuery} id:<number>\` to view full result`)
+        .setTimestamp();
+      
+      results.slice(0, 10).forEach((item) => {
+        const date = new Date(item.timestamp).toLocaleDateString();
+        // Clean up HTML marks from snippets for Discord
+        const snippet = (item.result_snippet || item.result.substring(0, 100))
+          .replace(/<mark>/g, '**')
+          .replace(/<\/mark>/g, '**')
+          .substring(0, 200);
+        
+        embed.addFields({
+          name: `#${item.id} - ${item.query.substring(0, 50)}`,
+          value: `${snippet}...\n📅 ${date}`,
+          inline: false
+        });
+      });
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+    
+    // WEBSEARCH COMMAND - DuckDuckGo search
+    else if (commandName === 'websearch') {
+      const searchQuery = interaction.options.getString('query');
+      const numResults = interaction.options.getInteger('results') || 5;
+      
+      await interaction.deferReply();
+      
+      try {
+        // Use DuckDuckGo HTML search (no API key needed)
+        const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}`;
+        const response = await axios.get(searchUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        
+        // Parse results using cheerio
+        const cheerio = await import('cheerio');
+        const $ = cheerio.load(response.data);
+        
+        const results = [];
+        $('.result').each((i, el) => {
+          if (i >= numResults) return false;
+          
+          const title = $(el).find('.result__title a').text().trim();
+          const url = $(el).find('.result__url').text().trim();
+          const snippet = $(el).find('.result__snippet').text().trim();
+          
+          if (title && url) {
+            results.push({ title, url: url.startsWith('http') ? url : `https://${url}`, snippet });
+          }
+        });
+        
+        if (results.length === 0) {
+          await interaction.editReply(`🔍 No web results found for "${searchQuery}"`);
+          return;
+        }
+        
+        const embed = new EmbedBuilder()
+          .setColor('#DE5833')
+          .setTitle(`🌐 Web Search: "${searchQuery}"`)
+          .setDescription(`Found ${results.length} results via DuckDuckGo`)
+          .setTimestamp();
+        
+        results.forEach((result, i) => {
+          embed.addFields({
+            name: `${i + 1}. ${result.title.substring(0, 100)}`,
+            value: `${result.snippet.substring(0, 200) || 'No description'}...\n🔗 [${result.url.substring(0, 50)}](${result.url})`,
+            inline: false
+          });
+        });
+        
+        embed.setFooter({ text: 'Powered by DuckDuckGo 🦆' });
+        
+        await interaction.editReply({ embeds: [embed] });
+      } catch (error) {
+        console.error('Web search error:', error);
+        await interaction.editReply(`❌ Web search failed: ${error.message}`);
+      }
+    }
+    
     // WEATHER COMMAND
     else if (commandName === 'weather') {
       const city = interaction.options.getString('city') || 'Cape Town';
@@ -1934,6 +2062,8 @@ client.on('interactionCreate', async (interaction) => {
           { name: '📊 /speedhistory', value: 'View speed test history', inline: false },
           { name: '🔎 /research', value: 'Research a topic and save results (requires permission)', inline: false },
           { name: '📚 /researchhistory', value: 'View past research', inline: false },
+          { name: '🔍 /researchsearch', value: 'Full-text search through past research', inline: false },
+          { name: '🌐 /websearch', value: 'Search the web via DuckDuckGo', inline: false },
           { name: '🌤️ /weather', value: 'Get weather information', inline: false },
           { name: '💬 /chat', value: 'Chat with me!', inline: false },
           { name: '⏰ /schedule', value: 'Manage scheduled tasks', inline: false },

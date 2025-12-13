@@ -100,6 +100,49 @@ export function initDatabase() {
     )
   `);
 
+  // Full-text search virtual table for research logs
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS research_fts USING fts5(
+      query,
+      result,
+      content='research_logs',
+      content_rowid='id'
+    )
+  `);
+
+  // Triggers to keep FTS index in sync
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS research_ai AFTER INSERT ON research_logs BEGIN
+      INSERT INTO research_fts(rowid, query, result) VALUES (new.id, new.query, new.result);
+    END
+  `);
+
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS research_ad AFTER DELETE ON research_logs BEGIN
+      INSERT INTO research_fts(research_fts, rowid, query, result) VALUES('delete', old.id, old.query, old.result);
+    END
+  `);
+
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS research_au AFTER UPDATE ON research_logs BEGIN
+      INSERT INTO research_fts(research_fts, rowid, query, result) VALUES('delete', old.id, old.query, old.result);
+      INSERT INTO research_fts(rowid, query, result) VALUES (new.id, new.query, new.result);
+    END
+  `);
+
+  // Rebuild FTS index if needed (populate from existing data)
+  try {
+    const ftsCount = db.prepare('SELECT COUNT(*) as count FROM research_fts').get();
+    const researchCount = db.prepare('SELECT COUNT(*) as count FROM research_logs').get();
+    if (ftsCount.count === 0 && researchCount.count > 0) {
+      console.log('📚 Rebuilding research full-text search index...');
+      db.exec(`INSERT INTO research_fts(rowid, query, result) SELECT id, query, result FROM research_logs`);
+      console.log('✅ FTS index rebuilt');
+    }
+  } catch (e) {
+    // FTS table might not exist yet on first run
+  }
+
   console.log('✅ Database initialized');
 }
 
@@ -225,6 +268,42 @@ export const researchOps = {
       WHERE query LIKE ? OR result LIKE ?
       ORDER BY timestamp DESC LIMIT 50
     `).all(`%${query}%`, `%${query}%`);
+  },
+
+  // Full-text search using FTS5
+  fullTextSearch: (searchTerm) => {
+    try {
+      // Escape special FTS5 characters and create search query
+      const escaped = searchTerm.replace(/['"*()]/g, ' ').trim();
+      const terms = escaped.split(/\s+/).filter(t => t.length > 1);
+      
+      if (terms.length === 0) {
+        return [];
+      }
+      
+      // Use prefix matching for better results
+      const ftsQuery = terms.map(t => `"${t}"*`).join(' OR ');
+      
+      return db.prepare(`
+        SELECT r.*, 
+               snippet(research_fts, 0, '<mark>', '</mark>', '...', 32) as query_snippet,
+               snippet(research_fts, 1, '<mark>', '</mark>', '...', 64) as result_snippet,
+               bm25(research_fts) as relevance
+        FROM research_fts fts
+        JOIN research_logs r ON fts.rowid = r.id
+        WHERE research_fts MATCH ?
+        ORDER BY relevance
+        LIMIT 25
+      `).all(ftsQuery);
+    } catch (e) {
+      console.error('FTS search error:', e.message);
+      // Fallback to LIKE search
+      return db.prepare(`
+        SELECT * FROM research_logs 
+        WHERE query LIKE ? OR result LIKE ?
+        ORDER BY timestamp DESC LIMIT 25
+      `).all(`%${searchTerm}%`, `%${searchTerm}%`);
+    }
   }
 };
 

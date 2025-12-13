@@ -58,6 +58,30 @@ export const commands = [
         .setMaxValue(50)),
 
   new SlashCommandBuilder()
+    .setName('researchsearch')
+    .setDescription('🔍 Search through past research with full-text search')
+    .addStringOption(option =>
+      option.setName('query')
+        .setDescription('Search terms')
+        .setRequired(true))
+    .addIntegerOption(option =>
+      option.setName('id')
+        .setDescription('View full result by ID')),
+
+  new SlashCommandBuilder()
+    .setName('websearch')
+    .setDescription('🌐 Search the web (DuckDuckGo)')
+    .addStringOption(option =>
+      option.setName('query')
+        .setDescription('What to search for')
+        .setRequired(true))
+    .addIntegerOption(option =>
+      option.setName('results')
+        .setDescription('Number of results (1-10)')
+        .setMinValue(1)
+        .setMaxValue(10)),
+
+  new SlashCommandBuilder()
     .setName('weather')
     .setDescription('🌤️ Get weather information')
     .addStringOption(option =>
