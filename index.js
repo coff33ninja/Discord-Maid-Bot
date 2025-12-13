@@ -716,9 +716,11 @@ client.on('interactionCreate', async (interaction) => {
       // Show local network devices
       if (localDevices.length > 0) {
         const localList = localDevices.slice(0, 10).map((device, index) => {
+          const emoji = device.emoji || '';
           const name = device.name ? `**${device.name}**` : device.hostname || device.ip;
+          const group = device.device_group ? ` 📁${device.device_group}` : '';
           const networkBadge = device.network === 'both' ? '🌐' : '';
-          return `  ${index + 1}. ${name} ${networkBadge}\n     \`${device.ip}\` | \`${device.mac.substring(0, 17)}\` | ${device.latency}ms`;
+          return `  ${index + 1}. ${emoji} ${name}${group} ${networkBadge}\n     \`${device.ip}\` | \`${device.mac.substring(0, 17)}\` | ${device.latency}ms`;
         }).join('\n');
         
         embed.addFields({
@@ -731,10 +733,12 @@ client.on('interactionCreate', async (interaction) => {
       // Show Tailscale devices (slightly indented)
       if (tailscaleDevices.length > 0) {
         const tailscaleList = tailscaleDevices.slice(0, 10).map((device, index) => {
+          const emoji = device.emoji || '';
           const name = device.name ? `**${device.name}**` : device.hostname;
+          const group = device.device_group ? ` 📁${device.device_group}` : '';
           const status = device.online ? '🟢' : '🔴';
           const latency = device.latency ? `${device.latency}ms` : 'offline';
-          return `    ${index + 1}. ${name} ${status}\n       \`${device.ip}\` | ${device.os} | ${latency}`;
+          return `    ${index + 1}. ${emoji} ${name}${group} ${status}\n       \`${device.ip}\` | ${device.os} | ${latency}`;
         }).join('\n');
         
         embed.addFields({
@@ -746,7 +750,7 @@ client.on('interactionCreate', async (interaction) => {
       
       embed.addFields({
         name: '💡 Tip',
-        value: 'Use `/namedevice <device> <name>` to assign friendly names!\nView all devices on the dashboard.',
+        value: 'Use `/deviceemoji` and `/devicegroup` to organize devices!\nView all devices on the dashboard.',
         inline: false
       });
       

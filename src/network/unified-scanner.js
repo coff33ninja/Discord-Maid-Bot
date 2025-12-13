@@ -94,6 +94,8 @@ async function scanLocalNetwork(subnet) {
                 mac: isValidMac ? mac : 'unknown',
                 hostname: existingDevice?.hostname || ip,
                 name: existingDevice?.notes || null, // User-assigned name
+                emoji: existingDevice?.emoji || null,
+                device_group: existingDevice?.device_group || null,
                 online: true,
                 latency: Math.round(result.time),
                 network: 'local',
@@ -135,19 +137,23 @@ async function scanTailscaleNetwork() {
     for (const [id, peer] of Object.entries(status.Peer || {})) {
       const tailscaleIP = peer.TailscaleIPs?.[0] || 'unknown';
       
-      // Try to find existing device by IP or hostname
+      // Try to find existing device by IP, hostname, or Tailscale ID
       const allDevices = deviceOps.getAll();
+      const tailscaleMac = `ts:${id.substring(0, 16)}`;
       const existingDevice = allDevices.find(d => 
         d.ip === tailscaleIP || 
-        d.hostname === peer.HostName
+        d.hostname === peer.HostName ||
+        d.mac === tailscaleMac
       );
       
       devices.push({
         id,
         hostname: peer.HostName || 'Unknown',
         ip: tailscaleIP,
-        mac: existingDevice?.mac || 'N/A (VPN)',
+        mac: existingDevice?.mac || tailscaleMac,
         name: existingDevice?.notes || null, // User-assigned name
+        emoji: existingDevice?.emoji || null,
+        device_group: existingDevice?.device_group || null,
         online: false, // Will be determined by ping
         os: peer.OS || 'unknown',
         lastSeen: peer.LastSeen,
@@ -172,14 +178,16 @@ async function scanTailscaleNetwork() {
         device.online = result.alive;
         device.latency = result.alive ? Math.round(result.time) : null;
         
-        // Update database if we have a MAC address
-        if (device.mac !== 'N/A (VPN)') {
-          deviceOps.upsert({
-            ip: device.ip,
-            mac: device.mac,
-            hostname: device.hostname
-          });
-        }
+        // Update database - use Tailscale ID as MAC for VPN devices
+        const macAddress = device.mac === 'N/A (VPN)' 
+          ? `ts:${device.id.substring(0, 16)}` // Use Tailscale ID as unique identifier
+          : device.mac;
+        
+        deviceOps.upsert({
+          ip: device.ip,
+          mac: macAddress,
+          hostname: device.hostname
+        });
       } catch (error) {
         console.error(`  ${device.hostname}: ❌ Error - ${error.message}`);
         device.online = false;
