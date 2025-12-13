@@ -2,6 +2,402 @@ import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
 // Command definitions
 export const commands = [
+  // ============================================
+  // UNIFIED COMMANDS (New Structure)
+  // ============================================
+  
+  // /network - Network Operations
+  new SlashCommandBuilder()
+    .setName('network')
+    .setDescription('🌐 Network operations and monitoring')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('scan')
+        .setDescription('Scan network for devices'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('devices')
+        .setDescription('List all known devices')
+        .addStringOption(option =>
+          option.setName('filter')
+            .setDescription('Filter devices')
+            .addChoices(
+              { name: 'Online Only', value: 'online' },
+              { name: 'Offline Only', value: 'offline' },
+              { name: 'All Devices', value: 'all' }
+            )))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('wol')
+        .setDescription('Wake device with Wake-on-LAN')
+        .addStringOption(option =>
+          option.setName('device')
+            .setDescription('Device to wake')
+            .setRequired(true)
+            .setAutocomplete(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('speedtest')
+        .setDescription('Run internet speed test'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('speedhistory')
+        .setDescription('View speed test history')
+        .addIntegerOption(option =>
+          option.setName('days')
+            .setDescription('Number of days to show')
+            .setMinValue(1)
+            .setMaxValue(30))),
+
+  // /device - Device Management
+  new SlashCommandBuilder()
+    .setName('device')
+    .setDescription('📱 Device management and configuration')
+    .addSubcommandGroup(group =>
+      group
+        .setName('group')
+        .setDescription('Manage device groups')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('assign')
+            .setDescription('Assign device to a group')
+            .addStringOption(option =>
+              option.setName('device')
+                .setDescription('Device to assign')
+                .setRequired(true)
+                .setAutocomplete(true))
+            .addStringOption(option =>
+              option.setName('group')
+                .setDescription('Group name')
+                .setRequired(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('addmultiple')
+            .setDescription('Add multiple devices to a group')
+            .addStringOption(option =>
+              option.setName('group')
+                .setDescription('Group name')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('device1')
+                .setDescription('First device')
+                .setRequired(true)
+                .setAutocomplete(true))
+            .addStringOption(option =>
+              option.setName('device2')
+                .setDescription('Second device')
+                .setAutocomplete(true))
+            .addStringOption(option =>
+              option.setName('device3')
+                .setDescription('Third device')
+                .setAutocomplete(true))
+            .addStringOption(option =>
+              option.setName('device4')
+                .setDescription('Fourth device')
+                .setAutocomplete(true))
+            .addStringOption(option =>
+              option.setName('device5')
+                .setDescription('Fifth device')
+                .setAutocomplete(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('assignpattern')
+            .setDescription('Assign devices by name pattern')
+            .addStringOption(option =>
+              option.setName('group')
+                .setDescription('Group name')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('pattern')
+                .setDescription('Pattern to match')
+                .setRequired(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('assignall')
+            .setDescription('Assign all devices matching filter')
+            .addStringOption(option =>
+              option.setName('group')
+                .setDescription('Group name')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('filter')
+                .setDescription('Which devices to add')
+                .setRequired(true)
+                .addChoices(
+                  { name: 'All Online Devices', value: 'online' },
+                  { name: 'All Offline Devices', value: 'offline' },
+                  { name: 'All Devices', value: 'all' },
+                  { name: 'Local Network Only', value: 'local' },
+                  { name: 'Tailscale Only', value: 'tailscale' }
+                )))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('list')
+            .setDescription('List all groups'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('view')
+            .setDescription('View devices in a group')
+            .addStringOption(option =>
+              option.setName('group')
+                .setDescription('Group name')
+                .setRequired(true)
+                .setAutocomplete(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('remove')
+            .setDescription('Remove device from its group')
+            .addStringOption(option =>
+              option.setName('device')
+                .setDescription('Device to remove')
+                .setRequired(true)
+                .setAutocomplete(true))))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('config')
+        .setDescription('Configure device properties')
+        .addStringOption(option =>
+          option.setName('device')
+            .setDescription('Device to configure')
+            .setRequired(true)
+            .setAutocomplete(true))
+        .addStringOption(option =>
+          option.setName('name')
+            .setDescription('Friendly name'))
+        .addStringOption(option =>
+          option.setName('emoji')
+            .setDescription('Emoji (e.g., 🎮 💻 📱)'))
+        .addStringOption(option =>
+          option.setName('group')
+            .setDescription('Group name')))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('list')
+        .setDescription('List all known devices')
+        .addStringOption(option =>
+          option.setName('filter')
+            .setDescription('Filter devices')
+            .addChoices(
+              { name: 'Online Only', value: 'online' },
+              { name: 'Offline Only', value: 'offline' },
+              { name: 'All Devices', value: 'all' }
+            ))),
+
+  // /automation - Automation & Triggers
+  new SlashCommandBuilder()
+    .setName('automation')
+    .setDescription('⚙️ Automation and triggers')
+    .addSubcommandGroup(group =>
+      group
+        .setName('speedalert')
+        .setDescription('Speed alert notifications')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('config')
+            .setDescription('Configure speed alerts')
+            .addNumberOption(option =>
+              option.setName('threshold')
+                .setDescription('Alert when speed drops below (Mbps)')
+                .setRequired(true)
+                .setMinValue(1)
+                .setMaxValue(1000))
+            .addChannelOption(option =>
+              option.setName('channel')
+                .setDescription('Channel to send alerts')
+                .setRequired(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('status')
+            .setDescription('View current settings'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('enable')
+            .setDescription('Enable speed alerts'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('disable')
+            .setDescription('Disable speed alerts')))
+    .addSubcommandGroup(group =>
+      group
+        .setName('devicetrigger')
+        .setDescription('Device automation triggers')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('add')
+            .setDescription('Create a new trigger')
+            .addStringOption(option =>
+              option.setName('name')
+                .setDescription('Trigger name')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('device')
+                .setDescription('Device to monitor')
+                .setRequired(true)
+                .setAutocomplete(true))
+            .addStringOption(option =>
+              option.setName('event')
+                .setDescription('When to trigger')
+                .setRequired(true)
+                .addChoices(
+                  { name: 'Device comes online', value: 'online' },
+                  { name: 'Device goes offline', value: 'offline' },
+                  { name: 'Unknown device detected', value: 'unknown' }
+                ))
+            .addStringOption(option =>
+              option.setName('action')
+                .setDescription('What to do')
+                .setRequired(true)
+                .addChoices(
+                  { name: 'Send me a DM', value: 'discord_dm' },
+                  { name: 'Post in channel', value: 'discord_channel' },
+                  { name: 'Control Home Assistant', value: 'homeassistant' }
+                ))
+            .addStringOption(option =>
+              option.setName('message')
+                .setDescription('Custom message'))
+            .addChannelOption(option =>
+              option.setName('channel')
+                .setDescription('Channel for alerts'))
+            .addStringOption(option =>
+              option.setName('ha_entity')
+                .setDescription('Home Assistant entity')
+                .setAutocomplete(true))
+            .addStringOption(option =>
+              option.setName('ha_service')
+                .setDescription('HA service (e.g., light.turn_on)')))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('list')
+            .setDescription('List all triggers'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('remove')
+            .setDescription('Remove a trigger')
+            .addStringOption(option =>
+              option.setName('trigger')
+                .setDescription('Trigger to remove')
+                .setRequired(true)
+                .setAutocomplete(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('toggle')
+            .setDescription('Enable/disable a trigger')
+            .addStringOption(option =>
+              option.setName('trigger')
+                .setDescription('Trigger to toggle')
+                .setRequired(true)
+                .setAutocomplete(true))
+            .addBooleanOption(option =>
+              option.setName('enabled')
+                .setDescription('Enable or disable')
+                .setRequired(true))))
+    .addSubcommandGroup(group =>
+      group
+        .setName('schedule')
+        .setDescription('Task scheduling')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('add')
+            .setDescription('Add scheduled task')
+            .addStringOption(option =>
+              option.setName('name')
+                .setDescription('Task name')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('cron')
+                .setDescription('Cron expression (e.g., "0 9 * * *")')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('command')
+                .setDescription('Command to run')
+                .setRequired(true)
+                .addChoices(
+                  { name: 'Network Scan', value: 'scan' },
+                  { name: 'Speed Test', value: 'speedtest' },
+                  { name: 'Weather Update', value: 'weather' }
+                ))
+            .addChannelOption(option =>
+              option.setName('channel')
+                .setDescription('Channel to post results')))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('list')
+            .setDescription('List all scheduled tasks'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('remove')
+            .setDescription('Remove a scheduled task')
+            .addStringOption(option =>
+              option.setName('name')
+                .setDescription('Task name')
+                .setRequired(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('enable')
+            .setDescription('Enable a task')
+            .addStringOption(option =>
+              option.setName('name')
+                .setDescription('Task name')
+                .setRequired(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('disable')
+            .setDescription('Disable a task')
+            .addStringOption(option =>
+              option.setName('name')
+                .setDescription('Task name')
+                .setRequired(true)))),
+
+  // /research - Research & Search
+  new SlashCommandBuilder()
+    .setName('research')
+    .setDescription('🔎 Research and search tools')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('query')
+        .setDescription('Research a topic with AI')
+        .addStringOption(option =>
+          option.setName('topic')
+            .setDescription('What to research')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('history')
+        .setDescription('View past research')
+        .addIntegerOption(option =>
+          option.setName('limit')
+            .setDescription('Number of results')
+            .setMinValue(5)
+            .setMaxValue(50)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('search')
+        .setDescription('Search through past research')
+        .addStringOption(option =>
+          option.setName('query')
+            .setDescription('Search terms')
+            .setRequired(true))
+        .addIntegerOption(option =>
+          option.setName('id')
+            .setDescription('View full result by ID')))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('web')
+        .setDescription('Search the web (DuckDuckGo)')
+        .addStringOption(option =>
+          option.setName('query')
+            .setDescription('What to search for')
+            .setRequired(true))
+        .addIntegerOption(option =>
+          option.setName('results')
+            .setDescription('Number of results (1-10)')
+            .setMinValue(1)
+            .setMaxValue(10))),
+
+  // ============================================
+  // LEGACY COMMANDS (Backwards Compatibility)
+  // ============================================
+  
   new SlashCommandBuilder()
     .setName('scan')
     .setDescription('🔍 Scan network for devices'),

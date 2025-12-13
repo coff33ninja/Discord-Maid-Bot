@@ -33,6 +33,7 @@ temp/
 *.tar.gz
 *.bak
 backup_*/
+.backup/
 
 # OS files
 .DS_Store
