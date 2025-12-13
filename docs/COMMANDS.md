@@ -407,36 +407,93 @@ Manage scheduled tasks.
 
 ## Home Assistant
 
-### /lights
-Control Home Assistant lights.
+### /homeassistant
+Unified Home Assistant control command with multiple subcommands.
 
+#### Subcommands:
+
+**lights** - List all lights
 ```
-/lights [action] [entity]
-```
-
-**Actions:**
-- `list` - Show all lights
-- `on` - Turn on
-- `off` - Turn off
-- `toggle` - Toggle state
-
----
-
-### /switches
-Control Home Assistant switches.
-
-```
-/switches [action] [entity]
+/homeassistant lights
 ```
 
----
-
-### /sensors
-View Home Assistant sensor data.
-
+**light** - Control a specific light
 ```
-/sensors [entity]
+/homeassistant light entity:<entity_id> action:<on|off|toggle>
 ```
+- Autocomplete available for entity selection
+- Shows current state (💡 on / ⚫ off)
+
+**switches** - List all switches
+```
+/homeassistant switches
+```
+
+**switch** - Control a specific switch
+```
+/homeassistant switch entity:<entity_id> action:<on|off|toggle>
+```
+- Autocomplete available for entity selection
+
+**sensors** - List all sensors
+```
+/homeassistant sensors
+```
+
+**sensor** - View specific sensor data
+```
+/homeassistant sensor entity:<entity_id>
+```
+- Shows current value with unit of measurement
+
+**scenes** - List all scenes (Admin only)
+```
+/homeassistant scenes
+```
+
+**scene** - Activate a scene (Admin only)
+```
+/homeassistant scene entity:<scene_id>
+```
+- Autocomplete available (🎬 icon)
+- Requires CONTROL_LIGHTS permission
+
+**automations** - List all automations (Admin only)
+```
+/homeassistant automations
+```
+
+**automation** - Trigger an automation (Admin only)
+```
+/homeassistant automation entity:<automation_id> action:<trigger|on|off>
+```
+- Autocomplete available (▶️ on / ⏸️ off)
+- Requires TRIGGER_AUTOMATION permission
+
+**scripts** - List all scripts (Admin only)
+```
+/homeassistant scripts
+```
+
+**script** - Run a script (Admin only)
+```
+/homeassistant script entity:<script_id>
+```
+- Autocomplete available (📜 icon)
+- Requires RUN_SCRIPT permission
+
+**climate** - List all climate devices (Admin only)
+```
+/homeassistant climate
+```
+
+**diagnose** - Test Home Assistant connection
+```
+/homeassistant diagnose
+```
+- Shows connection status
+- Lists available entities
+- Detects ESPHome devices
 
 ---
 
@@ -470,14 +527,25 @@ Show command help.
 
 ## Command Permissions
 
-| Command | Default Access |
-|---------|---------------|
-| `/chat`, `/personality` | Everyone |
-| `/scan`, `/wake` | Operator+ |
-| `/speedtest` | Operator+ |
-| `/research` | Operator+ |
-| All games | Everyone |
-| `/schedule` | Admin |
-| `/config` | Admin |
+| Command | Default Access | Required Permission |
+|---------|---------------|---------------------|
+| `/chat`, `/personality` | Everyone | - |
+| `/scan`, `/wake` | Operator+ | SCAN_NETWORK, WAKE_DEVICE |
+| `/speedtest` | Operator+ | RUN_SPEEDTEST |
+| `/research` | Operator+ | RESEARCH |
+| All games | Everyone | - |
+| `/schedule` | Admin | MANAGE_TASKS |
+| `/config` | Admin | MANAGE_CONFIG |
+| `/homeassistant lights/switches/sensors` | Operator+ | VIEW_DEVICES |
+| `/homeassistant light/switch` | Operator+ | CONTROL_LIGHTS, CONTROL_SWITCHES |
+| `/homeassistant scene` | Admin | CONTROL_LIGHTS |
+| `/homeassistant automation` | Admin | TRIGGER_AUTOMATION |
+| `/homeassistant script` | Admin | RUN_SCRIPT |
+| `/homeassistant climate` | Operator+ | CONTROL_CLIMATE |
+
+**Permission Roles:**
+- **Admin**: All permissions
+- **Operator**: All except MANAGE_CONFIG, MANAGE_TASKS, TRIGGER_AUTOMATION, RUN_SCRIPT, ACTIVATE_SCENE
+- **User**: Basic commands only (chat, games)
 
 Permissions can be customized via dashboard.
