@@ -1211,46 +1211,6 @@ client.on('interactionCreate', async (interaction) => {
       await interaction.reply({ embeds: [embed] });
     }
     
-    // NAMEDEVICE COMMAND
-    else if (routedCommandName === 'namedevice') {
-      const deviceIdentifier = interaction.options.getString('device');
-      const friendlyName = interaction.options.getString('name');
-      
-      await interaction.deferReply();
-      
-      try {
-        const result = assignDeviceName(deviceIdentifier, friendlyName);
-        
-        if (!result.success) {
-          await interaction.editReply(`❌ Failed to assign name: ${result.error}`);
-          return;
-        }
-        
-        const device = result.device;
-        
-        const embed = new EmbedBuilder()
-          .setColor('#FFD700')
-          .setTitle('🏷️ Device Name Assigned')
-          .setDescription(`Successfully named device **${friendlyName}**`)
-          .addFields(
-            { name: 'Device Name', value: friendlyName, inline: true },
-            { name: 'Hostname', value: device.hostname || 'Unknown', inline: true },
-            { name: 'IP Address', value: device.ip, inline: true },
-            { name: 'MAC Address', value: device.mac, inline: true },
-            { name: 'Status', value: device.online ? '🟢 Online' : '🔴 Offline', inline: true }
-          )
-          .setFooter({ text: 'This name will appear in all device lists!' })
-          .setTimestamp();
-        
-        await interaction.editReply({ embeds: [embed] });
-        
-        // Broadcast update to dashboard
-        broadcastUpdate('device-named', { device: result.device, name: friendlyName });
-      } catch (error) {
-        await interaction.editReply(`❌ Error: ${error.message}`);
-      }
-    }
-    
     // DEVICECONFIG COMMAND (Unified device configuration)
     else if (routedCommandName === 'deviceconfig') {
       const deviceIdentifier = interaction.options.getString('device');
@@ -1323,52 +1283,6 @@ client.on('interactionCreate', async (interaction) => {
         
         await interaction.editReply({ embeds: [embed] });
         broadcastUpdate('device-updated', { device: updatedDevice });
-      } catch (error) {
-        await interaction.editReply(`❌ Error: ${error.message}`);
-      }
-    }
-    
-    // DEVICEEMOJI COMMAND
-    else if (routedCommandName === 'deviceemoji') {
-      const deviceIdentifier = interaction.options.getString('device');
-      const emoji = interaction.options.getString('emoji');
-      
-      await interaction.deferReply();
-      
-      try {
-        // Find device
-        let device = deviceOps.getByMac(deviceIdentifier);
-        if (!device) {
-          device = deviceOps.getAll().find(d => 
-            d.ip === deviceIdentifier || 
-            d.hostname === deviceIdentifier || 
-            d.notes === deviceIdentifier
-          );
-        }
-        
-        if (!device) {
-          await interaction.editReply('❌ Device not found. Use `/scan` to discover devices first.');
-          return;
-        }
-        
-        // Update emoji
-        deviceOps.updateEmoji(device.id, emoji);
-        
-        const displayName = device.notes || device.hostname || device.ip;
-        
-        const embed = new EmbedBuilder()
-          .setColor('#FFD700')
-          .setTitle('😀 Device Emoji Updated')
-          .setDescription(`Successfully added emoji to **${displayName}**`)
-          .addFields(
-            { name: 'Device', value: `${emoji} ${displayName}`, inline: true },
-            { name: 'IP Address', value: device.ip, inline: true },
-            { name: 'Status', value: device.online ? '🟢 Online' : '🔴 Offline', inline: true }
-          )
-          .setTimestamp();
-        
-        await interaction.editReply({ embeds: [embed] });
-        broadcastUpdate('device-updated', { device: { ...device, emoji } });
       } catch (error) {
         await interaction.editReply(`❌ Error: ${error.message}`);
       }
@@ -3567,6 +3481,86 @@ client.on('interactionCreate', async (interaction) => {
         }
         
         await interaction.reply({ embeds: [embed] });
+      }
+    }
+    
+    // CONFIG COMMAND
+    else if (routedCommandName === 'config') {
+      const subcommand = interaction.options.getSubcommand();
+      
+      // Check admin permission
+      const { PERMISSIONS } = await import('./src/auth/auth.js');
+      const hasPermission = await checkUserPermission(userId, PERMISSIONS.MANAGE_CONFIG);
+      
+      if (!hasPermission) {
+        await interaction.reply({ 
+          content: '❌ You do not have permission to manage configuration. Admin only.', 
+          ephemeral: true 
+        });
+        return;
+      }
+      
+      if (subcommand === 'view') {
+        const section = interaction.options.getString('section');
+        
+        const embed = new EmbedBuilder()
+          .setColor('#667eea')
+          .setTitle('⚙️ Bot Configuration')
+          .setTimestamp();
+        
+        if (!section || section === 'smb') {
+          const smbHost = configOps.get('smb_host') || 'Not configured';
+          const smbShare = configOps.get('smb_share') || 'Not configured';
+          const smbUser = configOps.get('smb_username') || 'Not configured';
+          
+          embed.addFields({
+            name: '📁 SMB Storage',
+            value: `**Host:** ${smbHost}\n**Share:** ${smbShare}\n**User:** ${smbUser}`,
+            inline: false
+          });
+        }
+        
+        if (!section || section === 'homeassistant') {
+          const haUrl = configOps.get('ha_url') || 'Not configured';
+          const haToken = configOps.get('ha_token') ? '✅ Configured' : '❌ Not configured';
+          
+          embed.addFields({
+            name: '🏠 Home Assistant',
+            value: `**URL:** ${haUrl}\n**Token:** ${haToken}`,
+            inline: false
+          });
+        }
+        
+        if (!section || section === 'gemini') {
+          const keyCount = geminiKeys.length;
+          const currentKey = geminiKeys[0] ? `${geminiKeys[0].substring(0, 10)}...` : 'Not configured';
+          
+          embed.addFields({
+            name: '🤖 Gemini API',
+            value: `**Keys:** ${keyCount} configured\n**Current:** ${currentKey}`,
+            inline: false
+          });
+        }
+        
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+        
+      } else if (subcommand === 'set') {
+        const key = interaction.options.getString('key');
+        const value = interaction.options.getString('value');
+        
+        try {
+          configOps.set(key, value);
+          
+          await interaction.reply({
+            content: `✅ Configuration updated: \`${key}\` = \`${value}\``,
+            ephemeral: true
+          });
+        } catch (error) {
+          await interaction.reply({
+            content: `❌ Error updating configuration: ${error.message}`,
+            ephemeral: true
+          });
+        }
       }
     }
     
