@@ -184,20 +184,67 @@ async function loadHomeAssistant() {
     
     // Load ESP devices
     const espResponse = await authFetch('/api/homeassistant/esp-devices');
-    const espDevices = await espResponse.json();
+    const espResult = await espResponse.json();
     const espList = document.getElementById('espList');
     espList.innerHTML = '';
-    espDevices.forEach(device => {
-      const item = document.createElement('div');
-      item.className = 'device-item';
-      item.innerHTML = `
-        <div class="device-info">
-          <div class="device-name">${device.name}</div>
-          <div class="device-details">${device.entities.length} entities</div>
+    
+    // Check if there's a warning
+    if (espResult.warning) {
+      const warningDiv = document.createElement('div');
+      warningDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 15px;';
+      warningDiv.innerHTML = `
+        <div style="color: #856404;">
+          <strong>⚠️ ${espResult.warning}</strong>
+          ${espResult.instructions ? `
+            <ul style="margin: 10px 0 0 20px; font-size: 0.9em;">
+              ${espResult.instructions.map(inst => `<li>${inst}</li>`).join('')}
+            </ul>
+          ` : ''}
         </div>
       `;
-      espList.appendChild(item);
-    });
+      espList.appendChild(warningDiv);
+    }
+    
+    // Display devices
+    const espDevices = espResult.devices || [];
+    if (espDevices.length === 0 && !espResult.warning) {
+      espList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No ESP devices found</p>';
+    } else {
+      espDevices.forEach(device => {
+        const item = document.createElement('div');
+        item.className = 'device-item';
+        const statusIcon = device.online ? '🟢' : '🔴';
+        const statusText = device.online ? 'Online' : 'Offline';
+        item.innerHTML = `
+          <div class="device-info">
+            <div class="device-name">${statusIcon} ${device.name}</div>
+            <div class="device-details">${device.entities.length} entities • ${statusText}</div>
+          </div>
+        `;
+        
+        // Add click to expand entities
+        item.style.cursor = 'pointer';
+        item.onclick = () => {
+          const existing = item.querySelector('.entity-list');
+          if (existing) {
+            existing.remove();
+          } else {
+            const entityList = document.createElement('div');
+            entityList.className = 'entity-list';
+            entityList.style.cssText = 'margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em;';
+            entityList.innerHTML = device.entities.map(e => 
+              `<div style="padding: 5px 0; border-bottom: 1px solid #dee2e6;">
+                <strong>${e.name}</strong><br>
+                <span style="color: #666;">${e.type}: ${e.state}</span>
+              </div>`
+            ).join('');
+            item.appendChild(entityList);
+          }
+        };
+        
+        espList.appendChild(item);
+      });
+    }
   } catch (error) {
     console.error('Failed to load Home Assistant:', error);
   }
