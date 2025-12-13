@@ -1,0 +1,391 @@
+import { Plugin } from '../src/plugins/plugin-manager.js';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import crypto from 'crypto';
+
+const execAsync = promisify(exec);
+
+/**
+ * AI System Administrator Plugin (PLANNED - REQUIRES CAREFUL SECURITY REVIEW)
+ * 
+ * Allows authorized admins to manage servers through natural language
+ * 
+ * ⚠️ SECURITY WARNING ⚠️
+ * This plugin can execute system commands. Only enable with:
+ * - Strict permission controls
+ * - Command approval system
+ * - Comprehensive audit logging
+ * - Rate limiting
+ * - Whitelist validation
+ */
+export default class AISysadminPlugin extends Plugin {
+  constructor() {
+    super('ai-sysadmin', '1.0.0', 'AI-powered system administration');
+    
+    this.enabled = process.env.SYSADMIN_ENABLED === 'true';
+    this.mode = process.env.SYSADMIN_MODE || 'whitelist'; // whitelist | approval | unrestricted
+    this.requireApproval = process.env.SYSADMIN_REQUIRE_APPROVAL !== 'false';
+    this.maxCommandsPerHour = parseInt(process.env.SYSADMIN_MAX_COMMANDS_PER_HOUR) || 10;
+    this.commandTimeout = parseInt(process.env.SYSADMIN_COMMAND_TIMEOUT) || 300000;
+    
+    // Command execution tracking
+    this.commandHistory = new Map(); // userId -> [timestamps]
+    this.pendingApprovals = new Map(); // messageId -> { commands, userId, timestamp }
+    
+    // Safe command patterns (whitelist)
+    this.safeCommands = [
+      // System info (read-only)
+      /^uptime$/,
+      /^free -h$/,
+      /^df -h$/,
+      /^top -bn1 \| head -20$/,
+      /^ps aux \| head -20$/,
+      /^systemctl status [\w-]+$/,
+      
+      // Service management (specific services only)
+      /^systemctl (start|stop|restart|reload) discord-maid-bot$/,
+      /^journalctl -u discord-maid-bot -n \d+ --no-pager$/,
+      
+      // Git operations (read-only and safe)
+      /^git status$/,
+      /^git log --oneline -\d+$/,
+      /^git pull$/,
+      /^git fetch$/,
+      
+      // File viewing (read-only, specific paths)
+      /^cat \/home\/think\/discord-maid-bot\/[\w\/.]+$/,
+      /^tail -n \d+ \/var\/log\/[\w\/.]+$/,
+      /^ls -la \/home\/think\/discord-maid-bot\/?[\w\/]*$/,
+      
+      // Network diagnostics
+      /^ping -c \d+ [\w.]+$/,
+      /^curl -I https?:\/\/[\w.\/]+$/,
+      
+      // Package info (read-only)
+      /^apt list --installed \| grep [\w-]+$/,
+      /^dpkg -l \| grep [\w-]+$/,
+    ];
+    
+    // Dangerous patterns (always block)
+    this.dangerousPatterns = [
+      /rm -rf/,
+      /dd if=/,
+      /mkfs/,
+      /fdisk/,
+      /> \/dev\//,
+      /chmod 777/,
+      /chown -R/,
+      /sudo su/,
+      /passwd/,
+      /userdel/,
+      /shutdown/,
+      /reboot/,
+      /init 0/,
+      /kill -9 1/,
+    ];
+  }
+  
+  async onLoad() {
+    if (!this.enabled) {
+      console.log('⚠️  AI Sysadmin plugin loaded but DISABLED (set SYSADMIN_ENABLED=true to enable)');
+      return;
+    }
+    
+    console.log('🤖 AI Sysadmin plugin loaded');
+    console.log(`   Mode: ${this.mode}`);
+    console.log(`   Approval required: ${this.requireApproval}`);
+    console.log(`   Rate limit: ${this.maxCommandsPerHour} commands/hour`);
+  }
+  
+  /**
+   * Main entry point - process natural language request
+   */
+  async processRequest(userId, username, request, interaction) {
+    const logger = await this.getLogger();
+    
+    try {
+      // 1. Check if enabled
+      if (!this.enabled) {
+        return {
+          success: false,
+          message: '❌ AI Sysadmin is disabled. Contact server administrator.'
+        };
+      }
+      
+      // 2. Check rate limit
+      if (!this.checkRateLimit(userId)) {
+        return {
+          success: false,
+          message: `❌ Rate limit exceeded. Max ${this.maxCommandsPerHour} commands per hour.`
+        };
+      }
+      
+      // 3. Generate commands using AI
+      logger.info(`Processing sysadmin request from ${username}`, { request });
+      const commands = await this.generateCommands(request);
+      
+      if (!commands || commands.length === 0) {
+        return {
+          success: false,
+          message: '❌ Could not generate commands from your request. Please be more specific.'
+        };
+      }
+      
+      // 4. Validate commands
+      const validation = this.validateCommands(commands);
+      if (!validation.safe) {
+        logger.warn(`Blocked dangerous command from ${username}`, { commands, reason: validation.reason });
+        return {
+          success: false,
+          message: `❌ Command blocked: ${validation.reason}\n\nBlocked commands:\n${validation.blocked.map(c => `• ${c}`).join('\n')}`
+        };
+      }
+      
+      // 5. Request approval if required
+      if (this.requireApproval) {
+        return await this.requestApproval(userId, username, request, commands, interaction);
+      }
+      
+      // 6. Execute directly (if approval not required)
+      return await this.executeCommands(userId, username, request, commands);
+      
+    } catch (error) {
+      logger.error('Sysadmin request failed', { error: error.message, userId, request });
+      return {
+        success: false,
+        message: `❌ Error: ${error.message}`
+      };
+    }
+  }
+  
+  /**
+   * Generate shell commands from natural language using AI
+   */
+  async generateCommands(request) {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const { geminiKeys } = await import('../src/config/gemini-keys.js');
+    
+    const apiKey = geminiKeys.getKey();
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: process.env.SYSADMIN_AI_MODEL || 'gemini-1.5-flash',
+      generationConfig: {
+        temperature: 0.1, // Low temperature for precise commands
+        maxOutputTokens: 500,
+      }
+    });
+    
+    const systemContext = `
+You are a system administrator assistant for an Ubuntu 24.04 server.
+Generate ONLY the shell commands needed to fulfill the user's request.
+
+Server details:
+- OS: Ubuntu 24.04 (Noble)
+- User: think
+- Bot location: /home/think/discord-maid-bot
+- Services: discord-maid-bot (systemd)
+- Package manager: nala (preferred) or apt
+- Node.js: v20.19.6 (via nvm)
+
+Rules:
+1. Output ONLY shell commands, one per line
+2. No explanations, no markdown, no code blocks
+3. Use safe, read-only commands when possible
+4. Prefer systemctl for service management
+5. Use full paths when necessary
+6. No interactive commands (use -y flags)
+7. No dangerous operations (rm -rf, dd, etc.)
+
+Example input: "Check if the bot is running"
+Example output:
+systemctl status discord-maid-bot
+ps aux | grep node
+
+Example input: "Show last 20 log lines"
+Example output:
+journalctl -u discord-maid-bot -n 20 --no-pager
+
+Now generate commands for: ${request}
+`;
+    
+    const result = await model.generateContent(systemContext);
+    const response = result.response.text().trim();
+    
+    // Parse commands (one per line)
+    const commands = response
+      .split('\n')
+      .map(cmd => cmd.trim())
+      .filter(cmd => cmd && !cmd.startsWith('#') && !cmd.startsWith('//'));
+    
+    return commands;
+  }
+  
+  /**
+   * Validate commands against whitelist and dangerous patterns
+   */
+  validateCommands(commands) {
+    const blocked = [];
+    const reasons = [];
+    
+    for (const cmd of commands) {
+      // Check dangerous patterns first
+      for (const pattern of this.dangerousPatterns) {
+        if (pattern.test(cmd)) {
+          blocked.push(cmd);
+          reasons.push(`Dangerous pattern detected: ${pattern}`);
+          break;
+        }
+      }
+      
+      // Check whitelist (if in whitelist mode)
+      if (this.mode === 'whitelist') {
+        const isWhitelisted = this.safeCommands.some(pattern => pattern.test(cmd));
+        if (!isWhitelisted) {
+          blocked.push(cmd);
+          reasons.push('Command not in whitelist');
+        }
+      }
+    }
+    
+    return {
+      safe: blocked.length === 0,
+      blocked,
+      reason: reasons[0] || null
+    };
+  }
+  
+  /**
+   * Check rate limit for user
+   */
+  checkRateLimit(userId) {
+    const now = Date.now();
+    const oneHourAgo = now - (60 * 60 * 1000);
+    
+    // Get user's command history
+    let history = this.commandHistory.get(userId) || [];
+    
+    // Remove old entries
+    history = history.filter(timestamp => timestamp > oneHourAgo);
+    
+    // Check limit
+    if (history.length >= this.maxCommandsPerHour) {
+      return false;
+    }
+    
+    // Add current timestamp
+    history.push(now);
+    this.commandHistory.set(userId, history);
+    
+    return true;
+  }
+  
+  /**
+   * Request approval from user before executing
+   */
+  async requestApproval(userId, username, request, commands, interaction) {
+    // Store pending approval
+    const approvalId = `${userId}-${Date.now()}`;
+    this.pendingApprovals.set(approvalId, {
+      userId,
+      username,
+      request,
+      commands,
+      timestamp: Date.now()
+    });
+    
+    // Create approval message
+    const commandList = commands.map((cmd, i) => `${i + 1}. \`${cmd}\``).join('\n');
+    
+    return {
+      success: true,
+      requiresApproval: true,
+      approvalId,
+      message: `🔍 **Command Preview**\n\nRequest: "${request}"\n\n**Commands to execute:**\n${commandList}\n\n⚠️ **Approve execution?**`,
+      commands
+    };
+  }
+  
+  /**
+   * Execute approved commands
+   */
+  async executeCommands(userId, username, request, commands) {
+    const logger = await this.getLogger();
+    const results = [];
+    
+    logger.info(`Executing ${commands.length} command(s) for ${username}`);
+    
+    for (let i = 0; i < commands.length; i++) {
+      const cmd = commands[i];
+      
+      try {
+        logger.debug(`Executing command ${i + 1}/${commands.length}`, { command: cmd });
+        
+        const startTime = Date.now();
+        const { stdout, stderr } = await execAsync(cmd, {
+          timeout: this.commandTimeout,
+          cwd: '/home/think/discord-maid-bot'
+        });
+        const duration = Date.now() - startTime;
+        
+        results.push({
+          command: cmd,
+          success: true,
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          duration
+        });
+        
+        // Log to audit trail
+        await this.logAudit(userId, username, request, cmd, true, 0, stdout, stderr, duration);
+        
+      } catch (error) {
+        logger.error(`Command failed: ${cmd}`, { error: error.message });
+        
+        results.push({
+          command: cmd,
+          success: false,
+          error: error.message,
+          exitCode: error.code
+        });
+        
+        // Log failure
+        await this.logAudit(userId, username, request, cmd, true, error.code, '', error.message, 0);
+        
+        // Stop on first error
+        break;
+      }
+    }
+    
+    return {
+      success: results.every(r => r.success),
+      results
+    };
+  }
+  
+  /**
+   * Log to audit trail
+   */
+  async logAudit(userId, username, request, command, executed, exitCode, stdout, stderr, duration) {
+    // Use centralized logging system
+    const logger = await this.getLogger();
+    logger.info('Sysadmin command executed', {
+      userId,
+      username,
+      request,
+      command,
+      executed,
+      exitCode,
+      duration,
+      hasOutput: !!stdout,
+      hasError: !!stderr
+    });
+    
+    // Also store in database for audit trail
+    // TODO: Implement sysadmin_audit table
+  }
+  
+  async getLogger() {
+    const { createLogger } = await import('../src/logging/logger.js');
+    return createLogger('ai-sysadmin');
+  }
+}
