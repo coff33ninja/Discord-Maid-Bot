@@ -394,6 +394,396 @@ export const commands = [
             .setMinValue(1)
             .setMaxValue(10))),
 
+  // /game - Games (18 games consolidated)
+  new SlashCommandBuilder()
+    .setName('game')
+    .setDescription('🎮 Play games')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('trivia')
+        .setDescription('Trivia game')
+        .addStringOption(option =>
+          option.setName('category')
+            .setDescription('Category')
+            .addChoices(
+              { name: 'General Knowledge', value: 'general' },
+              { name: 'Science', value: 'science' },
+              { name: 'History', value: 'history' },
+              { name: 'Geography', value: 'geography' },
+              { name: 'Entertainment', value: 'entertainment' },
+              { name: 'Sports', value: 'sports' },
+              { name: 'Random', value: 'random' }
+            ))
+        .addStringOption(option =>
+          option.setName('difficulty')
+            .setDescription('Difficulty')
+            .addChoices(
+              { name: 'Easy', value: 'easy' },
+              { name: 'Medium', value: 'medium' },
+              { name: 'Hard', value: 'hard' }
+            ))
+        .addIntegerOption(option =>
+          option.setName('rounds')
+            .setDescription('Number of rounds')
+            .setMinValue(1)
+            .setMaxValue(20)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('hangman')
+        .setDescription('Hangman game')
+        .addStringOption(option =>
+          option.setName('category')
+            .setDescription('Word category')
+            .addChoices(
+              { name: 'Animals', value: 'animals' },
+              { name: 'Countries', value: 'countries' },
+              { name: 'Movies', value: 'movies' },
+              { name: 'Random', value: 'random' }
+            ))
+        .addStringOption(option =>
+          option.setName('difficulty')
+            .setDescription('Difficulty')
+            .addChoices(
+              { name: 'Easy', value: 'easy' },
+              { name: 'Medium', value: 'medium' },
+              { name: 'Hard', value: 'hard' }
+            )))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('wordchain')
+        .setDescription('Word chain game')
+        .addIntegerOption(option =>
+          option.setName('rounds')
+            .setDescription('Number of rounds')
+            .setMinValue(5)
+            .setMaxValue(50))
+        .addBooleanOption(option =>
+          option.setName('trust_mode')
+            .setDescription('Trust mode (no validation)'))
+        .addBooleanOption(option =>
+          option.setName('hints')
+            .setDescription('Enable hints')))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('tictactoe')
+        .setDescription('Tic Tac Toe')
+        .addUserOption(option =>
+          option.setName('opponent')
+            .setDescription('Player to challenge')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('connect4')
+        .setDescription('Connect Four')
+        .addUserOption(option =>
+          option.setName('opponent')
+            .setDescription('Player to challenge')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('rps')
+        .setDescription('Rock Paper Scissors')
+        .addUserOption(option =>
+          option.setName('opponent')
+            .setDescription('Player to challenge')
+            .setRequired(true))
+        .addIntegerOption(option =>
+          option.setName('rounds')
+            .setDescription('Best of')
+            .addChoices(
+              { name: 'Best of 3', value: 3 },
+              { name: 'Best of 5', value: 5 },
+              { name: 'Best of 7', value: 7 }
+            )))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('numguess')
+        .setDescription('Number guessing game')
+        .addIntegerOption(option =>
+          option.setName('max')
+            .setDescription('Maximum number')
+            .setMinValue(10)
+            .setMaxValue(1000)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('riddle')
+        .setDescription('Riddle game')
+        .addStringOption(option =>
+          option.setName('difficulty')
+            .setDescription('Difficulty')
+            .addChoices(
+              { name: 'Easy', value: 'easy' },
+              { name: 'Medium', value: 'medium' },
+              { name: 'Hard', value: 'hard' }
+            )))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('20questions')
+        .setDescription('20 Questions with AI')
+        .addStringOption(option =>
+          option.setName('category')
+            .setDescription('Category')
+            .addChoices(
+              { name: 'Animals', value: 'animals' },
+              { name: 'Objects', value: 'objects' },
+              { name: 'People', value: 'people' },
+              { name: 'Places', value: 'places' },
+              { name: 'Random', value: 'random' }
+            )))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('emojidecode')
+        .setDescription('Guess from emojis')
+        .addStringOption(option =>
+          option.setName('category')
+            .setDescription('Category')
+            .addChoices(
+              { name: 'Movies', value: 'movies' },
+              { name: 'Songs', value: 'songs' },
+              { name: 'Books', value: 'books' },
+              { name: 'Random', value: 'random' }
+            )))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('wouldyourather')
+        .setDescription('Would You Rather')
+        .addStringOption(option =>
+          option.setName('category')
+            .setDescription('Category')
+            .addChoices(
+              { name: 'Funny', value: 'funny' },
+              { name: 'Serious', value: 'serious' },
+              { name: 'Random', value: 'random' }
+            )))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('caption')
+        .setDescription('Caption contest'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('acronym')
+        .setDescription('Acronym game')
+        .addIntegerOption(option =>
+          option.setName('length')
+            .setDescription('Acronym length')
+            .setMinValue(3)
+            .setMaxValue(6)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('story')
+        .setDescription('Collaborative story builder')
+        .addStringOption(option =>
+          option.setName('genre')
+            .setDescription('Story genre')
+            .addChoices(
+              { name: 'Fantasy', value: 'fantasy' },
+              { name: 'Sci-Fi', value: 'scifi' },
+              { name: 'Horror', value: 'horror' },
+              { name: 'Comedy', value: 'comedy' },
+              { name: 'Random', value: 'random' }
+            ))
+        .addIntegerOption(option =>
+          option.setName('rounds')
+            .setDescription('Number of rounds')
+            .setMinValue(3)
+            .setMaxValue(20)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('mathblitz')
+        .setDescription('Math blitz')
+        .addStringOption(option =>
+          option.setName('difficulty')
+            .setDescription('Difficulty')
+            .addChoices(
+              { name: 'Easy', value: 'easy' },
+              { name: 'Medium', value: 'medium' },
+              { name: 'Hard', value: 'hard' }
+            ))
+        .addIntegerOption(option =>
+          option.setName('rounds')
+            .setDescription('Number of rounds')
+            .setMinValue(5)
+            .setMaxValue(30)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('reaction')
+        .setDescription('Reaction race'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('mafia')
+        .setDescription('Mafia/Werewolf game')
+        .addIntegerOption(option =>
+          option.setName('players')
+            .setDescription('Number of players')
+            .setMinValue(5)
+            .setMaxValue(20)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('stats')
+        .setDescription('View your game statistics')),
+
+  // /bot - Bot Management
+  new SlashCommandBuilder()
+    .setName('bot')
+    .setDescription('🤖 Bot management and settings')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('chat')
+        .setDescription('Chat with AI assistant')
+        .addStringOption(option =>
+          option.setName('message')
+            .setDescription('Your message')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('personality')
+        .setDescription('Change bot personality')
+        .addStringOption(option =>
+          option.setName('style')
+            .setDescription('Personality style')
+            .addChoices(
+              { name: '🌸 Maid', value: 'maid' },
+              { name: '💢 Tsundere', value: 'tsundere' },
+              { name: '❄️ Kuudere', value: 'kuudere' },
+              { name: '🥺 Dandere', value: 'dandere' },
+              { name: '🖤 Yandere', value: 'yandere' },
+              { name: '⭐ Genki', value: 'genki' },
+              { name: '💋 Onee-san', value: 'oneesan' },
+              { name: '🔮 Chuunibyou', value: 'chuunibyou' },
+              { name: '🎩 Butler', value: 'butler' },
+              { name: '🐱 Catgirl', value: 'catgirl' }
+            )))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('stats')
+        .setDescription('View bot statistics'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('dashboard')
+        .setDescription('Get web dashboard URL'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('help')
+        .setDescription('Show help and available commands'))
+    .addSubcommandGroup(group =>
+      group
+        .setName('plugin')
+        .setDescription('Plugin management')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('list')
+            .setDescription('List all plugins'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('enable')
+            .setDescription('Enable a plugin')
+            .addStringOption(option =>
+              option.setName('name')
+                .setDescription('Plugin name')
+                .setRequired(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('disable')
+            .setDescription('Disable a plugin')
+            .addStringOption(option =>
+              option.setName('name')
+                .setDescription('Plugin name')
+                .setRequired(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('reload')
+            .setDescription('Reload a plugin')
+            .addStringOption(option =>
+              option.setName('name')
+                .setDescription('Plugin name')
+                .setRequired(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('stats')
+            .setDescription('View plugin statistics'))),
+
+  // /admin - Administration
+  new SlashCommandBuilder()
+    .setName('admin')
+    .setDescription('👑 Administration (Admin only)')
+    .addSubcommandGroup(group =>
+      group
+        .setName('permissions')
+        .setDescription('Permission management')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('list')
+            .setDescription('List all users and permissions'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('set')
+            .setDescription('Set user role')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to modify')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('role')
+                .setDescription('Role to assign')
+                .setRequired(true)
+                .addChoices(
+                  { name: 'Admin', value: 'admin' },
+                  { name: 'Operator', value: 'operator' },
+                  { name: 'User', value: 'user' }
+                )))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('grant')
+            .setDescription('Grant specific permission')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to grant permission')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('permission')
+                .setDescription('Permission to grant')
+                .setRequired(true)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('revoke')
+            .setDescription('Revoke specific permission')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to revoke permission')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('permission')
+                .setDescription('Permission to revoke')
+                .setRequired(true))))
+    .addSubcommandGroup(group =>
+      group
+        .setName('config')
+        .setDescription('Bot configuration')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('view')
+            .setDescription('View configuration')
+            .addStringOption(option =>
+              option.setName('section')
+                .setDescription('Config section')
+                .addChoices(
+                  { name: 'SMB Storage', value: 'smb' },
+                  { name: 'Home Assistant', value: 'homeassistant' },
+                  { name: 'Gemini API', value: 'gemini' }
+                )))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('set')
+            .setDescription('Set configuration value')
+            .addStringOption(option =>
+              option.setName('key')
+                .setDescription('Configuration key')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('value')
+                .setDescription('Configuration value')
+                .setRequired(true)))),
+
   // ============================================
   // LEGACY COMMANDS (Backwards Compatibility)
   // ============================================
