@@ -39,6 +39,33 @@ await initializeAuth();
 // Initialize plugin system
 await initPluginSystem();
 
+// Register core handlers for plugins (plugins never import core directly)
+import { registerCoreHandler } from './src/plugins/plugin-manager.js';
+
+registerCoreHandler('get-all-devices', async () => {
+  return deviceOps.getAll();
+});
+
+registerCoreHandler('update-device-notes', async (data) => {
+  const { deviceId, notes } = data;
+  deviceOps.updateNotes(deviceId, notes);
+  return { success: true };
+});
+
+registerCoreHandler('set-device-emoji', async (data) => {
+  const { mac, emoji } = data;
+  deviceOps.setEmoji(mac, emoji);
+  return { success: true };
+});
+
+registerCoreHandler('assign-device-group', async (data) => {
+  const { mac, groupName } = data;
+  deviceOps.assignGroup(mac, groupName);
+  return { success: true };
+});
+
+console.log('✅ Core handlers registered for plugin system');
+
 // Sync environment variables to database (for integrations)
 console.log('🔄 Syncing environment configuration...');
 configOps.syncFromEnv('HA_URL', 'ha_url', process.env.HA_URL);

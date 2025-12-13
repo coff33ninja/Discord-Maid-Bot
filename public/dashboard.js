@@ -1214,6 +1214,68 @@ async function refreshDevices() {
   }
 }
 
+// Wake all PCs
+async function wakeAllPCs() {
+  if (!confirm('Send wake-on-LAN packets to all PC devices?')) {
+    return;
+  }
+  
+  try {
+    const response = await authFetch('/api/quick-actions/wake-all-pcs', {
+      method: 'POST'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to wake PCs');
+    }
+    
+    const result = await response.json();
+    
+    if (result.count === 0) {
+      alert('ℹ️ No PC devices found to wake.\n\nTip: Name your devices with "PC", "Desktop", "Laptop", or "Computer" in the name.');
+    } else {
+      const successCount = result.results.filter(r => r.success).length;
+      alert(`✅ Wake packets sent to ${result.count} PC(s)!\n\n${successCount} successful, ${result.count - successCount} failed.\n\nDevices should start booting now.`);
+    }
+    
+    // Refresh devices after a delay
+    setTimeout(() => loadDevices(), 3000);
+  } catch (error) {
+    console.error('Wake all PCs error:', error);
+    alert('❌ Failed to wake PCs. Please try again.');
+  }
+}
+
+// Scan network
+async function scanNetwork() {
+  if (!confirm('Run full network scan? This will discover new devices and may take 30-60 seconds.')) {
+    return;
+  }
+  
+  try {
+    document.getElementById('deviceList').innerHTML = '<p style="text-align: center; color: #667eea; padding: 20px;">🔍 Scanning network...</p>';
+    
+    const response = await authFetch('/api/quick-actions/scan-network', {
+      method: 'POST'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Network scan failed');
+    }
+    
+    const result = await response.json();
+    
+    alert(`✅ Network Scan Complete!\n\n📡 Found ${result.stats.total} devices\n🏠 Local: ${result.stats.local}\n🌐 Tailscale: ${result.stats.tailscale}`);
+    
+    // Reload devices
+    await loadDevices();
+  } catch (error) {
+    console.error('Network scan error:', error);
+    alert('❌ Network scan failed. Please try again.');
+    await loadDevices();
+  }
+}
+
 // Run speed test
 async function runSpeedTest() {
   if (!confirm('Run internet speed test? This may take 30-60 seconds.')) {

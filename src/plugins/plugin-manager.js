@@ -12,6 +12,13 @@ const loadedPlugins = new Map();
 const pluginCommands = new Map(); // Store plugin commands
 let watcher = null;
 
+// Core request handlers (injected by core system)
+let coreRequestHandlers = {};
+
+export function registerCoreHandler(event, handler) {
+  coreRequestHandlers[event] = handler;
+}
+
 // Plugin interface
 export class Plugin {
   constructor(name, version, description) {
@@ -35,6 +42,15 @@ export class Plugin {
   // Event listeners
   on(event, handler) {
     // To be implemented by plugin manager
+  }
+  
+  // Request data/actions from core system (never imports core directly)
+  async requestFromCore(event, data = null) {
+    const handler = coreRequestHandlers[event];
+    if (!handler) {
+      throw new Error(`Core handler not registered for event: ${event}`);
+    }
+    return await handler(data);
   }
 }
 
