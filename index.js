@@ -371,29 +371,132 @@ async function setUserRole(userId, username, role) {
 client.on('interactionCreate', async (interaction) => {
   if (interaction.isAutocomplete()) {
     const { commandName } = interaction;
+    const focusedValue = interaction.options.getFocused().toLowerCase();
     
-    if (commandName === 'wol') {
-      const focusedValue = interaction.options.getFocused().toLowerCase();
-      const devices = deviceOps.getAll();
-      
-      // Filter devices based on input
-      const filtered = devices
-        .filter(d => {
+    try {
+      // WOL command - device autocomplete with improved sorting
+      if (commandName === 'wol') {
+        const devices = deviceOps.getAll();
+        
+        // Score-based filtering and sorting
+        const scored = devices.map(d => {
           const hostname = (d.hostname || '').toLowerCase();
           const ip = d.ip.toLowerCase();
           const mac = d.mac.toLowerCase();
-          return hostname.includes(focusedValue) || 
-                 ip.includes(focusedValue) || 
-                 mac.includes(focusedValue);
+          const notes = (d.notes || '').toLowerCase();
+          
+          let score = 0;
+          if (!focusedValue) {
+            // No input - prioritize online devices and those with hostnames
+            score = (d.online ? 100 : 0) + (d.hostname ? 50 : 0);
+          } else {
+            // Exact match gets highest score
+            if (hostname === focusedValue) score = 1000;
+            else if (hostname.startsWith(focusedValue)) score = 500;
+            else if (hostname.includes(focusedValue)) score = 200;
+            else if (ip.startsWith(focusedValue)) score = 150;
+            else if (ip.includes(focusedValue)) score = 100;
+            else if (mac.includes(focusedValue)) score = 80;
+            else if (notes.includes(focusedValue)) score = 50;
+            else return null; // No match
+            
+            // Bonus for online devices
+            if (d.online) score += 25;
+          }
+          return { device: d, score };
         })
-        .slice(0, 25); // Discord limit
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 25);
+        
+        await interaction.respond(
+          scored.map(({ device: d }) => {
+            // Enhanced display with more info
+            const status = d.online ? '🟢' : '🔴';
+            const name = d.hostname || 'Unknown';
+            const lastSeen = d.last_seen ? new Date(d.last_seen).toLocaleDateString() : '';
+            const notePreview = d.notes ? ` 📝` : '';
+            
+            return {
+              name: `${status} ${name} | ${d.ip} | ${d.mac.substring(0, 8)}...${notePreview}`,
+              value: d.mac
+            };
+          })
+        );
+      }
       
-      await interaction.respond(
-        filtered.map(d => ({
-          name: `${d.hostname || d.ip} (${d.ip}) ${d.online ? '🟢' : '🔴'}`,
-          value: d.mac
-        }))
-      );
+      // Home Assistant entity autocomplete
+      else if (commandName === 'homeassistant') {
+        const subcommand = interaction.options.getSubcommand();
+        const { getAllLights, getAllSwitches, getAllSensors } = await import('./src/integrations/homeassistant.js');
+        
+        let entities = [];
+        let entityType = '';
+        
+        try {
+          if (subcommand === 'light') {
+            entities = await getAllLights();
+            entityType = 'light';
+          } else if (subcommand === 'switch') {
+            entities = await getAllSwitches();
+            entityType = 'switch';
+          } else if (subcommand === 'sensor') {
+            entities = await getAllSensors();
+            entityType = 'sensor';
+          }
+        } catch (err) {
+          // HA not configured or unavailable
+          await interaction.respond([{ name: '⚠️ Home Assistant not available', value: 'error' }]);
+          return;
+        }
+        
+        // Filter and sort entities
+        const filtered = entities
+          .map(e => {
+            const entityId = e.entity_id.toLowerCase();
+            const friendlyName = (e.attributes?.friendly_name || '').toLowerCase();
+            const state = e.state;
+            
+            let score = 0;
+            if (!focusedValue) {
+              score = 100; // Show all when no input
+            } else {
+              if (friendlyName.startsWith(focusedValue)) score = 500;
+              else if (friendlyName.includes(focusedValue)) score = 300;
+              else if (entityId.includes(focusedValue)) score = 200;
+              else return null;
+            }
+            
+            return { entity: e, score };
+          })
+          .filter(Boolean)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 25);
+        
+        await interaction.respond(
+          filtered.map(({ entity: e }) => {
+            const friendlyName = e.attributes?.friendly_name || e.entity_id;
+            const state = e.state;
+            
+            // State indicators
+            let stateIcon = '';
+            if (entityType === 'light' || entityType === 'switch') {
+              stateIcon = state === 'on' ? '💡' : '⚫';
+            } else if (entityType === 'sensor') {
+              const unit = e.attributes?.unit_of_measurement || '';
+              stateIcon = `${state}${unit}`;
+            }
+            
+            return {
+              name: `${stateIcon} ${friendlyName} (${e.entity_id})`.substring(0, 100),
+              value: e.entity_id
+            };
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Autocomplete error:', error);
+      await interaction.respond([]);
     }
     return;
   }

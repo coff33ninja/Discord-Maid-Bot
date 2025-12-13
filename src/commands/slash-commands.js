@@ -212,7 +212,8 @@ export const commands = [
         .addStringOption(option =>
           option.setName('entity')
             .setDescription('Entity ID (e.g., light.living_room)')
-            .setRequired(true))
+            .setRequired(true)
+            .setAutocomplete(true))
         .addBooleanOption(option =>
           option.setName('state')
             .setDescription('Turn on or off')
@@ -233,7 +234,8 @@ export const commands = [
         .addStringOption(option =>
           option.setName('entity')
             .setDescription('Entity ID (e.g., switch.fan)')
-            .setRequired(true))
+            .setRequired(true)
+            .setAutocomplete(true))
         .addBooleanOption(option =>
           option.setName('state')
             .setDescription('Turn on or off')
@@ -249,7 +251,8 @@ export const commands = [
         .addStringOption(option =>
           option.setName('entity')
             .setDescription('Entity ID (e.g., sensor.temperature)')
-            .setRequired(true)))
+            .setRequired(true)
+            .setAutocomplete(true)))
     .addSubcommand(subcommand =>
       subcommand
         .setName('esp')
