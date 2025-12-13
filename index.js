@@ -1957,8 +1957,20 @@ client.on('interactionCreate', async (interaction) => {
       }
     }
     
-    // LOGS COMMAND
+    // LOGS COMMAND (Admin only)
     else if (routedCommandName === 'logs') {
+      // Check permission - only admins can view logs
+      const { PERMISSIONS } = await import('./src/auth/auth.js');
+      const hasPermission = await checkUserPermission(userId, PERMISSIONS.VIEW_LOGS);
+      
+      if (!hasPermission) {
+        await interaction.reply({ 
+          content: '❌ You do not have permission to view logs. This command is restricted to administrators only.', 
+          ephemeral: true 
+        });
+        return;
+      }
+      
       const subcommand = interaction.options.getSubcommand();
       const { logOps } = await import('./src/logging/logger.js');
       

@@ -24,6 +24,7 @@ async function init() {
   await loadHomeAssistant();
   await loadPlugins();
   await loadSettings();
+  await checkLogsPermission(); // Check if user can view logs
   initCharts();
   
   // Real-time updates
@@ -1438,6 +1439,28 @@ async function setUserPersonality(userId, personalityKey) {
 
 // ===== Logs Management =====
 
+// Check if user has permission to view logs
+async function checkLogsPermission() {
+  try {
+    // Try to access logs endpoint
+    const response = await authFetch('/api/logs?limit=1');
+    
+    if (response.status === 403) {
+      // User doesn't have permission - hide logs tab
+      const logsTab = document.querySelector('.tab[onclick*="logs"]');
+      if (logsTab) {
+        logsTab.style.display = 'none';
+      }
+    }
+  } catch (error) {
+    // If error, hide logs tab to be safe
+    const logsTab = document.querySelector('.tab[onclick*="logs"]');
+    if (logsTab) {
+      logsTab.style.display = 'none';
+    }
+  }
+}
+
 // Load logs
 async function loadLogs() {
   try {
@@ -1450,6 +1473,12 @@ async function loadLogs() {
     if (category) url += `&category=${category}`;
     
     const response = await authFetch(url);
+    
+    if (response.status === 403) {
+      document.getElementById('logsList').innerHTML = '<p style="color: #ef4444; text-align: center; padding: 40px;">❌ Access Denied<br><br>Logs are restricted to administrators only.</p>';
+      return;
+    }
+    
     const logs = await response.json();
     
     displayLogs(logs);

@@ -48,7 +48,10 @@ export const PERMISSIONS = {
   CONTROL_CLIMATE: 'control_climate',
   TRIGGER_AUTOMATION: 'trigger_automation',
   ACTIVATE_SCENE: 'activate_scene',
-  RUN_SCRIPT: 'run_script'
+  RUN_SCRIPT: 'run_script',
+  
+  // Logs (Admin only)
+  VIEW_LOGS: 'view_logs'
 };
 
 // Role permissions mapping

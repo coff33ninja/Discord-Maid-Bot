@@ -677,8 +677,8 @@ export function startDashboard(port = 3000) {
     });
   });
   
-  // Logs
-  app.get('/api/logs', requireAuth, (req, res) => {
+  // Logs (Admin only)
+  app.get('/api/logs', requireAuth, requirePermission(PERMISSIONS.VIEW_LOGS), (req, res) => {
     try {
       const limit = parseInt(req.query.limit) || 100;
       const level = req.query.level || null;
@@ -691,7 +691,7 @@ export function startDashboard(port = 3000) {
     }
   });
   
-  app.get('/api/logs/search', requireAuth, (req, res) => {
+  app.get('/api/logs/search', requireAuth, requirePermission(PERMISSIONS.VIEW_LOGS), (req, res) => {
     try {
       const query = req.query.q;
       const limit = parseInt(req.query.limit) || 100;
@@ -707,7 +707,7 @@ export function startDashboard(port = 3000) {
     }
   });
   
-  app.get('/api/logs/stats', requireAuth, (req, res) => {
+  app.get('/api/logs/stats', requireAuth, requirePermission(PERMISSIONS.VIEW_LOGS), (req, res) => {
     try {
       const stats = logOps.getStats();
       res.json(stats);
@@ -716,7 +716,7 @@ export function startDashboard(port = 3000) {
     }
   });
   
-  app.get('/api/logs/categories', requireAuth, (req, res) => {
+  app.get('/api/logs/categories', requireAuth, requirePermission(PERMISSIONS.VIEW_LOGS), (req, res) => {
     try {
       const categories = logOps.getCategories();
       res.json(categories);
@@ -725,11 +725,11 @@ export function startDashboard(port = 3000) {
     }
   });
   
-  app.get('/api/logs/levels', requireAuth, (req, res) => {
+  app.get('/api/logs/levels', requireAuth, requirePermission(PERMISSIONS.VIEW_LOGS), (req, res) => {
     res.json(Object.values(LOG_LEVELS));
   });
   
-  app.post('/api/logs/cleanup', requireAuth, requirePermission(PERMISSIONS.MODIFY_CONFIG), (req, res) => {
+  app.post('/api/logs/cleanup', requireAuth, requirePermission(PERMISSIONS.VIEW_LOGS), (req, res) => {
     try {
       const deleted = logOps.cleanOldLogs();
       res.json({ success: true, deleted });
