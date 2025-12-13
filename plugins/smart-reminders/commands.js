@@ -7,7 +7,7 @@ import { SlashCommandSubcommandGroupBuilder } from 'discord.js';
 
 export const commandGroup = new SlashCommandSubcommandGroupBuilder()
   .setName('reminder')
-  .setDescription('Smart reminder system')
+  .setDescription('Smart reminder & automation system')
   .addSubcommand(subcommand =>
     subcommand
       .setName('add')
@@ -18,7 +18,7 @@ export const commandGroup = new SlashCommandSubcommandGroupBuilder()
           .setRequired(true))
       .addStringOption(option =>
         option.setName('when')
-          .setDescription('When to remind (e.g., 5m, 2h, 1d)')
+          .setDescription('When to remind (e.g., 5m, 2h, 1d, 18:00)')
           .setRequired(true))
       .addStringOption(option =>
         option.setName('name')
@@ -32,6 +32,42 @@ export const commandGroup = new SlashCommandSubcommandGroupBuilder()
       .addBooleanOption(option =>
         option.setName('ai_variation')
           .setDescription('Use AI to vary recurring messages')))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('automation')
+      .setDescription('Create automation with actions')
+      .addStringOption(option =>
+        option.setName('name')
+          .setDescription('Automation name')
+          .setRequired(true))
+      .addStringOption(option =>
+        option.setName('when')
+          .setDescription('When to trigger (e.g., 5m, 2h, 1d, 18:00)')
+          .setRequired(true))
+      .addStringOption(option =>
+        option.setName('action_type')
+          .setDescription('Type of action')
+          .setRequired(true)
+          .addChoices(
+            { name: 'Home Assistant', value: 'homeassistant' },
+            { name: 'Wake-on-LAN', value: 'wol' },
+            { name: 'Network Scan', value: 'scan' },
+            { name: 'Speed Test', value: 'speedtest' }
+          ))
+      .addStringOption(option =>
+        option.setName('ha_entity')
+          .setDescription('Home Assistant entity ID')
+          .setAutocomplete(true))
+      .addStringOption(option =>
+        option.setName('ha_service')
+          .setDescription('HA service (e.g., light.turn_on)'))
+      .addStringOption(option =>
+        option.setName('device')
+          .setDescription('Device for WOL')
+          .setAutocomplete(true))
+      .addStringOption(option =>
+        option.setName('message')
+          .setDescription('Notification message')))
   .addSubcommand(subcommand =>
     subcommand
       .setName('recurring')
@@ -107,6 +143,8 @@ export async function handleCommand(interaction, plugin) {
   switch (subcommand) {
     case 'add':
       return await handleAdd(interaction, plugin);
+    case 'automation':
+      return await handleAutomation(interaction, plugin);
     case 'recurring':
       return await handleRecurring(interaction, plugin);
     case 'presence':
@@ -164,6 +202,29 @@ export async function handleAutocomplete(interaction, plugin) {
       }));
     
     await interaction.respond(filtered);
+  } else if (focusedOption.name === 'ha_entity') {
+    // Home Assistant entity autocomplete
+    try {
+      const { getEntities } = await import('../../src/integrations/homeassistant.js');
+      const entities = await getEntities();
+      const focusedValue = focusedOption.value.toLowerCase();
+      
+      const filtered = entities
+        .filter(e => {
+          if (!focusedValue) return true;
+          return e.entity_id.toLowerCase().includes(focusedValue) ||
+                 (e.attributes?.friendly_name || '').toLowerCase().includes(focusedValue);
+        })
+        .slice(0, 25)
+        .map(e => ({
+          name: `${e.attributes?.friendly_name || e.entity_id}`,
+          value: e.entity_id
+        }));
+      
+      await interaction.respond(filtered);
+    } catch (err) {
+      await interaction.respond([{ name: 'Home Assistant not available', value: 'error' }]);
+    }
   }
 }
 
@@ -178,7 +239,7 @@ async function handleAdd(interaction, plugin) {
   const aiVariation = interaction.options.getBoolean('ai_variation') || false;
   
   try {
-    const triggerTime = plugin.parseRelativeTime(when);
+    const triggerTime = parseTimeString(when);
     
     const reminder = await plugin.addReminder({
       name,
@@ -212,6 +273,126 @@ async function handleAdd(interaction, plugin) {
   } catch (error) {
     await interaction.editReply(`❌ Failed to create reminder: ${error.message}`);
   }
+}
+
+async function handleAutomation(interaction, plugin) {
+  await interaction.deferReply();
+  
+  const name = interaction.options.getString('name');
+  const when = interaction.options.getString('when');
+  const actionType = interaction.options.getString('action_type');
+  const haEntity = interaction.options.getString('ha_entity');
+  const haService = interaction.options.getString('ha_service');
+  const deviceMac = interaction.options.getString('device');
+  const message = interaction.options.getString('message') || `Automation: ${name}`;
+  
+  try {
+    const triggerTime = parseTimeString(when);
+    
+    // Build actions array
+    const actions = [];
+    
+    if (actionType === 'homeassistant') {
+      if (!haEntity || !haService) {
+        await interaction.editReply('❌ Home Assistant entity and service are required');
+        return;
+      }
+      actions.push({
+        type: 'homeassistant',
+        entityId: haEntity,
+        service: haService,
+        data: {}
+      });
+    } else if (actionType === 'wol') {
+      if (!deviceMac) {
+        await interaction.editReply('❌ Device is required for Wake-on-LAN');
+        return;
+      }
+      actions.push({
+        type: 'wol',
+        mac: deviceMac
+      });
+    } else if (actionType === 'scan') {
+      actions.push({ type: 'scan' });
+    } else if (actionType === 'speedtest') {
+      actions.push({ type: 'speedtest' });
+    }
+    
+    const reminder = await plugin.addReminder({
+      name,
+      message,
+      type: 'time',
+      target: 'automation',
+      userId: interaction.user.id,
+      triggerTime,
+      actions
+    });
+    
+    const triggerDate = new Date(triggerTime);
+    
+    // Get action description
+    let actionDesc = '';
+    if (actionType === 'homeassistant') {
+      actionDesc = `${haService} on ${haEntity}`;
+    } else if (actionType === 'wol') {
+      const { deviceOps } = await import('../../src/database/db.js');
+      const device = deviceOps.getByMac(deviceMac);
+      const deviceName = device ? (device.notes || device.hostname || device.ip) : deviceMac;
+      actionDesc = `Wake ${deviceName}`;
+    } else if (actionType === 'scan') {
+      actionDesc = 'Run network scan';
+    } else if (actionType === 'speedtest') {
+      actionDesc = 'Run speed test';
+    }
+    
+    await interaction.editReply({
+      embeds: [{
+        color: 0x00FF00,
+        title: '✅ Automation Created',
+        fields: [
+          { name: 'Name', value: name, inline: false },
+          { name: 'Action', value: actionDesc, inline: false },
+          { name: 'When', value: triggerDate.toLocaleString(), inline: true },
+          { name: 'Type', value: actionType, inline: true },
+          { name: 'ID', value: reminder.id, inline: true }
+        ],
+        footer: { text: 'Automation will execute at the specified time' },
+        timestamp: new Date()
+      }]
+    });
+  } catch (error) {
+    await interaction.editReply(`❌ Failed to create automation: ${error.message}`);
+  }
+}
+
+// Helper: Parse time string (supports relative like "5m" or absolute like "18:00")
+function parseTimeString(timeStr) {
+  const now = Date.now();
+  
+  // Check if it's a time format (HH:MM)
+  if (timeStr.includes(':')) {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const targetTime = new Date();
+    targetTime.setHours(hours, minutes, 0, 0);
+    
+    // If time has passed today, schedule for tomorrow
+    if (targetTime.getTime() < now) {
+      targetTime.setDate(targetTime.getDate() + 1);
+    }
+    
+    return targetTime.getTime();
+  }
+  
+  // Otherwise parse as relative time
+  const value = parseInt(timeStr);
+  const unit = timeStr.slice(-1);
+  
+  let ms = 0;
+  if (unit === 'm') ms = value * 60 * 1000;
+  else if (unit === 'h') ms = value * 60 * 60 * 1000;
+  else if (unit === 'd') ms = value * 24 * 60 * 60 * 1000;
+  
+  return now + ms;
 }
 
 async function handleRecurring(interaction, plugin) {

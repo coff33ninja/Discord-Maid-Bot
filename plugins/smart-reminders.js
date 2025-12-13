@@ -127,6 +127,11 @@ export default class SmartRemindersPlugin extends Plugin {
     if (!this.client) return;
     
     try {
+      // Execute automation actions first
+      if (reminder.actions && reminder.actions.length > 0) {
+        await this.executeActions(reminder.actions, reminder);
+      }
+      
       // Get message content (with AI variation if enabled)
       let message = reminder.message;
       
@@ -134,7 +139,7 @@ export default class SmartRemindersPlugin extends Plugin {
         message = await this.generateVariation(reminder.message);
       }
       
-      // Send reminder
+      // Send notification (if not automation-only)
       if (reminder.target === 'dm') {
         const user = await this.client.users.fetch(reminder.userId);
         await user.send({
@@ -164,12 +169,86 @@ export default class SmartRemindersPlugin extends Plugin {
             timestamp: new Date()
           }]
         });
+      } else if (reminder.target === 'automation') {
+        // Automation-only, send confirmation to user
+        const user = await this.client.users.fetch(reminder.userId);
+        await user.send({
+          embeds: [{
+            color: 0x00FF00,
+            title: '✅ Automation Executed',
+            description: message,
+            fields: [
+              { name: '🤖 Actions', value: `${reminder.actions.length} action(s) executed`, inline: true },
+              { name: '⏰ Type', value: reminder.type, inline: true }
+            ],
+            timestamp: new Date()
+          }]
+        });
       }
       
       console.log(`⏰ Triggered reminder: ${reminder.name}`);
     } catch (error) {
       console.error(`Failed to trigger reminder ${reminder.name}:`, error);
     }
+  }
+  
+  async executeActions(actions, reminder) {
+    for (const action of actions) {
+      try {
+        switch (action.type) {
+          case 'homeassistant':
+            await this.executeHomeAssistantAction(action);
+            break;
+          case 'wol':
+            await this.executeWakeOnLan(action);
+            break;
+          case 'scan':
+            await this.executeNetworkScan();
+            break;
+          case 'speedtest':
+            await this.executeSpeedTest();
+            break;
+          default:
+            console.warn(`Unknown action type: ${action.type}`);
+        }
+        
+        console.log(`✅ Executed action: ${action.type}`);
+      } catch (error) {
+        console.error(`Failed to execute action ${action.type}:`, error);
+      }
+    }
+  }
+  
+  async executeHomeAssistantAction(action) {
+    const { callService } = await import('../src/integrations/homeassistant.js');
+    const [domain, service] = action.service.split('.');
+    
+    await callService(domain, service, {
+      entity_id: action.entityId,
+      ...action.data
+    });
+  }
+  
+  async executeWakeOnLan(action) {
+    const wol = (await import('wake_on_lan')).default;
+    
+    return new Promise((resolve, reject) => {
+      wol.wake(action.mac, (error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+  }
+  
+  async executeNetworkScan() {
+    const { scanUnifiedNetwork } = await import('../src/network/unified-scanner.js');
+    const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';
+    await scanUnifiedNetwork(subnet);
+  }
+  
+  async executeSpeedTest() {
+    const speedtest = (await import('speedtest-net')).default;
+    await speedtest({ acceptLicense: true, acceptGdpr: true });
   }
   
   async generateVariation(originalMessage) {
@@ -201,7 +280,7 @@ Variation:`;
       name: reminderData.name,
       message: reminderData.message,
       type: reminderData.type, // 'time', 'presence', 'recurring'
-      target: reminderData.target, // 'dm', 'channel'
+      target: reminderData.target, // 'dm', 'channel', 'automation'
       userId: reminderData.userId,
       channelId: reminderData.channelId,
       triggerTime: reminderData.triggerTime,
@@ -209,6 +288,8 @@ Variation:`;
       interval: reminderData.interval,
       context: reminderData.context,
       aiVariation: reminderData.aiVariation || false,
+      // Automation actions
+      actions: reminderData.actions || [], // Array of actions to execute
       active: true,
       completed: false,
       createdAt: Date.now(),
