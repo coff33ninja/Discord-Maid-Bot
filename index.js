@@ -709,7 +709,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /device router
-    else if (routedCommandName === 'device') {
+    else if (commandName === 'device') {
       const subcommand = interaction.options.getSubcommand();
       const subcommandGroup = interaction.options.getSubcommandGroup(false);
       
@@ -725,7 +725,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /automation router
-    else if (routedCommandName === 'automation') {
+    else if (commandName === 'automation') {
       const subcommandGroup = interaction.options.getSubcommandGroup(false);
       
       if (subcommandGroup === 'speedalert') {
@@ -738,7 +738,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /research router
-    else if (routedCommandName === 'research') {
+    else if (commandName === 'research') {
       const subcommand = interaction.options.getSubcommand();
       
       if (subcommand === 'query') {
@@ -753,7 +753,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /game router
-    else if (routedCommandName === 'game') {
+    else if (commandName === 'game') {
       const subcommand = interaction.options.getSubcommand();
       
       // Map to existing game commands
@@ -767,7 +767,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /bot router
-    else if (routedCommandName === 'bot') {
+    else if (commandName === 'bot') {
       const subcommand = interaction.options.getSubcommand();
       const subcommandGroup = interaction.options.getSubcommandGroup(false);
       
@@ -779,7 +779,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     // /admin router
-    else if (routedCommandName === 'admin') {
+    else if (commandName === 'admin') {
       const subcommandGroup = interaction.options.getSubcommandGroup(false);
       
       if (subcommandGroup === 'permissions') {
