@@ -1,5 +1,5 @@
-// Connect to Socket.io
-const socket = io('http://localhost:3000');
+// Connect to Socket.io (use current host and port)
+const socket = io();
 
 let deviceChart, speedChart;
 
@@ -1020,11 +1020,23 @@ async function loadResearch() {
 // Load speed test history
 async function loadSpeedHistory() {
   try {
-    const response = await fetch('/api/speedtests/history?days=7');
+    const response = await authFetch('/api/speedtests/history?days=7');
     const history = await response.json();
     
     if (history.length > 0) {
       updateSpeedChart(history);
+      
+      // Show latest test results
+      const latest = history[history.length - 1];
+      const resultsPanel = document.getElementById('speedTestResults');
+      if (resultsPanel && latest) {
+        resultsPanel.style.display = 'block';
+        document.getElementById('latestDownload').textContent = parseFloat(latest.download).toFixed(1);
+        document.getElementById('latestUpload').textContent = parseFloat(latest.upload).toFixed(1);
+        document.getElementById('latestPing').textContent = parseFloat(latest.ping).toFixed(1);
+        document.getElementById('latestServer').textContent = latest.server || '--';
+        document.getElementById('latestISP').textContent = latest.isp || '--';
+      }
     }
   } catch (error) {
     console.error('Failed to load speed history:', error);
@@ -1175,12 +1187,18 @@ async function runSpeedTest() {
   }
   
   try {
-    // Show loading state
-    const originalDownload = document.getElementById('downloadSpeed').textContent;
-    const originalUpload = document.getElementById('uploadSpeed').textContent;
-    
+    // Show loading state in stats
     document.getElementById('downloadSpeed').textContent = '...';
     document.getElementById('uploadSpeed').textContent = '...';
+    
+    // Show loading in results panel if visible
+    const resultsPanel = document.getElementById('speedTestResults');
+    if (resultsPanel) {
+      resultsPanel.style.display = 'block';
+      document.getElementById('latestDownload').textContent = '...';
+      document.getElementById('latestUpload').textContent = '...';
+      document.getElementById('latestPing').textContent = '...';
+    }
     
     // Trigger speed test on server
     const response = await authFetch('/api/speedtests/run', {
@@ -1193,14 +1211,24 @@ async function runSpeedTest() {
     
     const result = await response.json();
     
-    // Update display
+    // Update stats display
     document.getElementById('downloadSpeed').textContent = parseFloat(result.download).toFixed(1);
     document.getElementById('uploadSpeed').textContent = parseFloat(result.upload).toFixed(1);
+    
+    // Update results panel
+    if (resultsPanel) {
+      resultsPanel.style.display = 'block';
+      document.getElementById('latestDownload').textContent = parseFloat(result.download).toFixed(1);
+      document.getElementById('latestUpload').textContent = parseFloat(result.upload).toFixed(1);
+      document.getElementById('latestPing').textContent = parseFloat(result.ping).toFixed(1);
+      document.getElementById('latestServer').textContent = result.server || '--';
+      document.getElementById('latestISP').textContent = result.isp || '--';
+    }
     
     // Reload speed history chart
     await loadSpeedHistory();
     
-    alert(`✅ Speed Test Complete!\n\n⬇️ Download: ${result.download} Mbps\n⬆️ Upload: ${result.upload} Mbps\n📡 Ping: ${result.ping} ms`);
+    alert(`✅ Speed Test Complete!\n\n⬇️ Download: ${result.download} Mbps\n⬆️ Upload: ${result.upload} Mbps\n📡 Ping: ${result.ping} ms\n🌐 Server: ${result.server}\n🏢 ISP: ${result.isp}`);
   } catch (error) {
     console.error('Speed test error:', error);
     alert('❌ Speed test failed. Please try again.');

@@ -501,9 +501,36 @@
 
     <div id="speedtest-tab" class="tab-content">
       <div class="card">
-        <h2>🚀 Speed Test History</h2>
+        <h2>
+          🚀 Speed Test History
+          <button class="refresh-btn" onclick="runSpeedTest()" style="background: #f59e0b;">▶ Run Test</button>
+        </h2>
         <div class="chart-container">
           <canvas id="speedChart"></canvas>
+        </div>
+        <div id="speedTestResults" style="margin-top: 20px; padding: 15px; background: #f9fafb; border-radius: 8px; display: none;">
+          <h3 style="margin-top: 0; color: #667eea;">Latest Test Results</h3>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+            <div>
+              <div style="font-size: 0.85em; color: #666;">⬇️ Download</div>
+              <div style="font-size: 1.8em; font-weight: bold; color: #667eea;" id="latestDownload">--</div>
+              <div style="font-size: 0.85em; color: #999;">Mbps</div>
+            </div>
+            <div>
+              <div style="font-size: 0.85em; color: #666;">⬆️ Upload</div>
+              <div style="font-size: 1.8em; font-weight: bold; color: #f59e0b;" id="latestUpload">--</div>
+              <div style="font-size: 0.85em; color: #999;">Mbps</div>
+            </div>
+            <div>
+              <div style="font-size: 0.85em; color: #666;">📡 Ping</div>
+              <div style="font-size: 1.8em; font-weight: bold; color: #10b981;" id="latestPing">--</div>
+              <div style="font-size: 0.85em; color: #999;">ms</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px; font-size: 0.85em; color: #666;">
+            <strong>Server:</strong> <span id="latestServer">--</span> | 
+            <strong>ISP:</strong> <span id="latestISP">--</span>
+          </div>
         </div>
       </div>
     </div>
