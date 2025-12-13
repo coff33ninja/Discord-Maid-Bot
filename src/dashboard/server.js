@@ -34,6 +34,7 @@ import {
   checkConnection as checkHAConnection,
   configureHomeAssistant
 } from '../integrations/homeassistant.js';
+import { logOps, LOG_LEVELS } from '../logging/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -674,6 +675,67 @@ export function startDashboard(port = 3000) {
         enabled: enabledTasks.length
       }
     });
+  });
+  
+  // Logs
+  app.get('/api/logs', requireAuth, (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit) || 100;
+      const level = req.query.level || null;
+      const category = req.query.category || null;
+      
+      const logs = logOps.getRecent(limit, level, category);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get('/api/logs/search', requireAuth, (req, res) => {
+    try {
+      const query = req.query.q;
+      const limit = parseInt(req.query.limit) || 100;
+      
+      if (!query) {
+        return res.status(400).json({ error: 'Query parameter required' });
+      }
+      
+      const logs = logOps.search(query, limit);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get('/api/logs/stats', requireAuth, (req, res) => {
+    try {
+      const stats = logOps.getStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get('/api/logs/categories', requireAuth, (req, res) => {
+    try {
+      const categories = logOps.getCategories();
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get('/api/logs/levels', requireAuth, (req, res) => {
+    res.json(Object.values(LOG_LEVELS));
+  });
+  
+  app.post('/api/logs/cleanup', requireAuth, requirePermission(PERMISSIONS.MODIFY_CONFIG), (req, res) => {
+    try {
+      const deleted = logOps.cleanOldLogs();
+      res.json({ success: true, deleted });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
   });
   
   // Quick Actions

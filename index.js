@@ -33,11 +33,18 @@ dotenv.config();
 // Initialize database
 initDatabase();
 
+// Initialize logging system
+import { createLogger } from './src/logging/logger.js';
+const logger = createLogger('core');
+logger.info('Starting Discord Maid Bot...');
+
 // Initialize authentication
 await initializeAuth();
+logger.info('Authentication system initialized');
 
 // Initialize plugin system
 await initPluginSystem();
+logger.info('Plugin system initialized');
 
 // Register core handlers for plugins (plugins never import core directly)
 import { registerCoreHandler } from './src/plugins/plugin-manager.js';
@@ -968,6 +975,8 @@ client.on('interactionCreate', async (interaction) => {
       
       if (subcommandGroup === 'plugin') {
         interaction.commandName = 'plugin';
+      } else if (subcommandGroup === 'logs') {
+        interaction.commandName = 'logs';
       } else {
         interaction.commandName = subcommand; // chat, personality, stats, dashboard, help
       }
@@ -1945,6 +1954,143 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply({ embeds: [embed] });
       } catch (error) {
         await interaction.editReply(`❌ Weather check failed: ${error.message}`);
+      }
+    }
+    
+    // LOGS COMMAND
+    else if (routedCommandName === 'logs') {
+      const subcommand = interaction.options.getSubcommand();
+      const { logOps } = await import('./src/logging/logger.js');
+      
+      if (subcommand === 'recent') {
+        await interaction.deferReply();
+        
+        const levelOption = interaction.options.getString('level');
+        const level = (levelOption && levelOption !== 'all') ? levelOption : null;
+        const limit = interaction.options.getInteger('limit') || 10;
+        
+        const logs = logOps.getRecent(limit, level, null);
+        
+        if (logs.length === 0) {
+          await interaction.editReply('📋 No logs found');
+          return;
+        }
+        
+        const levelEmojis = {
+          debug: '🔍',
+          info: 'ℹ️',
+          warn: '⚠️',
+          error: '❌',
+          critical: '🔴'
+        };
+        
+        const logText = logs.map(log => {
+          const emoji = levelEmojis[log.level] || '📝';
+          const timestamp = new Date(log.timestamp).toLocaleTimeString();
+          return `${emoji} \`[${timestamp}]\` **${log.category}** - ${log.message}`;
+        }).join('\n');
+        
+        const embed = new EmbedBuilder()
+          .setColor('#667eea')
+          .setTitle(`📋 Recent Logs ${level ? `(${level.toUpperCase()})` : ''}`)
+          .setDescription(logText.substring(0, 4000))
+          .setFooter({ text: `Showing ${logs.length} of ${limit} requested logs` })
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+      }
+      else if (subcommand === 'search') {
+        await interaction.deferReply();
+        
+        const query = interaction.options.getString('query');
+        const limit = interaction.options.getInteger('limit') || 10;
+        
+        const logs = logOps.search(query, limit);
+        
+        if (logs.length === 0) {
+          await interaction.editReply(`📋 No logs found matching: "${query}"`);
+          return;
+        }
+        
+        const levelEmojis = {
+          debug: '🔍',
+          info: 'ℹ️',
+          warn: '⚠️',
+          error: '❌',
+          critical: '🔴'
+        };
+        
+        const logText = logs.map(log => {
+          const emoji = levelEmojis[log.level] || '📝';
+          const timestamp = new Date(log.timestamp).toLocaleTimeString();
+          return `${emoji} \`[${timestamp}]\` **${log.category}** - ${log.message}`;
+        }).join('\n');
+        
+        const embed = new EmbedBuilder()
+          .setColor('#667eea')
+          .setTitle(`🔍 Search Results: "${query}"`)
+          .setDescription(logText.substring(0, 4000))
+          .setFooter({ text: `Found ${logs.length} matching logs` })
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+      }
+      else if (subcommand === 'stats') {
+        await interaction.deferReply();
+        
+        const stats = logOps.getStats();
+        
+        const embed = new EmbedBuilder()
+          .setColor('#667eea')
+          .setTitle('📊 Log Statistics')
+          .addFields(
+            { name: '📋 Total Logs', value: stats.total.toString(), inline: true },
+            { name: '❌ Errors', value: ((stats.byLevel?.error || 0) + (stats.byLevel?.critical || 0)).toString(), inline: true },
+            { name: '⚠️ Warnings', value: (stats.byLevel?.warn || 0).toString(), inline: true },
+            { name: 'ℹ️ Info', value: (stats.byLevel?.info || 0).toString(), inline: true },
+            { name: '🔍 Debug', value: (stats.byLevel?.debug || 0).toString(), inline: true },
+            { name: '🔴 Recent Errors (24h)', value: stats.recentErrors.toString(), inline: true }
+          )
+          .setFooter({ text: 'Logs are retained for 3 days' })
+          .setTimestamp();
+        
+        if (stats.topCategories && stats.topCategories.length > 0) {
+          const categories = stats.topCategories
+            .slice(0, 5)
+            .map(c => `${c.category}: ${c.count}`)
+            .join('\n');
+          embed.addFields({ name: '📂 Top Categories', value: categories, inline: false });
+        }
+        
+        await interaction.editReply({ embeds: [embed] });
+      }
+      else if (subcommand === 'errors') {
+        await interaction.deferReply();
+        
+        const limit = interaction.options.getInteger('limit') || 10;
+        const logs = logOps.getRecent(limit, null, null).filter(log => 
+          log.level === 'error' || log.level === 'critical'
+        );
+        
+        if (logs.length === 0) {
+          await interaction.editReply('✅ No recent errors found!');
+          return;
+        }
+        
+        const logText = logs.map(log => {
+          const emoji = log.level === 'critical' ? '🔴' : '❌';
+          const timestamp = new Date(log.timestamp).toLocaleTimeString();
+          return `${emoji} \`[${timestamp}]\` **${log.category}** - ${log.message}`;
+        }).join('\n');
+        
+        const embed = new EmbedBuilder()
+          .setColor('#ef4444')
+          .setTitle('❌ Recent Errors')
+          .setDescription(logText.substring(0, 4000))
+          .setFooter({ text: `Showing ${logs.length} error(s)` })
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
       }
     }
     

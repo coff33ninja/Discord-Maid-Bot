@@ -434,6 +434,7 @@
       <button class="tab" onclick="switchTab('tasks')">⏰ Scheduled Tasks</button>
       <button class="tab" onclick="switchTab('homeassistant')">🏠 Smart Home</button>
       <button class="tab" onclick="switchTab('plugins')">🔌 Plugins</button>
+      <button class="tab" onclick="switchTab('logs')">📋 Logs</button>
       <button class="tab" onclick="switchTab('research')">📚 Research</button>
       <button class="tab" onclick="switchTab('settings')">⚙️ Settings</button>
     </div>
@@ -608,6 +609,66 @@
         </div>
         <div id="pluginsList">
           <p style="text-align: center; color: #999; padding: 20px;">Loading plugins...</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="logs-tab" class="tab-content">
+      <div class="card">
+        <h2>
+          📋 System Logs
+          <button class="refresh-btn" onclick="loadLogs()" style="margin-left: 10px;">🔄 Refresh</button>
+        </h2>
+        
+        <!-- Filters -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+          <select id="logLevelFilter" onchange="loadLogs()" style="padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+            <option value="">All Levels</option>
+            <option value="debug">Debug</option>
+            <option value="info">Info</option>
+            <option value="warn">Warning</option>
+            <option value="error">Error</option>
+            <option value="critical">Critical</option>
+          </select>
+          
+          <select id="logCategoryFilter" onchange="loadLogs()" style="padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+            <option value="">All Categories</option>
+          </select>
+          
+          <input type="text" id="logSearchInput" placeholder="Search logs..." style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+          <button onclick="searchLogs()" style="padding: 8px 16px;">🔍 Search</button>
+          
+          <select id="logLimitFilter" onchange="loadLogs()" style="padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+            <option value="50">50 logs</option>
+            <option value="100" selected>100 logs</option>
+            <option value="200">200 logs</option>
+            <option value="500">500 logs</option>
+          </select>
+        </div>
+        
+        <!-- Log Stats -->
+        <div id="logStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+          <div>
+            <div style="font-size: 0.85em; color: #666;">Total Logs</div>
+            <div style="font-size: 1.5em; font-weight: bold; color: #667eea;" id="logStatsTotal">0</div>
+          </div>
+          <div>
+            <div style="font-size: 0.85em; color: #666;">🔴 Errors</div>
+            <div style="font-size: 1.5em; font-weight: bold; color: #ef4444;" id="logStatsErrors">0</div>
+          </div>
+          <div>
+            <div style="font-size: 0.85em; color: #666;">⚠️ Warnings</div>
+            <div style="font-size: 1.5em; font-weight: bold; color: #f59e0b;" id="logStatsWarnings">0</div>
+          </div>
+          <div>
+            <div style="font-size: 0.85em; color: #666;">ℹ️ Info</div>
+            <div style="font-size: 1.5em; font-weight: bold; color: #10b981;" id="logStatsInfo">0</div>
+          </div>
+        </div>
+        
+        <!-- Logs List -->
+        <div id="logsList" style="max-height: 600px; overflow-y: auto;">
+          <p style="text-align: center; color: #999; padding: 20px;">Loading logs...</p>
         </div>
       </div>
     </div>

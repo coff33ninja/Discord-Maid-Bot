@@ -1436,6 +1436,154 @@ async function setUserPersonality(userId, personalityKey) {
   }
 }
 
+// ===== Logs Management =====
+
+// Load logs
+async function loadLogs() {
+  try {
+    const level = document.getElementById('logLevelFilter').value;
+    const category = document.getElementById('logCategoryFilter').value;
+    const limit = document.getElementById('logLimitFilter').value;
+    
+    let url = `/api/logs?limit=${limit}`;
+    if (level) url += `&level=${level}`;
+    if (category) url += `&category=${category}`;
+    
+    const response = await authFetch(url);
+    const logs = await response.json();
+    
+    displayLogs(logs);
+    
+    // Load stats
+    await loadLogStats();
+    
+    // Load categories for filter
+    await loadLogCategories();
+  } catch (error) {
+    console.error('Failed to load logs:', error);
+    document.getElementById('logsList').innerHTML = '<p style="color: #ef4444;">Failed to load logs</p>';
+  }
+}
+
+// Search logs
+async function searchLogs() {
+  try {
+    const query = document.getElementById('logSearchInput').value.trim();
+    if (!query) {
+      await loadLogs();
+      return;
+    }
+    
+    const limit = document.getElementById('logLimitFilter').value;
+    const response = await authFetch(`/api/logs/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+    const logs = await response.json();
+    
+    displayLogs(logs);
+  } catch (error) {
+    console.error('Failed to search logs:', error);
+    alert('Failed to search logs');
+  }
+}
+
+// Display logs
+function displayLogs(logs) {
+  const logsList = document.getElementById('logsList');
+  logsList.innerHTML = '';
+  
+  if (logs.length === 0) {
+    logsList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No logs found</p>';
+    return;
+  }
+  
+  logs.forEach(log => {
+    const item = document.createElement('div');
+    item.style.cssText = 'padding: 12px; border-left: 4px solid; margin-bottom: 8px; background: #f9fafb; border-radius: 4px; font-family: monospace; font-size: 0.9em;';
+    
+    // Color based on level
+    const levelColors = {
+      debug: '#6b7280',
+      info: '#10b981',
+      warn: '#f59e0b',
+      error: '#ef4444',
+      critical: '#dc2626'
+    };
+    item.style.borderLeftColor = levelColors[log.level] || '#6b7280';
+    
+    const timestamp = new Date(log.timestamp).toLocaleString();
+    const levelBadge = `<span style="background: ${levelColors[log.level]}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold;">${log.level.toUpperCase()}</span>`;
+    const categoryBadge = `<span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.85em;">${log.category}</span>`;
+    
+    let metadataHtml = '';
+    if (log.metadata) {
+      metadataHtml = `
+        <div style="margin-top: 8px; padding: 8px; background: white; border-radius: 4px; font-size: 0.85em;">
+          <strong>Metadata:</strong>
+          <pre style="margin: 5px 0 0 0; white-space: pre-wrap; word-wrap: break-word;">${JSON.stringify(log.metadata, null, 2)}</pre>
+        </div>
+      `;
+    }
+    
+    item.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div>
+          ${levelBadge}
+          ${categoryBadge}
+          ${log.source ? `<span style="color: #666; font-size: 0.85em; margin-left: 8px;">Source: ${log.source}</span>` : ''}
+          ${log.userId ? `<span style="color: #666; font-size: 0.85em; margin-left: 8px;">User: ${log.userId}</span>` : ''}
+        </div>
+        <div style="color: #666; font-size: 0.85em;">${timestamp}</div>
+      </div>
+      <div style="color: #333; line-height: 1.5;">${log.message}</div>
+      ${metadataHtml}
+    `;
+    
+    logsList.appendChild(item);
+  });
+}
+
+// Load log statistics
+async function loadLogStats() {
+  try {
+    const response = await authFetch('/api/logs/stats');
+    const stats = await response.json();
+    
+    document.getElementById('logStatsTotal').textContent = stats.total || 0;
+    document.getElementById('logStatsErrors').textContent = (stats.byLevel?.error || 0) + (stats.byLevel?.critical || 0);
+    document.getElementById('logStatsWarnings').textContent = stats.byLevel?.warn || 0;
+    document.getElementById('logStatsInfo').textContent = stats.byLevel?.info || 0;
+  } catch (error) {
+    console.error('Failed to load log stats:', error);
+  }
+}
+
+// Load log categories for filter
+async function loadLogCategories() {
+  try {
+    const response = await authFetch('/api/logs/categories');
+    const categories = await response.json();
+    
+    const select = document.getElementById('logCategoryFilter');
+    const currentValue = select.value;
+    
+    // Keep "All Categories" option
+    select.innerHTML = '<option value="">All Categories</option>';
+    
+    categories.forEach(category => {
+      const option = document.createElement('option');
+      option.value = category;
+      option.textContent = category;
+      select.appendChild(option);
+    });
+    
+    // Restore selection
+    if (currentValue) {
+      select.value = currentValue;
+    }
+  } catch (error) {
+    console.error('Failed to load log categories:', error);
+  }
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', init);
 

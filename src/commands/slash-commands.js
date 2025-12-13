@@ -572,6 +572,56 @@ export const commands = [
         .setDescription('Show help and available commands'))
     .addSubcommandGroup(group =>
       group
+        .setName('logs')
+        .setDescription('View system logs')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('recent')
+            .setDescription('View recent logs')
+            .addStringOption(option =>
+              option.setName('level')
+                .setDescription('Filter by log level')
+                .addChoices(
+                  { name: 'All', value: 'all' },
+                  { name: 'Debug', value: 'debug' },
+                  { name: 'Info', value: 'info' },
+                  { name: 'Warning', value: 'warn' },
+                  { name: 'Error', value: 'error' },
+                  { name: 'Critical', value: 'critical' }
+                ))
+            .addIntegerOption(option =>
+              option.setName('limit')
+                .setDescription('Number of logs to show (default: 10)')
+                .setMinValue(1)
+                .setMaxValue(50)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('search')
+            .setDescription('Search logs')
+            .addStringOption(option =>
+              option.setName('query')
+                .setDescription('Search query')
+                .setRequired(true))
+            .addIntegerOption(option =>
+              option.setName('limit')
+                .setDescription('Number of results (default: 10)')
+                .setMinValue(1)
+                .setMaxValue(50)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('stats')
+            .setDescription('View log statistics'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('errors')
+            .setDescription('View recent errors')
+            .addIntegerOption(option =>
+              option.setName('limit')
+                .setDescription('Number of errors to show (default: 10)')
+                .setMinValue(1)
+                .setMaxValue(50))))
+    .addSubcommandGroup(group =>
+      group
         .setName('plugin')
         .setDescription('Plugin management')
         .addSubcommand(subcommand =>
