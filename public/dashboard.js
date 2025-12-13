@@ -275,14 +275,90 @@ async function loadPlugins() {
           <div class="task-name">${plugin.name} v${plugin.version}</div>
           <div class="task-schedule">${plugin.description}</div>
         </div>
-        <span class="${plugin.enabled ? 'task-enabled' : 'task-disabled'}">
-          ${plugin.enabled ? '✓ Enabled' : '✗ Disabled'}
-        </span>
+        <div style="display: flex; gap: 5px; align-items: center;">
+          <span class="${plugin.enabled ? 'task-enabled' : 'task-disabled'}">
+            ${plugin.enabled ? '✓ Enabled' : '✗ Disabled'}
+          </span>
+          ${plugin.enabled 
+            ? `<button onclick="disablePlugin('${plugin.name}')" style="background: #f59e0b; padding: 5px 10px; font-size: 0.85em;">⏸️ Disable</button>`
+            : `<button onclick="enablePlugin('${plugin.name}')" style="background: #10b981; padding: 5px 10px; font-size: 0.85em;">▶️ Enable</button>`
+          }
+          <button onclick="reloadPlugin('${plugin.name}')" style="background: #667eea; padding: 5px 10px; font-size: 0.85em;">🔄 Reload</button>
+        </div>
       `;
       list.appendChild(item);
     });
   } catch (error) {
     console.error('Failed to load plugins:', error);
+  }
+}
+
+// Enable plugin
+async function enablePlugin(pluginName) {
+  if (!confirm(`Enable plugin "${pluginName}"?`)) {
+    return;
+  }
+  
+  try {
+    const response = await authFetch(`/api/plugins/${pluginName}/enable`, {
+      method: 'POST'
+    });
+    
+    if (response.ok) {
+      alert(`✅ Plugin "${pluginName}" enabled successfully!`);
+      await loadPlugins();
+    } else {
+      const error = await response.json();
+      alert(`❌ Failed to enable plugin: ${error.error}`);
+    }
+  } catch (error) {
+    alert(`❌ Error: ${error.message}`);
+  }
+}
+
+// Disable plugin
+async function disablePlugin(pluginName) {
+  if (!confirm(`Disable plugin "${pluginName}"?\n\nThis will stop the plugin from processing commands until re-enabled.`)) {
+    return;
+  }
+  
+  try {
+    const response = await authFetch(`/api/plugins/${pluginName}/disable`, {
+      method: 'POST'
+    });
+    
+    if (response.ok) {
+      alert(`⏸️ Plugin "${pluginName}" disabled successfully!`);
+      await loadPlugins();
+    } else {
+      const error = await response.json();
+      alert(`❌ Failed to disable plugin: ${error.error}`);
+    }
+  } catch (error) {
+    alert(`❌ Error: ${error.message}`);
+  }
+}
+
+// Reload plugin
+async function reloadPlugin(pluginName) {
+  if (!confirm(`Reload plugin "${pluginName}"?\n\nThis will restart the plugin with the latest code changes.`)) {
+    return;
+  }
+  
+  try {
+    const response = await authFetch(`/api/plugins/${pluginName}/reload`, {
+      method: 'POST'
+    });
+    
+    if (response.ok) {
+      alert(`🔄 Plugin "${pluginName}" reloaded successfully!`);
+      await loadPlugins();
+    } else {
+      const error = await response.json();
+      alert(`❌ Failed to reload plugin: ${error.error}`);
+    }
+  } catch (error) {
+    alert(`❌ Error: ${error.message}`);
   }
 }
 

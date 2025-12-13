@@ -2807,9 +2807,23 @@ client.on('interactionCreate', async (interaction) => {
       }
     }
     
-    // PLUGIN COMMAND
+    // PLUGIN COMMAND (Admin only for enable/disable/reload)
     else if (routedCommandName === 'plugin') {
       const subcommand = interaction.options.getSubcommand();
+      
+      // Check permission for enable/disable/reload (admin only)
+      if (['enable', 'disable', 'reload'].includes(subcommand)) {
+        const { PERMISSIONS } = await import('./src/auth/auth.js');
+        const hasPermission = await checkUserPermission(userId, PERMISSIONS.MODIFY_CONFIG);
+        
+        if (!hasPermission) {
+          await interaction.reply({ 
+            content: '❌ You do not have permission to manage plugins. This command is restricted to administrators only.', 
+            ephemeral: true 
+          });
+          return;
+        }
+      }
       
       if (subcommand === 'list') {
         const { getLoadedPlugins } = await import('./src/plugins/plugin-manager.js');
@@ -2886,6 +2900,23 @@ client.on('interactionCreate', async (interaction) => {
         } catch (error) {
           await interaction.editReply(`❌ Failed to reload plugin: ${error.message}`);
         }
+      }
+      else if (subcommand === 'stats') {
+        const { getPluginStats } = await import('./src/plugins/plugin-manager.js');
+        const stats = getPluginStats();
+        
+        const embed = new EmbedBuilder()
+          .setColor('#9370DB')
+          .setTitle('📊 Plugin Statistics')
+          .addFields(
+            { name: '📦 Total Plugins', value: stats.total.toString(), inline: true },
+            { name: '✅ Enabled', value: stats.enabled.toString(), inline: true },
+            { name: '❌ Disabled', value: stats.disabled.toString(), inline: true }
+          )
+          .setFooter({ text: 'Use /bot plugin list to see all plugins' })
+          .setTimestamp();
+        
+        await interaction.reply({ embeds: [embed] });
       }
     }
     
