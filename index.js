@@ -437,8 +437,8 @@ client.on('interactionCreate', async (interaction) => {
         );
       }
       
-      // NAMEDEVICE, DEVICEEMOJI, DEVICEGROUP command - device autocomplete
-      else if (commandName === 'namedevice' || commandName === 'deviceemoji' || 
+      // NAMEDEVICE, DEVICEEMOJI, DEVICECONFIG, DEVICEGROUP command - device autocomplete
+      else if (commandName === 'namedevice' || commandName === 'deviceemoji' || commandName === 'deviceconfig' ||
                (commandName === 'devicegroup' && (focusedOption.name === 'device' || focusedOption.name.startsWith('device')))) {
         const devices = deviceOps.getAll();
         
@@ -459,8 +459,9 @@ client.on('interactionCreate', async (interaction) => {
           
           let score = 0;
           if (!focusedValue) {
-            // No input - prioritize devices with names, then online devices
+            // No input - show all devices, prioritize devices with names, then online devices
             score = (d.notes ? 200 : 0) + (d.online ? 100 : 0) + (d.hostname ? 50 : 0);
+            return { device: d, score };
           } else {
             // Exact match gets highest score
             if (notes === focusedValue) score = 1000;
@@ -476,8 +477,8 @@ client.on('interactionCreate', async (interaction) => {
             
             // Bonus for online devices
             if (d.online) score += 25;
+            return { device: d, score };
           }
-          return { device: d, score };
         })
         .filter(Boolean)
         .sort((a, b) => b.score - a.score)
@@ -851,6 +852,83 @@ client.on('interactionCreate', async (interaction) => {
         
         // Broadcast update to dashboard
         broadcastUpdate('device-named', { device: result.device, name: friendlyName });
+      } catch (error) {
+        await interaction.editReply(`❌ Error: ${error.message}`);
+      }
+    }
+    
+    // DEVICECONFIG COMMAND (Unified device configuration)
+    else if (commandName === 'deviceconfig') {
+      const deviceIdentifier = interaction.options.getString('device');
+      const name = interaction.options.getString('name');
+      const emoji = interaction.options.getString('emoji');
+      const group = interaction.options.getString('group');
+      
+      await interaction.deferReply();
+      
+      try {
+        // Find device
+        let device = deviceOps.getByMac(deviceIdentifier);
+        if (!device) {
+          device = deviceOps.getAll().find(d => 
+            d.ip === deviceIdentifier || 
+            d.hostname === deviceIdentifier || 
+            d.notes === deviceIdentifier
+          );
+        }
+        
+        if (!device) {
+          await interaction.editReply('❌ Device not found. Use `/scan` to discover devices first.');
+          return;
+        }
+        
+        // Check if at least one property is provided
+        if (!name && !emoji && !group) {
+          await interaction.editReply('❌ Please provide at least one property to configure (name, emoji, or group).');
+          return;
+        }
+        
+        // Update properties
+        const updates = [];
+        if (name) {
+          deviceOps.updateNotes(device.id, name);
+          updates.push(`Name: **${name}**`);
+        }
+        if (emoji) {
+          deviceOps.updateEmoji(device.id, emoji);
+          updates.push(`Emoji: ${emoji}`);
+        }
+        if (group) {
+          deviceOps.updateGroup(device.id, group);
+          updates.push(`Group: **${group}**`);
+        }
+        
+        // Get updated device
+        const updatedDevice = deviceOps.getById(device.id);
+        const displayName = updatedDevice.notes || updatedDevice.hostname || updatedDevice.ip;
+        const displayEmoji = updatedDevice.emoji || '';
+        
+        const embed = new EmbedBuilder()
+          .setColor('#4CAF50')
+          .setTitle('⚙️ Device Configuration Updated')
+          .setDescription(`Successfully configured **${displayEmoji} ${displayName}**`)
+          .addFields(
+            { name: 'Device', value: `${displayEmoji} ${displayName}`, inline: true },
+            { name: 'IP Address', value: updatedDevice.ip, inline: true },
+            { name: 'Status', value: updatedDevice.online ? '🟢 Online' : '🔴 Offline', inline: true }
+          )
+          .setTimestamp();
+        
+        if (updates.length > 0) {
+          embed.addFields({
+            name: '✅ Updated Properties',
+            value: updates.join('\n'),
+            inline: false
+          });
+        }
+        
+        await interaction.editReply({ embeds: [embed] });
+        broadcastUpdate('device-updated', { device: updatedDevice });
       } catch (error) {
         await interaction.editReply(`❌ Error: ${error.message}`);
       }

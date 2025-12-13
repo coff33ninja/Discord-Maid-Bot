@@ -222,7 +222,29 @@ export const commands = [
         .setDescription('Friendly name for the device')
         .setRequired(true)),
 
-  // Device emoji command
+  // Unified device configuration command
+  new SlashCommandBuilder()
+    .setName('deviceconfig')
+    .setDescription('⚙️ Configure device properties (name, emoji, group)')
+    .addStringOption(option =>
+      option.setName('device')
+        .setDescription('Device to configure')
+        .setRequired(true)
+        .setAutocomplete(true))
+    .addStringOption(option =>
+      option.setName('name')
+        .setDescription('Friendly name for the device')
+        .setRequired(false))
+    .addStringOption(option =>
+      option.setName('emoji')
+        .setDescription('Emoji to display (e.g., 🎮 💻 📱 🖥️)')
+        .setRequired(false))
+    .addStringOption(option =>
+      option.setName('group')
+        .setDescription('Group name (e.g., Family Devices, IoT)')
+        .setRequired(false)),
+
+  // Device emoji command (kept for backwards compatibility)
   new SlashCommandBuilder()
     .setName('deviceemoji')
     .setDescription('😀 Add an emoji to a device')
