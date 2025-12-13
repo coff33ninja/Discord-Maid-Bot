@@ -675,6 +675,70 @@ export function startDashboard(port = 3000) {
       }
     });
   });
+  
+  // Quick Actions
+  app.post('/api/quick-actions/wake-all-pcs', requireAuth, requirePermission(PERMISSIONS.WAKE_DEVICE), async (req, res) => {
+    try {
+      const devices = deviceOps.getAll();
+      const wol = (await import('wake_on_lan')).default;
+      
+      // Filter for PC-like devices (based on hostname patterns)
+      const pcs = devices.filter(d => {
+        const name = (d.hostname || d.notes || '').toLowerCase();
+        return name.includes('pc') || name.includes('desktop') || name.includes('laptop') || name.includes('computer');
+      });
+      
+      if (pcs.length === 0) {
+        return res.json({ success: true, message: 'No PCs found', count: 0 });
+      }
+      
+      const results = [];
+      for (const pc of pcs) {
+        try {
+          await new Promise((resolve, reject) => {
+            wol.wake(pc.mac, (error) => {
+              if (error) reject(error);
+              else resolve();
+            });
+          });
+          results.push({ device: pc.hostname || pc.ip, success: true });
+        } catch (error) {
+          results.push({ device: pc.hostname || pc.ip, success: false, error: error.message });
+        }
+      }
+      
+      broadcastUpdate('wake-all-pcs', { results, timestamp: new Date() });
+      
+      res.json({ 
+        success: true, 
+        message: `Sent wake packets to ${pcs.length} PC(s)`,
+        count: pcs.length,
+        results 
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post('/api/quick-actions/scan-network', requireAuth, async (req, res) => {
+    try {
+      const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';
+      const result = await scanUnifiedNetwork(subnet);
+      
+      broadcastUpdate('network-scan-complete', { 
+        stats: result.stats, 
+        timestamp: new Date() 
+      });
+      
+      res.json({ 
+        success: true, 
+        message: `Found ${result.stats.total} devices`,
+        stats: result.stats 
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // Socket.io for real-time updates
   io.on('connection', (socket) => {
