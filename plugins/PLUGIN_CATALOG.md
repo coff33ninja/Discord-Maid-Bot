@@ -2,7 +2,7 @@
 
 This document lists all available plugins for the Discord Maid Bot.
 
-## 🎯 Active Plugins (6)
+## 🎯 Active Plugins (7)
 
 ### 1. 🏥 Device Health Monitoring
 **Plugin:** `device-health`  
@@ -177,9 +177,40 @@ This document lists all available plugins for the Discord Maid Bot.
 
 - **Total Plugins:** 6
 - **Active Plugins:** 6
-- **Commands Added:** 5 command groups
-- **Total Subcommands:** 30+
-- **Lines of Code:** ~2,500+
+- **Commands Added:** 6 command groups
+- **Total Subcommands:** 33+
+- **Lines of Code:** ~2,800+
+
+---
+
+### 7. 📦 Device Bulk Operations
+**Plugin:** `device-bulk-ops`  
+**Version:** 1.0.0  
+**Commands:** `/device bulk`  
+**Description:** Perform bulk operations on multiple devices at once
+
+**Features:**
+- Bulk rename devices matching a pattern
+- Bulk set emoji for devices
+- Bulk assign devices to groups
+- Regex pattern matching
+- Prefix/suffix support for renaming
+- Shows preview of affected devices
+
+**Subcommands:**
+- `/device bulk rename <pattern> [prefix] [suffix]` - Bulk rename devices
+- `/device bulk emoji <pattern> <emoji>` - Bulk set emoji
+- `/device bulk group <pattern> <group>` - Bulk assign to group
+
+**Example Use Cases:**
+- Rename all PCs: `/device bulk rename pattern:PC prefix:Gaming-`
+- Set emoji for phones: `/device bulk emoji pattern:phone emoji:📱`
+- Group all IoT devices: `/device bulk group pattern:ESP group:Smart Home`
+
+**Architecture:**
+- Uses `requestFromCore()` method - never imports core files
+- Pure injection pattern - fully self-contained
+- Hot-reloadable without touching core system
 
 ---
 
