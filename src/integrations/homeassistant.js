@@ -268,26 +268,6 @@ export async function getSensorData(entityId) {
   };
 }
 
-// Get climate control
-export async function getClimate(entityId) {
-  const state = await getEntityState(entityId);
-  return {
-    current_temperature: state.attributes?.current_temperature,
-    target_temperature: state.attributes?.temperature,
-    mode: state.state,
-    hvac_modes: state.attributes?.hvac_modes,
-    friendly_name: state.attributes?.friendly_name
-  };
-}
-
-// Set climate temperature
-export async function setClimateTemperature(entityId, temperature) {
-  return await callService('climate', 'set_temperature', {
-    entity_id: entityId,
-    temperature
-  });
-}
-
 // Get all lights
 export async function getAllLights() {
   const entities = await getEntities();
@@ -388,4 +368,16 @@ export async function setClimateMode(entityId, hvacMode) {
     entity_id: entityId,
     hvac_mode: hvacMode
   });
+}
+
+// Get climate control details
+export async function getClimate(entityId) {
+  const state = await getEntityState(entityId);
+  return {
+    current_temperature: state.attributes?.current_temperature,
+    target_temperature: state.attributes?.temperature,
+    mode: state.state,
+    hvac_modes: state.attributes?.hvac_modes,
+    friendly_name: state.attributes?.friendly_name
+  };
 }
