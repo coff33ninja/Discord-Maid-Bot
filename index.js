@@ -19,7 +19,7 @@ import { initScheduler, scheduleTask, stopTask } from './src/scheduler/tasks.js'
 import { initializeAuth } from './src/auth/auth.js';
 import { initPluginSystem, emitToPlugins } from './src/plugins/plugin-manager.js';
 import { initHomeAssistant } from './src/integrations/homeassistant.js';
-import { scanTailscaleNetwork, isTailscaleAvailable, getTailscaleStatus } from './src/network/tailscale.js';
+import { scanUnifiedNetwork, assignDeviceName, findDevice, isTailscaleAvailable, getTailscaleStatus } from './src/network/unified-scanner.js';
 import { saveToSMB } from './src/config/smb-config.js';
 import { geminiKeys, generateWithRotation } from './src/config/gemini-keys.js';
 
@@ -80,54 +80,29 @@ function setUserPersonality(userId, personalityKey) {
 let networkDevices = [];
 let lastScanTime = null;
 
-// Helper: Scan network for devices
+// Helper: Scan network for devices (unified local + Tailscale)
 async function scanNetwork() {
-  console.log('🔍 Scanning network...');
-  const devices = [];
   const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';
-  const baseIP = subnet.split('/')[0].split('.').slice(0, 3).join('.');
+  const result = await scanUnifiedNetwork(subnet);
   
-  const promises = [];
-  for (let i = 1; i <= 254; i++) {
-    const ip = `${baseIP}.${i}`;
-    promises.push(
-      ping.promise.probe(ip, { timeout: 1 }).then(res => {
-        if (res.alive) {
-          return new Promise((resolve) => {
-            arp.getMAC(ip, (err, mac) => {
-              // Check if mac is a valid MAC address (not an error message)
-              const isValidMac = mac && /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(mac);
-              const device = {
-                ip,
-                mac: isValidMac ? mac : 'unknown',
-                hostname: res.host || ip,
-                online: true
-              };
-              devices.push(device);
-              
-              // Save to database
-              deviceOps.upsert(device);
-              
-              resolve();
-            });
-          });
-        }
-      }).catch(() => {})
-    );
-  }
-  
-  await Promise.all(promises);
-  networkDevices = devices;
+  networkDevices = result.all;
   lastScanTime = new Date();
   
   // Broadcast update to dashboard
-  broadcastUpdate('device-update', { devices, timestamp: lastScanTime });
+  broadcastUpdate('device-update', { 
+    devices: result.all, 
+    stats: result.stats,
+    timestamp: lastScanTime 
+  });
   
   // Emit to plugins
-  await emitToPlugins('networkScan', devices);
+  await emitToPlugins('networkScan', result.all);
   
-  console.log(`✅ Found ${devices.length} devices`);
-  return { devices, count: devices.length };
+  return { 
+    devices: result.all, 
+    count: result.stats.total,
+    stats: result.stats
+  };
 }
 
 // Helper: Wake on LAN
@@ -425,6 +400,57 @@ client.on('interactionCreate', async (interaction) => {
         );
       }
       
+      // NAMEDEVICE command - device autocomplete
+      else if (commandName === 'namedevice') {
+        const devices = deviceOps.getAll();
+        
+        // Score-based filtering and sorting
+        const scored = devices.map(d => {
+          const hostname = (d.hostname || '').toLowerCase();
+          const ip = d.ip.toLowerCase();
+          const mac = d.mac.toLowerCase();
+          const notes = (d.notes || '').toLowerCase();
+          
+          let score = 0;
+          if (!focusedValue) {
+            // No input - prioritize devices with names, then online devices
+            score = (d.notes ? 200 : 0) + (d.online ? 100 : 0) + (d.hostname ? 50 : 0);
+          } else {
+            // Exact match gets highest score
+            if (notes === focusedValue) score = 1000;
+            else if (notes.startsWith(focusedValue)) score = 800;
+            else if (hostname === focusedValue) score = 600;
+            else if (hostname.startsWith(focusedValue)) score = 500;
+            else if (notes.includes(focusedValue)) score = 400;
+            else if (hostname.includes(focusedValue)) score = 200;
+            else if (ip.startsWith(focusedValue)) score = 150;
+            else if (ip.includes(focusedValue)) score = 100;
+            else if (mac.includes(focusedValue)) score = 80;
+            else return null; // No match
+            
+            // Bonus for online devices
+            if (d.online) score += 25;
+          }
+          return { device: d, score };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 25);
+        
+        await interaction.respond(
+          scored.map(({ device: d }) => {
+            // Enhanced display with more info
+            const status = d.online ? '🟢' : '🔴';
+            const displayName = d.notes ? `${d.notes} (${d.hostname || d.ip})` : (d.hostname || d.ip);
+            
+            return {
+              name: `${status} ${displayName} | ${d.ip}`.substring(0, 100),
+              value: d.mac
+            };
+          })
+        );
+      }
+      
       // Home Assistant entity autocomplete
       else if (commandName === 'homeassistant') {
         const subcommand = interaction.options.getSubcommand();
@@ -525,28 +551,58 @@ client.on('interactionCreate', async (interaction) => {
       await interaction.deferReply();
       
       const result = await scanNetwork();
+      const stats = result.stats;
       
       const embed = new EmbedBuilder()
         .setColor('#98FB98')
-        .setTitle('📡 Network Scan Results')
-        .setDescription(`Found **${result.count} devices** on your network~`)
+        .setTitle('📡 Unified Network Scan Results')
+        .setDescription(
+          `**Total: ${stats.total} devices** (${stats.online} online)\n` +
+          `├─ 🏠 Local Network: ${stats.local} devices\n` +
+          `└─ 🌐 Tailscale: ${stats.tailscale} devices`
+        )
         .setTimestamp();
       
-      result.devices.slice(0, 20).forEach((device, index) => {
-        embed.addFields({
-          name: `${index + 1}. ${device.hostname || device.ip}`,
-          value: `IP: \`${device.ip}\`\nMAC: \`${device.mac}\`\n🟢 Online`,
-          inline: true
-        });
-      });
+      // Group devices by network
+      const localDevices = result.devices.filter(d => d.network === 'local' || d.network === 'both');
+      const tailscaleDevices = result.devices.filter(d => d.network === 'tailscale');
       
-      if (result.devices.length > 20) {
+      // Show local network devices
+      if (localDevices.length > 0) {
+        const localList = localDevices.slice(0, 10).map((device, index) => {
+          const name = device.name ? `**${device.name}**` : device.hostname || device.ip;
+          const networkBadge = device.network === 'both' ? '🌐' : '';
+          return `  ${index + 1}. ${name} ${networkBadge}\n     \`${device.ip}\` | \`${device.mac.substring(0, 17)}\` | ${device.latency}ms`;
+        }).join('\n');
+        
         embed.addFields({
-          name: '📝 Note',
-          value: `Showing first 20 devices. View all on dashboard!`,
+          name: '🏠 Local Network',
+          value: localList + (localDevices.length > 10 ? `\n  ... and ${localDevices.length - 10} more` : ''),
           inline: false
         });
       }
+      
+      // Show Tailscale devices (slightly indented)
+      if (tailscaleDevices.length > 0) {
+        const tailscaleList = tailscaleDevices.slice(0, 10).map((device, index) => {
+          const name = device.name ? `**${device.name}**` : device.hostname;
+          const status = device.online ? '🟢' : '🔴';
+          const latency = device.latency ? `${device.latency}ms` : 'offline';
+          return `    ${index + 1}. ${name} ${status}\n       \`${device.ip}\` | ${device.os} | ${latency}`;
+        }).join('\n');
+        
+        embed.addFields({
+          name: '  🌐 Tailscale Network',
+          value: tailscaleList + (tailscaleDevices.length > 10 ? `\n    ... and ${tailscaleDevices.length - 10} more` : ''),
+          inline: false
+        });
+      }
+      
+      embed.addFields({
+        name: '💡 Tip',
+        value: 'Use `/namedevice <device> <name>` to assign friendly names!\nView all devices on the dashboard.',
+        inline: false
+      });
       
       await interaction.editReply({ embeds: [embed] });
     }
@@ -589,6 +645,46 @@ client.on('interactionCreate', async (interaction) => {
       }
       
       await interaction.reply({ embeds: [embed] });
+    }
+    
+    // NAMEDEVICE COMMAND
+    else if (commandName === 'namedevice') {
+      const deviceIdentifier = interaction.options.getString('device');
+      const friendlyName = interaction.options.getString('name');
+      
+      await interaction.deferReply();
+      
+      try {
+        const result = assignDeviceName(deviceIdentifier, friendlyName);
+        
+        if (!result.success) {
+          await interaction.editReply(`❌ Failed to assign name: ${result.error}`);
+          return;
+        }
+        
+        const device = result.device;
+        
+        const embed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('🏷️ Device Name Assigned')
+          .setDescription(`Successfully named device **${friendlyName}**`)
+          .addFields(
+            { name: 'Device Name', value: friendlyName, inline: true },
+            { name: 'Hostname', value: device.hostname || 'Unknown', inline: true },
+            { name: 'IP Address', value: device.ip, inline: true },
+            { name: 'MAC Address', value: device.mac, inline: true },
+            { name: 'Status', value: device.online ? '🟢 Online' : '🔴 Offline', inline: true }
+          )
+          .setFooter({ text: 'This name will appear in all device lists!' })
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        
+        // Broadcast update to dashboard
+        broadcastUpdate('device-named', { device: result.device, name: friendlyName });
+      } catch (error) {
+        await interaction.editReply(`❌ Error: ${error.message}`);
+      }
     }
     
     // WOL COMMAND
@@ -1210,79 +1306,7 @@ client.on('interactionCreate', async (interaction) => {
       await interaction.reply({ embeds: [embed] });
     }
     
-    // TAILSCALE COMMAND
-    else if (commandName === 'tailscale') {
-      const subcommand = interaction.options.getSubcommand();
-      
-      if (subcommand === 'devices') {
-        await interaction.deferReply();
-        
-        // Send initial message
-        await interaction.editReply('🔍 Scanning Tailscale network and pinging devices...');
-        
-        try {
-          const devices = await scanTailscaleNetwork();
-          
-          if (devices.length === 0) {
-            await interaction.editReply('⚠️ No Tailscale devices found. Make sure Tailscale is running!');
-            return;
-          }
-          
-          const onlineCount = devices.filter(d => d.online).length;
-          
-          const embed = new EmbedBuilder()
-            .setColor('#4B0082')
-            .setTitle('🌐 Tailscale Network Devices')
-            .setDescription(`Found **${devices.length} devices** on Tailscale network\n${onlineCount} online, ${devices.length - onlineCount} offline`)
-            .setTimestamp();
-          
-          devices.slice(0, 20).forEach((device, index) => {
-            const statusIcon = device.online ? '🟢' : '🔴';
-            const statusText = device.online ? 'Online' : 'Offline';
-            const latencyText = device.latency ? ` (${device.latency}ms)` : '';
-            
-            embed.addFields({
-              name: `${index + 1}. ${device.hostname}`,
-              value: `IP: \`${device.ip}\`\nOS: ${device.os}\n${statusIcon} ${statusText}${latencyText}`,
-              inline: true
-            });
-          });
-          
-          await interaction.editReply({ embeds: [embed] });
-        } catch (error) {
-          await interaction.editReply(`❌ Tailscale error: ${error.message}`);
-        }
-      }
-      else if (subcommand === 'status') {
-        await interaction.deferReply();
-        
-        try {
-          const available = await isTailscaleAvailable();
-          if (!available) {
-            await interaction.editReply('⚠️ Tailscale is not installed or not running');
-            return;
-          }
-          
-          const status = await getTailscaleStatus();
-          const myIP = status?.Self?.TailscaleIPs?.[0] || 'Unknown';
-          const peerCount = Object.keys(status?.Peer || {}).length;
-          
-          const embed = new EmbedBuilder()
-            .setColor('#4B0082')
-            .setTitle('🌐 Tailscale Status')
-            .addFields(
-              { name: 'Status', value: '🟢 Connected', inline: true },
-              { name: 'My IP', value: myIP, inline: true },
-              { name: 'Peers', value: `${peerCount}`, inline: true }
-            )
-            .setTimestamp();
-          
-          await interaction.editReply({ embeds: [embed] });
-        } catch (error) {
-          await interaction.editReply(`❌ Failed to get status: ${error.message}`);
-        }
-      }
-    }
+
     
     // HOME ASSISTANT COMMAND
     else if (commandName === 'homeassistant') {

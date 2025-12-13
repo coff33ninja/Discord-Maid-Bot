@@ -39,36 +39,72 @@ Change the bot's personality.
 ## Network Tools
 
 ### /scan
-Scan the local network for devices.
+Scan both local and Tailscale networks for devices (unified scan).
 
 ```
-/scan [network]
+/scan
 ```
 
-**Options:**
-- `network` - Network type: `local` or `tailscale`
+**Features:**
+- Scans local network (192.168.x.x)
+- Scans Tailscale VPN network
+- Shows devices grouped by network type
+- Displays friendly names if assigned
+- Shows latency and online status
 
-**Example:**
+**Example Output:**
 ```
-/scan network:local
+📡 Unified Network Scan Results
+Total: 15 devices (12 online)
+├─ 🏠 Local Network: 12 devices
+└─ 🌐 Tailscale: 3 devices
 ```
 
 ---
 
-### /wake
-Send Wake-on-LAN magic packet to a device.
+### /namedevice
+Assign a friendly name to a device.
 
 ```
-/wake <device>
+/namedevice <device> <name>
 ```
 
 **Options:**
-- `device` (required) - Device name or MAC address
+- `device` (required) - Device MAC, IP, or current name (autocomplete)
+- `name` (required) - Friendly name to assign
 
 **Example:**
 ```
-/wake device:gaming-pc
+/namedevice device:aa:bb:cc:dd:ee:ff name:Gaming PC
 ```
+
+**Features:**
+- Autocomplete shows all known devices
+- Names persist across scans
+- Names appear in all device lists
+- Prioritizes devices with existing names
+
+---
+
+### /wol
+Send Wake-on-LAN magic packet to a device.
+
+```
+/wol <device>
+```
+
+**Options:**
+- `device` (required) - Device MAC address (autocomplete)
+
+**Example:**
+```
+/wol device:aa:bb:cc:dd:ee:ff
+```
+
+**Features:**
+- Autocomplete shows device names if assigned
+- Shows device status and info
+- Requires Operator+ permission
 
 ---
 
@@ -81,6 +117,11 @@ List all known network devices.
 
 **Options:**
 - `filter` - Show: `all`, `online`, or `offline`
+
+**Features:**
+- Shows friendly names if assigned
+- Displays IP, MAC, and status
+- Shows device notes
 
 ---
 

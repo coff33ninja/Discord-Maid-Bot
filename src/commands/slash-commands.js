@@ -208,18 +208,19 @@ export const commands = [
         .setName('list')
         .setDescription('List all Discord users with roles')),
 
-  // Tailscale commands
+  // Device naming command
   new SlashCommandBuilder()
-    .setName('tailscale')
-    .setDescription('🌐 Tailscale network management')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('devices')
-        .setDescription('List Tailscale devices'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('status')
-        .setDescription('Show Tailscale status')),
+    .setName('namedevice')
+    .setDescription('🏷️ Assign a friendly name to a device')
+    .addStringOption(option =>
+      option.setName('device')
+        .setDescription('Device MAC address, IP, or current name')
+        .setRequired(true)
+        .setAutocomplete(true))
+    .addStringOption(option =>
+      option.setName('name')
+        .setDescription('Friendly name for the device')
+        .setRequired(true)),
 
   // Home Assistant commands
   new SlashCommandBuilder()

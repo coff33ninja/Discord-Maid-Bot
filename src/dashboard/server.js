@@ -21,7 +21,7 @@ import { getSMBConfig, setSMBConfig, testSMBConnection, toggleSMB, listSMBFiles 
 import { getPersonality, getPersonalityOptions, DEFAULT_PERSONALITY } from '../config/personalities.js';
 import { geminiKeys } from '../config/gemini-keys.js';
 import { getLoadedPlugins, enablePlugin, disablePlugin, reloadPlugin, getPluginStats } from '../plugins/plugin-manager.js';
-import { getTailscaleDevices, isTailscaleAvailable, getTailscaleStatus } from '../network/tailscale.js';
+import { scanUnifiedNetwork, isTailscaleAvailable, getTailscaleStatus } from '../network/unified-scanner.js';
 import { 
   getEntities, 
   getESPDevices, 
@@ -273,11 +273,23 @@ export function startDashboard(port = 3000) {
     res.json({ connected });
   });
   
-  // Tailscale
+  // Unified network scan (local + Tailscale)
+  app.get('/api/network/unified', requireAuth, async (req, res) => {
+    try {
+      const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';
+      const result = await scanUnifiedNetwork(subnet);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Legacy Tailscale endpoint (now returns Tailscale portion of unified scan)
   app.get('/api/tailscale/devices', requireAuth, async (req, res) => {
     try {
-      const devices = await getTailscaleDevices();
-      res.json(devices);
+      const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';
+      const result = await scanUnifiedNetwork(subnet);
+      res.json(result.tailscale);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
