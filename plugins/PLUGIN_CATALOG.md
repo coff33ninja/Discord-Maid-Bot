@@ -108,39 +108,54 @@ This document lists all available plugins for the Discord Maid Bot.
 **Plugin:** `smart-reminders`  
 **Version:** 1.0.0  
 **Commands:** `/bot reminder`  
-**Description:** Context-aware reminder and automation system with presence detection
+**Description:** Comprehensive reminder and automation system with multi-user support
 
 **Features:**
-- Time-based reminders (5m, 2h, 1d, or absolute time like 18:00)
-- Recurring reminders with intervals
-- Presence-based reminders (when device comes online)
-- **Automation actions** (Home Assistant, Wake-on-LAN, Network Scan, Speed Test)
-- Context storage for reminders
-- AI-generated message variations
-- DM, channel, or automation-only delivery
-- Enable/disable reminders
+- ⏰ Time-based reminders (5m, 2h, 1d, or absolute time like 18:00)
+- 🔁 Recurring reminders with intervals
+- 📱 Presence-based reminders (when device comes online)
+- 👥 **Remind others** - Create reminders for specific users
+- 👑 **Role reminders** - Remind entire roles/groups
+- 😴 **Snooze functionality** - Postpone reminders (up to 3 times)
+- 🤖 **Automation actions** (Home Assistant, Wake-on-LAN, Network Scan, Speed Test)
+- 🎯 **Conditional execution** - Only trigger if conditions are met
+- 📝 Context storage and message links
+- 🤖 AI-generated message variations
+- 📬 Multiple delivery options (DM, channel, role mention)
+- ✅ Enable/disable reminders
 
 **Subcommands:**
-- `/bot reminder add <message> <when>` - Create a time-based reminder
+- `/bot reminder add <message> <when>` - Create a time-based reminder for yourself
+- `/bot reminder for <user> <message> <when>` - Create reminder for someone else
+- `/bot reminder role <role> <message> <when> <channel>` - Remind an entire role
 - `/bot reminder automation <name> <when> <action_type>` - Create automation with actions
 - `/bot reminder recurring <message> <interval>` - Create recurring reminder
 - `/bot reminder presence <message> <device>` - Remind when device comes online
+- `/bot reminder snooze <reminder> <duration>` - Snooze a reminder
 - `/bot reminder list` - List your reminders
 - `/bot reminder remove <reminder>` - Remove a reminder
 - `/bot reminder toggle <reminder> <active>` - Enable/disable reminder
 
 **Automation Actions:**
-- **Home Assistant** - Control lights, switches, scenes, etc.
-- **Wake-on-LAN** - Wake up devices automatically
-- **Network Scan** - Trigger network scans
-- **Speed Test** - Run speed tests
+- 🏠 **Home Assistant** - Control lights, switches, scenes, etc.
+- 💻 **Wake-on-LAN** - Wake up devices automatically
+- 🌐 **Network Scan** - Trigger network scans
+- 📊 **Speed Test** - Run speed tests
+
+**Conditions (Advanced):**
+- `user_online` - Only trigger if user's device is online
+- `speed_above` - Only trigger if internet speed is above threshold
+- `time_range` - Only trigger during specific hours
+- `weekday` - Only trigger on weekdays
 
 **Example Use Cases:**
 - "Remind me to check the oven in 30m"
-- "Remind me to take breaks every 2h" (recurring)
+- "Remind @John to submit the report at 17:00"
+- "Remind @Developers role about standup at 09:00 tomorrow"
 - "Turn on my PC at 18:00 every day" (automation + WOL)
 - "Turn on lights when I get home" (presence + Home Assistant)
-- "Run network scan every morning at 8:00" (automation + scan)
+- "Run network scan every morning at 8:00, but only on weekdays" (automation + conditions)
+- "Snooze this reminder for 10 more minutes"
 
 ---
 
