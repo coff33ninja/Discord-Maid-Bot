@@ -19,7 +19,7 @@ import { initScheduler, scheduleTask, stopTask } from './src/scheduler/tasks.js'
 import { initializeAuth } from './src/auth/auth.js';
 import { initPluginSystem, emitToPlugins } from './src/plugins/plugin-manager.js';
 import { initHomeAssistant } from './src/integrations/homeassistant.js';
-import { scanUnifiedNetwork, assignDeviceName, findDevice, isTailscaleAvailable, getTailscaleStatus } from './src/network/unified-scanner.js';
+import { scanUnifiedNetwork, quickPingCheck, assignDeviceName, findDevice, isTailscaleAvailable, getTailscaleStatus } from './src/network/unified-scanner.js';
 import { saveToSMB } from './src/config/smb-config.js';
 import { geminiKeys, generateWithRotation } from './src/config/gemini-keys.js';
 
@@ -80,7 +80,28 @@ function setUserPersonality(userId, personalityKey) {
 let networkDevices = [];
 let lastScanTime = null;
 
-// Helper: Scan network for devices (unified local + Tailscale)
+// Helper: Quick ping check (only pings registered devices)
+async function quickPing() {
+  const result = await quickPingCheck();
+  
+  networkDevices = result.all;
+  lastScanTime = new Date();
+  
+  // Broadcast update to dashboard
+  broadcastUpdate('device-update', { 
+    devices: result.all, 
+    stats: result.stats,
+    timestamp: lastScanTime 
+  });
+  
+  return { 
+    devices: result.all, 
+    count: result.stats.total,
+    stats: result.stats
+  };
+}
+
+// Helper: Full network scan (discovers new devices)
 async function scanNetwork() {
   const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';
   const result = await scanUnifiedNetwork(subnet);
@@ -301,8 +322,15 @@ client.once('ready', async () => {
     status: 'online',
   });
   
-  // Initial network scan
-  await scanNetwork();
+  // Initial quick ping check (fast startup)
+  console.log('🔄 Running quick ping check on startup...');
+  await quickPing();
+  
+  // Schedule periodic full scan every 5 minutes
+  setInterval(async () => {
+    console.log('⏰ Running scheduled full network scan...');
+    await scanNetwork();
+  }, 5 * 60 * 1000); // 5 minutes
 });
 
 // Helper: Check if user has permission (based on Discord roles or stored permissions)

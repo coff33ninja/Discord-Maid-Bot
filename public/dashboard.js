@@ -692,27 +692,14 @@ async function deleteDiscordUser(userId, username) {
 let unifiedNetworkData = null;
 let currentNetworkFilter = 'all';
 
-// Load devices using unified network scan (uses cached data from last scan)
+// Load devices using quick ping (fast check of registered devices)
 async function loadDevices() {
   try {
-    // First, try to load from regular devices endpoint (cached data)
-    const devicesResponse = await authFetch('/api/devices');
-    const cachedDevices = await devicesResponse.json();
+    // Use quick ping to check registered devices (fast)
+    const response = await authFetch('/api/network/quick-ping');
+    unifiedNetworkData = await response.json();
     
-    if (cachedDevices && cachedDevices.length > 0) {
-      // Use cached data immediately
-      unifiedNetworkData = {
-        all: cachedDevices,
-        local: cachedDevices.filter(d => d.network !== 'tailscale'),
-        tailscale: cachedDevices.filter(d => d.network === 'tailscale'),
-        stats: {
-          total: cachedDevices.length,
-          local: cachedDevices.filter(d => d.network !== 'tailscale').length,
-          tailscale: cachedDevices.filter(d => d.network === 'tailscale').length,
-          online: cachedDevices.filter(d => d.online).length
-        }
-      };
-      
+    if (unifiedNetworkData && unifiedNetworkData.all && unifiedNetworkData.all.length > 0) {
       // Update stats
       document.getElementById('networkTotal').textContent = unifiedNetworkData.stats.total;
       document.getElementById('networkLocal').textContent = unifiedNetworkData.stats.local;
@@ -724,7 +711,7 @@ async function loadDevices() {
       // Update chart
       updateDeviceChart(unifiedNetworkData.all);
     } else {
-      // No cached data, trigger a scan
+      // No registered devices, trigger a full scan
       await refreshDevices();
     }
   } catch (error) {
@@ -1155,9 +1142,9 @@ function switchTab(tabName) {
 async function refreshDevices() {
   try {
     // Show loading state
-    document.getElementById('deviceList').innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">🔄 Scanning network...</p>';
+    document.getElementById('deviceList').innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">🔄 Full network scan in progress (discovering new devices)...</p>';
     
-    // Trigger unified network scan on server
+    // Trigger full unified network scan on server (discovers new devices)
     const response = await authFetch('/api/network/unified');
     unifiedNetworkData = await response.json();
     

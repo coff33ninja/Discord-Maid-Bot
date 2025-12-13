@@ -29,6 +29,13 @@
   - Linux/Mac: `ping -c 1 -W 5`
   - Parses both Windows and Linux ping output formats
 
+- **Optimized Network Scanning**: Fast startup with intelligent scanning strategy
+  - Quick ping check on startup (only pings registered devices - <5 seconds)
+  - Periodic full scans every 5 minutes (discovers new devices)
+  - Dashboard uses quick ping for instant loading
+  - "Scan Now" button triggers full discovery scan
+  - Separate API endpoints: `/api/network/quick-ping` and `/api/network/unified`
+
 - **Multiple Gemini API Keys**: Support for API key rotation
   - Configure up to 7 API keys in `.env`
   - Automatic rotation on rate limits

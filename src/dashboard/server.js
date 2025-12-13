@@ -273,7 +273,18 @@ export function startDashboard(port = 3000) {
     res.json({ connected });
   });
   
-  // Unified network scan (local + Tailscale)
+  // Quick ping check (only pings registered devices - fast)
+  app.get('/api/network/quick-ping', requireAuth, async (req, res) => {
+    try {
+      const { quickPingCheck } = await import('../network/unified-scanner.js');
+      const result = await quickPingCheck();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Unified network scan (local + Tailscale - full discovery)
   app.get('/api/network/unified', requireAuth, async (req, res) => {
     try {
       const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';

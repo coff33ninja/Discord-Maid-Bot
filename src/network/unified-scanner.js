@@ -199,9 +199,68 @@ async function scanTailscaleNetwork() {
   }
 }
 
-// Unified network scan - scans both local and Tailscale networks
+// Quick ping check - only pings already registered devices
+export async function quickPingCheck() {
+  console.log('🔄 Quick ping check of registered devices...');
+  
+  const allDevices = deviceOps.getAll();
+  
+  if (allDevices.length === 0) {
+    console.log('⚠️  No registered devices to ping');
+    return {
+      all: [],
+      local: [],
+      tailscale: [],
+      stats: { total: 0, local: 0, tailscale: 0, online: 0 }
+    };
+  }
+  
+  // Ping all registered devices
+  const promises = allDevices.map(async (device) => {
+    try {
+      const result = await pingDevice(device.ip);
+      
+      return {
+        ...device,
+        online: result.alive,
+        latency: result.alive ? Math.round(result.time) : null,
+        name: device.notes || null // User-assigned name
+      };
+    } catch (error) {
+      return {
+        ...device,
+        online: false,
+        latency: null,
+        name: device.notes || null
+      };
+    }
+  });
+  
+  const devices = await Promise.all(promises);
+  
+  // Separate by network type
+  const localDevices = devices.filter(d => d.network !== 'tailscale');
+  const tailscaleDevices = devices.filter(d => d.network === 'tailscale' || d.network === 'both');
+  
+  const onlineCount = devices.filter(d => d.online).length;
+  console.log(`✅ Quick ping complete: ${onlineCount}/${devices.length} devices online`);
+  
+  return {
+    all: devices,
+    local: localDevices,
+    tailscale: tailscaleDevices,
+    stats: {
+      total: devices.length,
+      local: localDevices.length,
+      tailscale: tailscaleDevices.length,
+      online: onlineCount
+    }
+  };
+}
+
+// Unified network scan - scans both local and Tailscale networks (full discovery)
 export async function scanUnifiedNetwork(subnet = '192.168.0.0/24') {
-  console.log('🌐 Starting unified network scan...');
+  console.log('🌐 Starting unified network scan (full discovery)...');
   
   const [localDevices, tailscaleDevices] = await Promise.all([
     scanLocalNetwork(subnet),
