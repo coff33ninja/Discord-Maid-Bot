@@ -41,6 +41,14 @@ npm start
 - Discord Bot Token ([Get one here](https://discord.com/developers/applications))
 - Gemini API Key ([Get one here](https://makersuite.google.com/app/apikey))
 
+### Platform Support
+
+- ✅ **Windows** - Fully supported
+- ✅ **Linux** - Fully supported (Ubuntu, Debian, etc.)
+- ✅ **macOS** - Should work (untested)
+
+Network scanning features automatically detect the platform and use appropriate commands.
+
 ## Configuration
 
 Create `.env` file:

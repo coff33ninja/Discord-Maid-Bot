@@ -6,10 +6,10 @@ import { deviceOps } from '../database/db.js';
 
 const execAsync = promisify(exec);
 
-// Alternative ping function using native Windows ping
+// Cross-platform ping function
 async function pingDevice(ip) {
   try {
-    // Try using the ping module first
+    // Try using the ping module first (cross-platform)
     const result = await ping.promise.probe(ip, { 
       timeout: 5,
       min_reply: 1
@@ -19,15 +19,23 @@ async function pingDevice(ip) {
       return { alive: true, time: parseFloat(result.time) };
     }
     
-    // If ping module says offline, try native Windows ping as fallback
+    // If ping module says offline, try native ping as fallback
     try {
-      const { stdout } = await execAsync(`ping -n 1 -w 5000 ${ip}`);
+      // Detect platform and use appropriate ping command
+      const isWindows = process.platform === 'win32';
+      const pingCmd = isWindows 
+        ? `ping -n 1 -w 5000 ${ip}`  // Windows: -n count, -w timeout in ms
+        : `ping -c 1 -W 5 ${ip}`;     // Linux/Mac: -c count, -W timeout in seconds
       
-      // Check if ping was successful
-      if (stdout.includes('Reply from') || stdout.includes('bytes=')) {
-        // Extract time from output (e.g., "time=25ms" or "time<1ms")
-        const timeMatch = stdout.match(/time[<=](\d+)ms/i);
-        const time = timeMatch ? parseInt(timeMatch[1]) : 1;
+      const { stdout } = await execAsync(pingCmd);
+      
+      // Check if ping was successful (works for both Windows and Linux)
+      if (stdout.includes('Reply from') || stdout.includes('bytes from') || stdout.includes('bytes=')) {
+        // Extract time from output
+        // Windows: "time=25ms" or "time<1ms"
+        // Linux: "time=25.0 ms" or "time=0.123 ms"
+        const timeMatch = stdout.match(/time[<=](\d+(?:\.\d+)?)\s*ms/i);
+        const time = timeMatch ? parseFloat(timeMatch[1]) : 1;
         return { alive: true, time };
       }
     } catch (cmdError) {

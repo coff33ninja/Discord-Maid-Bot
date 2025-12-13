@@ -193,6 +193,16 @@ The unified scanner:
 4. Updates database with latest information
 5. Returns organized results
 
+### Cross-Platform Compatibility
+
+The scanner works on both Windows and Linux:
+- **Ping Detection**: Uses `ping` npm module as primary method
+- **Fallback Ping**: Platform-specific native ping commands
+  - Windows: `ping -n 1 -w 5000 <ip>`
+  - Linux/Mac: `ping -c 1 -W 5 <ip>`
+- **Output Parsing**: Handles both Windows and Linux ping output formats
+- **Tailscale**: Works on any platform where Tailscale is installed
+
 ### Device Naming
 
 Device names are stored in the `notes` field of the devices table:
