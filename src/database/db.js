@@ -23,7 +23,9 @@ export function initDatabase() {
       last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
       online BOOLEAN DEFAULT 1,
       device_type TEXT,
-      notes TEXT
+      notes TEXT,
+      emoji TEXT,
+      device_group TEXT
     )
   `);
 
@@ -183,6 +185,22 @@ export const deviceOps = {
 
   updateNotes: (id, notes) => {
     return db.prepare('UPDATE devices SET notes = ? WHERE id = ?').run(notes, id);
+  },
+
+  updateEmoji: (id, emoji) => {
+    return db.prepare('UPDATE devices SET emoji = ? WHERE id = ?').run(emoji, id);
+  },
+
+  updateGroup: (id, group) => {
+    return db.prepare('UPDATE devices SET device_group = ? WHERE id = ?').run(group, id);
+  },
+
+  getByGroup: (group) => {
+    return db.prepare('SELECT * FROM devices WHERE device_group = ? ORDER BY last_seen DESC').all(group);
+  },
+
+  getAllGroups: () => {
+    return db.prepare('SELECT DISTINCT device_group FROM devices WHERE device_group IS NOT NULL ORDER BY device_group').all();
   },
 
   getHistory: (deviceId, limit = 100) => {

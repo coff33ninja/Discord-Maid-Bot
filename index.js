@@ -428,8 +428,9 @@ client.on('interactionCreate', async (interaction) => {
         );
       }
       
-      // NAMEDEVICE command - device autocomplete
-      else if (commandName === 'namedevice') {
+      // NAMEDEVICE, DEVICEEMOJI, DEVICEGROUP command - device autocomplete
+      else if (commandName === 'namedevice' || commandName === 'deviceemoji' || 
+               (commandName === 'devicegroup' && focusedOption.name === 'device')) {
         const devices = deviceOps.getAll();
         
         // Score-based filtering and sorting
@@ -467,15 +468,32 @@ client.on('interactionCreate', async (interaction) => {
         
         await interaction.respond(
           scored.map(({ device: d }) => {
-            // Enhanced display with more info
+            // Enhanced display with emoji and more info
             const status = d.online ? '🟢' : '🔴';
+            const emoji = d.emoji || '';
             const displayName = d.notes ? `${d.notes} (${d.hostname || d.ip})` : (d.hostname || d.ip);
             
             return {
-              name: `${status} ${displayName} | ${d.ip}`.substring(0, 100),
+              name: `${status} ${emoji} ${displayName} | ${d.ip}`.substring(0, 100),
               value: d.mac
             };
           })
+        );
+      }
+      
+      // DEVICEGROUP view - group autocomplete
+      else if (commandName === 'devicegroup' && focusedOption.name === 'group') {
+        const groups = deviceOps.getAllGroups();
+        
+        const filtered = groups
+          .filter(g => !focusedValue || g.device_group.toLowerCase().includes(focusedValue.toLowerCase()))
+          .slice(0, 25);
+        
+        await interaction.respond(
+          filtered.map(g => ({
+            name: `📁 ${g.device_group}`,
+            value: g.device_group
+          }))
         );
       }
       
@@ -725,6 +743,153 @@ client.on('interactionCreate', async (interaction) => {
         
         // Broadcast update to dashboard
         broadcastUpdate('device-named', { device: result.device, name: friendlyName });
+      } catch (error) {
+        await interaction.editReply(`❌ Error: ${error.message}`);
+      }
+    }
+    
+    // DEVICEEMOJI COMMAND
+    else if (commandName === 'deviceemoji') {
+      const deviceIdentifier = interaction.options.getString('device');
+      const emoji = interaction.options.getString('emoji');
+      
+      await interaction.deferReply();
+      
+      try {
+        // Find device
+        let device = deviceOps.getByMac(deviceIdentifier);
+        if (!device) {
+          device = deviceOps.getAll().find(d => 
+            d.ip === deviceIdentifier || 
+            d.hostname === deviceIdentifier || 
+            d.notes === deviceIdentifier
+          );
+        }
+        
+        if (!device) {
+          await interaction.editReply('❌ Device not found. Use `/scan` to discover devices first.');
+          return;
+        }
+        
+        // Update emoji
+        deviceOps.updateEmoji(device.id, emoji);
+        
+        const displayName = device.notes || device.hostname || device.ip;
+        
+        const embed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('😀 Device Emoji Updated')
+          .setDescription(`Successfully added emoji to **${displayName}**`)
+          .addFields(
+            { name: 'Device', value: `${emoji} ${displayName}`, inline: true },
+            { name: 'IP Address', value: device.ip, inline: true },
+            { name: 'Status', value: device.online ? '🟢 Online' : '🔴 Offline', inline: true }
+          )
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        broadcastUpdate('device-updated', { device: { ...device, emoji } });
+      } catch (error) {
+        await interaction.editReply(`❌ Error: ${error.message}`);
+      }
+    }
+    
+    // DEVICEGROUP COMMAND
+    else if (commandName === 'devicegroup') {
+      const subcommand = interaction.options.getSubcommand();
+      
+      await interaction.deferReply();
+      
+      try {
+        if (subcommand === 'assign') {
+          const deviceIdentifier = interaction.options.getString('device');
+          const groupName = interaction.options.getString('group');
+          
+          // Find device
+          let device = deviceOps.getByMac(deviceIdentifier);
+          if (!device) {
+            device = deviceOps.getAll().find(d => 
+              d.ip === deviceIdentifier || 
+              d.hostname === deviceIdentifier || 
+              d.notes === deviceIdentifier
+            );
+          }
+          
+          if (!device) {
+            await interaction.editReply('❌ Device not found. Use `/scan` to discover devices first.');
+            return;
+          }
+          
+          // Update group
+          deviceOps.updateGroup(device.id, groupName);
+          
+          const displayName = device.notes || device.hostname || device.ip;
+          const emoji = device.emoji || '';
+          
+          const embed = new EmbedBuilder()
+            .setColor('#4CAF50')
+            .setTitle('📁 Device Added to Group')
+            .setDescription(`**${emoji} ${displayName}** is now in group **${groupName}**`)
+            .addFields(
+              { name: 'Device', value: `${emoji} ${displayName}`, inline: true },
+              { name: 'Group', value: groupName, inline: true },
+              { name: 'Status', value: device.online ? '🟢 Online' : '🔴 Offline', inline: true }
+            )
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+          broadcastUpdate('device-updated', { device: { ...device, device_group: groupName } });
+          
+        } else if (subcommand === 'list') {
+          const groups = deviceOps.getAllGroups();
+          
+          if (groups.length === 0) {
+            await interaction.editReply('📁 No device groups created yet. Use `/devicegroup assign` to create groups.');
+            return;
+          }
+          
+          const groupList = groups.map(g => {
+            const devices = deviceOps.getByGroup(g.device_group);
+            const onlineCount = devices.filter(d => d.online).length;
+            return `📁 **${g.device_group}** - ${devices.length} devices (${onlineCount} online)`;
+          }).join('\n');
+          
+          const embed = new EmbedBuilder()
+            .setColor('#2196F3')
+            .setTitle('📁 Device Groups')
+            .setDescription(groupList)
+            .setFooter({ text: 'Use /devicegroup view to see devices in a group' })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+          
+        } else if (subcommand === 'view') {
+          const groupName = interaction.options.getString('group');
+          const devices = deviceOps.getByGroup(groupName);
+          
+          if (devices.length === 0) {
+            await interaction.editReply(`📁 No devices found in group **${groupName}**`);
+            return;
+          }
+          
+          const deviceList = devices.map(d => {
+            const status = d.online ? '🟢' : '🔴';
+            const emoji = d.emoji || '';
+            const name = d.notes || d.hostname || d.ip;
+            return `${status} ${emoji} **${name}** - ${d.ip}`;
+          }).join('\n');
+          
+          const onlineCount = devices.filter(d => d.online).length;
+          
+          const embed = new EmbedBuilder()
+            .setColor('#2196F3')
+            .setTitle(`📁 Group: ${groupName}`)
+            .setDescription(deviceList)
+            .setFooter({ text: `${devices.length} devices total, ${onlineCount} online` })
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+        }
       } catch (error) {
         await interaction.editReply(`❌ Error: ${error.message}`);
       }

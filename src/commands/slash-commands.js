@@ -222,6 +222,51 @@ export const commands = [
         .setDescription('Friendly name for the device')
         .setRequired(true)),
 
+  // Device emoji command
+  new SlashCommandBuilder()
+    .setName('deviceemoji')
+    .setDescription('😀 Add an emoji to a device')
+    .addStringOption(option =>
+      option.setName('device')
+        .setDescription('Device MAC address, IP, or name')
+        .setRequired(true)
+        .setAutocomplete(true))
+    .addStringOption(option =>
+      option.setName('emoji')
+        .setDescription('Emoji to display (e.g., 🎮 💻 📱 🖥️)')
+        .setRequired(true)),
+
+  // Device group command
+  new SlashCommandBuilder()
+    .setName('devicegroup')
+    .setDescription('📁 Manage device groups')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('assign')
+        .setDescription('Assign device to a group')
+        .addStringOption(option =>
+          option.setName('device')
+            .setDescription('Device MAC address, IP, or name')
+            .setRequired(true)
+            .setAutocomplete(true))
+        .addStringOption(option =>
+          option.setName('group')
+            .setDescription('Group name (e.g., Family Phones, IoT Devices)')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('list')
+        .setDescription('List all groups'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('view')
+        .setDescription('View devices in a group')
+        .addStringOption(option =>
+          option.setName('group')
+            .setDescription('Group name')
+            .setRequired(true)
+            .setAutocomplete(true))),
+
   // Home Assistant commands
   new SlashCommandBuilder()
     .setName('homeassistant')
