@@ -8,8 +8,13 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
 import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const HA_URL = process.env.HA_URL || 'http://192.168.0.250:8123';
 const HA_TOKEN = process.env.HA_TOKEN;

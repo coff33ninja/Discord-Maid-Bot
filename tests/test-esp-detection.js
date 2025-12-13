@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 
 import dotenv from 'dotenv';
-import { initHomeAssistant, getESPDevices } from './src/integrations/homeassistant.js';
-import { configOps } from './src/database/db.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { initHomeAssistant, getESPDevices } from '../src/integrations/homeassistant.js';
+import { configOps } from '../src/database/db.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 // Sync config
 configOps.set('ha_url', process.env.HA_URL);
