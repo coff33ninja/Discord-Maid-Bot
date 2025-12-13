@@ -213,6 +213,13 @@ function startPluginWatcher() {
   watcher
     .on('add', async (filePath) => {
       const filename = path.basename(filePath);
+      const dirname = path.dirname(filePath);
+      
+      // Ignore commands.js files in subdirectories
+      if (filename === 'commands.js' || dirname !== PLUGINS_DIR) {
+        return;
+      }
+      
       if (filename.endsWith('.js')) {
         console.log(`📦 New plugin detected: ${filename}`);
         await loadPlugin(filename);
@@ -220,6 +227,13 @@ function startPluginWatcher() {
     })
     .on('change', async (filePath) => {
       const filename = path.basename(filePath);
+      const dirname = path.dirname(filePath);
+      
+      // Ignore commands.js files in subdirectories
+      if (filename === 'commands.js' || dirname !== PLUGINS_DIR) {
+        return;
+      }
+      
       if (filename.endsWith('.js')) {
         console.log(`🔄 Plugin changed: ${filename}`);
         // Find plugin by filename
@@ -233,6 +247,13 @@ function startPluginWatcher() {
     })
     .on('unlink', async (filePath) => {
       const filename = path.basename(filePath);
+      const dirname = path.dirname(filePath);
+      
+      // Ignore commands.js files in subdirectories
+      if (filename === 'commands.js' || dirname !== PLUGINS_DIR) {
+        return;
+      }
+      
       console.log(`🗑️  Plugin removed: ${filename}`);
       // Find and unload plugin
       for (const [name, data] of loadedPlugins.entries()) {
