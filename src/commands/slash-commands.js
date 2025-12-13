@@ -523,6 +523,29 @@ export const commands = [
     .addStringOption(option =>
       option.setName('start')
         .setDescription('Starting word (optional)'))
+    .addStringOption(option =>
+      option.setName('theme')
+        .setDescription('Word theme/category')
+        .addChoices(
+          { name: '🎲 Any Words', value: 'any' },
+          { name: '🐾 Animals', value: 'animals' },
+          { name: '🍕 Food & Drinks', value: 'food' },
+          { name: '🌍 Countries & Places', value: 'places' },
+          { name: '🔬 Science & Nature', value: 'science' },
+          { name: '🎬 Movies & Entertainment', value: 'entertainment' }
+        ))
+    .addStringOption(option =>
+      option.setName('difficulty')
+        .setDescription('Difficulty level')
+        .addChoices(
+          { name: '🟢 Easy (30s, hints)', value: 'easy' },
+          { name: '🟡 Normal (20s)', value: 'normal' },
+          { name: '🔴 Hard (15s, no AI help)', value: 'hard' },
+          { name: '💀 Expert (10s, 5+ letters)', value: 'expert' }
+        ))
+    .addBooleanOption(option =>
+      option.setName('definitions')
+        .setDescription('Show word definitions after each valid word'))
     .addBooleanOption(option =>
       option.setName('trust_mode')
         .setDescription('Skip word validation entirely (honor system)')),

@@ -1752,12 +1752,14 @@ client.on('interactionCreate', async (interaction) => {
     
     // WORD CHAIN COMMAND
     else if (commandName === 'wordchain') {
-      const startWord = interaction.options.getString('start') || null;
-      const trustMode = interaction.options.getBoolean('trust_mode') || false;
       const { startWordChain } = await import('./src/games/wordchain.js');
-      // trustMode=true means skip all validation, so useAIFallback should be false
-      // trustMode=false means validate words, use AI as fallback if dictionary misses
-      await startWordChain(interaction, startWord, !trustMode);
+      await startWordChain(interaction, {
+        start: interaction.options.getString('start'),
+        theme: interaction.options.getString('theme') || 'any',
+        difficulty: interaction.options.getString('difficulty') || 'normal',
+        definitions: interaction.options.getBoolean('definitions') || false,
+        trust_mode: interaction.options.getBoolean('trust_mode') || false
+      });
     }
     
     // EMOJI DECODE COMMAND
