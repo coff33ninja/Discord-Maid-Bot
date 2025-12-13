@@ -138,3 +138,26 @@ The beauty of this system:
 - ❌ Never touch autocomplete logic
 
 Everything is **100% dynamic and self-contained**!
+
+## Future: Plugin Store 🏪
+
+We're planning a **Plugin Store** system that will allow you to:
+
+- 📦 Browse available plugins from a central repository
+- ⬇️ Install plugins directly from the dashboard or bot commands
+- 🔄 Update plugins with one click
+- 🌟 Rate and review plugins
+- 📝 Submit your own plugins to the store
+- 🔍 Search and filter by category (automation, games, utilities, etc.)
+
+**Planned Features:**
+- Central GitHub repository for community plugins
+- Plugin manifest with metadata (author, version, dependencies)
+- Automatic dependency resolution
+- Sandboxed plugin execution for security
+- Plugin marketplace with featured plugins
+- One-command installation: `/bot plugin install plugin-name`
+
+**Timeline:** Coming in a future update!
+
+Stay tuned for announcements. This will make extending the bot as easy as installing an app on your phone!
