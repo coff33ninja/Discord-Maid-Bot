@@ -67,6 +67,12 @@ docs_archive/
 research_*.txt
 speedtest_*.json
 
+# Test outputs (keep test scripts, ignore generated data)
+tests/ha-*.json
+tests/ha-*.txt
+tests/*-dump.json
+tests/*-report.txt
+
 # Native addon build files
 build/Release/
 prebuilds/
