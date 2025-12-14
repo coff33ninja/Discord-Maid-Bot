@@ -288,9 +288,9 @@ export async function startAITrivia(interaction, category, difficulty, questionC
   
   await interaction.deferReply();
   
-  const settings = getTriviaSettings(userId);
-  const timeLimit = settings.questionTime;
-  const count = questionCount || settings.questionsPerRound;
+  const settings = await getTriviaSettings(userId);
+  const timeLimit = settings.questionTime || 30;
+  const count = questionCount || settings.questionsPerRound || 5;
   
   const session = {
     mode: 'ai',
@@ -468,7 +468,8 @@ async function askQuestion(channel, channelId) {
     // AI mode - generate question
     try {
       questionData = await generateAIQuestion(session.category, session.difficulty);
-      timeLimit = getTriviaSettings(session.startedBy).questionTime;
+      const settings = await getTriviaSettings(session.startedBy);
+      timeLimit = settings.questionTime || 30;
     } catch (error) {
       const errorMsg = error?.message || 'Unknown error generating question';
       await channel.send(`❌ Failed to generate question: ${errorMsg}`);
