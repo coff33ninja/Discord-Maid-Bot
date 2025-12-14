@@ -1,7 +1,7 @@
-import { Plugin } from '../../src/core/plugin-system.js';
+import { Plugin } from '../../../src/core/plugin-system.js';
 import speedtest from 'speedtest-net';
-import { speedTestOps } from '../../src/database/db.js';
-import { broadcastUpdate } from '../../src/dashboard/server.js';
+import { speedTestOps } from '../../../src/database/db.js';
+import { broadcastUpdate } from '../../../src/dashboard/server.js';
 
 /**
  * Speed Test Integration Plugin
@@ -51,7 +51,7 @@ export default class SpeedTestPlugin extends Plugin {
     
     // Emit to other plugins
     try {
-      const { emitToPlugins } = await import('../../src/core/plugin-system.js');
+      const { emitToPlugins } = await import('../../../src/core/plugin-system.js');
       await emitToPlugins('speedTest', testResult);
     } catch (error) {
       // Plugin system not available
