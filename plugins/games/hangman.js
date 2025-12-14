@@ -1,7 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
-import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
 // Word categories with sample words (AI will generate more)
 const CATEGORIES = {

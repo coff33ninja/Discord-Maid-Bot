@@ -3,7 +3,6 @@ import { createRequire } from 'module';
 import axios from 'axios';
 import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
-import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
 // Create require for JSON import
 const require = createRequire(import.meta.url);
