@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 /**
  * Smart Reminder System Plugin
@@ -14,13 +15,14 @@ import { Plugin } from '../../src/core/plugin-system.js';
 export default class SmartRemindersPlugin extends Plugin {
   constructor() {
     super('1.0.0.0-beta', '1.0.0', 'Context-aware reminder system');
+    this.logger = createLogger('smart-reminders');
     this.reminders = [];
     this.client = null;
     this.checkInterval = null;
   }
   
   async onLoad() {
-    console.log('⏰ Smart Reminders plugin loaded');
+    this.logger.info('⏰ Smart Reminders plugin loaded');
     
     // Load reminders from database
     const { configOps } = await import('../../src/database/db.js');
@@ -29,9 +31,9 @@ export default class SmartRemindersPlugin extends Plugin {
     if (savedReminders) {
       try {
         this.reminders = JSON.parse(savedReminders);
-        console.log(`   Loaded ${this.reminders.length} reminder(s)`);
+        this.logger.info(`   Loaded ${this.reminders.length} reminder(s)`);
       } catch (e) {
-        console.error('   Failed to parse reminders:', e);
+        this.logger.error('   Failed to parse reminders:', e);
       }
     }
     
@@ -44,7 +46,7 @@ export default class SmartRemindersPlugin extends Plugin {
       clearInterval(this.checkInterval);
     }
     await this.saveReminders();
-    console.log('⏰ Smart Reminders plugin unloaded');
+    this.logger.info('⏰ Smart Reminders plugin unloaded');
   }
   
   setClient(client) {
@@ -131,7 +133,7 @@ export default class SmartRemindersPlugin extends Plugin {
       if (reminder.conditions && reminder.conditions.length > 0) {
         const conditionsMet = await this.checkConditions(reminder.conditions);
         if (!conditionsMet) {
-          console.log(`⏰ Reminder ${reminder.name} conditions not met, skipping`);
+          this.logger.info(`⏰ Reminder ${reminder.name} conditions not met, skipping`);
           return;
         }
       }
@@ -234,9 +236,9 @@ export default class SmartRemindersPlugin extends Plugin {
         });
       }
       
-      console.log(`⏰ Triggered reminder: ${reminder.name}`);
+      this.logger.info(`⏰ Triggered reminder: ${reminder.name}`);
     } catch (error) {
-      console.error(`Failed to trigger reminder ${reminder.name}:`, error);
+      this.logger.error(`Failed to trigger reminder ${reminder.name}:`, error);
     }
   }
   
@@ -273,7 +275,7 @@ export default class SmartRemindersPlugin extends Plugin {
             break;
         }
       } catch (error) {
-        console.error(`Failed to check condition ${condition.type}:`, error);
+        this.logger.error(`Failed to check condition ${condition.type}:`, error);
         return false;
       }
     }
@@ -298,12 +300,12 @@ export default class SmartRemindersPlugin extends Plugin {
             await this.executeSpeedTest();
             break;
           default:
-            console.warn(`Unknown action type: ${action.type}`);
+            this.logger.warn(`Unknown action type: ${action.type}`);
         }
         
-        console.log(`✅ Executed action: ${action.type}`);
+        this.logger.info(`✅ Executed action: ${action.type}`);
       } catch (error) {
-        console.error(`Failed to execute action ${action.type}:`, error);
+        this.logger.error(`Failed to execute action ${action.type}:`, error);
       }
     }
   }
@@ -357,7 +359,7 @@ Variation:`;
         return response.text().trim();
       }
     } catch (error) {
-      console.error('Failed to generate reminder variation:', error);
+      this.logger.error('Failed to generate reminder variation:', error);
     }
     
     return originalMessage;
@@ -398,7 +400,7 @@ Variation:`;
     this.reminders.push(reminder);
     await this.saveReminders();
     
-    console.log(`✅ Added reminder: ${reminder.name}`);
+    this.logger.info(`✅ Added reminder: ${reminder.name}`);
     return reminder;
   }
   
@@ -430,7 +432,7 @@ Variation:`;
     const removed = this.reminders.splice(index, 1)[0];
     await this.saveReminders();
     
-    console.log(`🗑️ Removed reminder: ${removed.name}`);
+    this.logger.info(`🗑️ Removed reminder: ${removed.name}`);
     return removed;
   }
   

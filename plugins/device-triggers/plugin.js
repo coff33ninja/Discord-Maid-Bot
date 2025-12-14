@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 /**
  * Device Automation Triggers Plugin
@@ -11,13 +12,14 @@ import { Plugin } from '../../src/core/plugin-system.js';
 export default class DeviceTriggersPlugin extends Plugin {
   constructor() {
     super('1.0.0.0-beta', '1.0.0', 'Automation rules based on device network status');
+    this.logger = createLogger('device-triggers');
     this.triggers = [];
     this.client = null;
     this.knownDevices = new Set();
   }
   
   async onLoad() {
-    console.log('🔔 Device Triggers plugin loaded');
+    this.logger.info('🔔 Device Triggers plugin loaded');
     
     // Load triggers from database
     const { configOps } = await import('../../src/database/db.js');
@@ -26,9 +28,9 @@ export default class DeviceTriggersPlugin extends Plugin {
     if (savedTriggers) {
       try {
         this.triggers = JSON.parse(savedTriggers);
-        console.log(`   Loaded ${this.triggers.length} trigger(s)`);
+        this.logger.info(`   Loaded ${this.triggers.length} trigger(s)`);
       } catch (e) {
-        console.error('   Failed to parse saved triggers:', e);
+        this.logger.error('   Failed to parse saved triggers:', e);
         this.triggers = [];
       }
     }
@@ -72,7 +74,7 @@ export default class DeviceTriggersPlugin extends Plugin {
     this.triggers.push(trigger);
     await this.saveTriggers();
     
-    console.log(`✅ Added trigger: ${trigger.name}`);
+    this.logger.info(`✅ Added trigger: ${trigger.name}`);
     return trigger;
   }
   
@@ -85,7 +87,7 @@ export default class DeviceTriggersPlugin extends Plugin {
     const removed = this.triggers.splice(index, 1)[0];
     await this.saveTriggers();
     
-    console.log(`🗑️ Removed trigger: ${removed.name}`);
+    this.logger.info(`🗑️ Removed trigger: ${removed.name}`);
     return removed;
   }
   
@@ -164,9 +166,9 @@ export default class DeviceTriggersPlugin extends Plugin {
           action: trigger.action
         });
         
-        console.log(`🔔 Triggered: ${trigger.name} for ${device.notes || device.hostname || device.ip}`);
+        this.logger.info(`🔔 Triggered: ${trigger.name} for ${device.notes || device.hostname || device.ip}`);
       } catch (error) {
-        console.error(`Failed to execute trigger ${trigger.name}:`, error);
+        this.logger.error(`Failed to execute trigger ${trigger.name}:`, error);
       }
     }
   }

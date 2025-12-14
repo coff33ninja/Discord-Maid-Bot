@@ -5,6 +5,7 @@
  */
 
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
 import { chatOps, configOps } from '../../src/database/db.js';
 
 // Get personality functions from personality plugin
@@ -49,8 +50,8 @@ async function chatWithMaid(userMessage, userId, username, networkContext = null
   const contextInfo = networkContext ? 
     `\n\nCurrent network devices: ${networkContext.deviceCount} devices online` : '';
   
-  const personalityKey = getUserPersonality(userId);
-  const personality = getPersonality(personalityKey);
+  const personalityKey = await getUserPersonality(userId);
+  const personality = await getPersonality(personalityKey);
   
   const prompt = `${personality.prompt}
 
@@ -106,6 +107,8 @@ export async function handleCommand(interaction, commandName, subcommand) {
     let networkContext = null;
     try {
       const { deviceOps } = await import('../../src/database/db.js');
+
+const logger = createLogger('conversational-ai');
       const devices = deviceOps.getAll();
       networkContext = {
         deviceCount: devices.filter(d => d.online).length
@@ -116,18 +119,20 @@ export async function handleCommand(interaction, commandName, subcommand) {
 
     const response = await chatWithMaid(message, userId, username, networkContext);
 
+    const personalityKey = await getUserPersonality(userId);
+    
     const embed = new EmbedBuilder()
       .setColor('#FFB6C1')
       .setTitle('💬 Chat Response')
       .setDescription(response)
-      .setFooter({ text: `Personality: ${getUserPersonality(userId)}` })
+      .setFooter({ text: `Personality: ${personalityKey}` })
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
     return true;
 
   } catch (error) {
-    console.error('Chat command error:', error);
+    logger.error('Chat command error:', error);
     await interaction.editReply({
       content: `❌ Failed to process chat: ${error.message}\n\nI apologize for the inconvenience, Master!`,
       ephemeral: true

@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 /**
  * Speed Alerts Plugin
@@ -7,13 +8,14 @@ import { Plugin } from '../../src/core/plugin-system.js';
 export default class SpeedAlertsPlugin extends Plugin {
   constructor() {
     super('1.0.0.0-beta', '1.0.0', 'Alert when internet speed drops below threshold');
+    this.logger = createLogger('speed-alerts');
     this.threshold = 50; // Default 50 Mbps
     this.alertChannel = null;
     this.client = null;
   }
   
   async onLoad() {
-    console.log('🚨 Speed Alerts plugin loaded');
+    this.logger.info('🚨 Speed Alerts plugin loaded');
     
     // Load settings from database
     const { configOps } = await import('../../src/database/db.js');
@@ -28,8 +30,8 @@ export default class SpeedAlertsPlugin extends Plugin {
       this.alertChannel = savedChannel;
     }
     
-    console.log(`   Threshold: ${this.threshold} Mbps`);
-    console.log(`   Alert Channel: ${this.alertChannel || 'Not configured'}`);
+    this.logger.info(`   Threshold: ${this.threshold} Mbps`);
+    this.logger.info(`   Alert Channel: ${this.alertChannel || 'Not configured'}`);
   }
   
   setClient(client) {
@@ -91,11 +93,11 @@ export default class SpeedAlertsPlugin extends Plugin {
           }]
         });
         
-        console.log(`🚨 Speed alert sent: ${download.toFixed(2)} Mbps (threshold: ${this.threshold} Mbps)`);
+        this.logger.info(`🚨 Speed alert sent: ${download.toFixed(2)} Mbps (threshold: ${this.threshold} Mbps)`);
         
         return { processed: true, alerted: true };
       } catch (error) {
-        console.error('Failed to send speed alert:', error);
+        this.logger.error('Failed to send speed alert:', error);
         return { processed: false, error: error.message };
       }
     }

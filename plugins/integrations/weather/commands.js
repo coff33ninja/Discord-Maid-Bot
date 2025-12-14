@@ -5,6 +5,7 @@
  */
 
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 // This is a standalone command
 export const parentCommand = null;
@@ -59,7 +60,7 @@ export async function handleCommand(interaction, commandName, subcommand) {
     await interaction.editReply({ embeds: [embed] });
     return true;
   } catch (error) {
-    console.error('Weather command error:', error);
+    logger.error('Weather command error:', error);
     
     let errorMessage = `❌ Failed to get weather: ${error.message}`;
     
@@ -80,6 +81,8 @@ export async function handleCommand(interaction, commandName, subcommand) {
 // Export weather function for use by other plugins (e.g., automation)
 export async function getWeather(city = 'Cape Town') {
   const { getPlugin } = await import('../../../src/core/plugin-system.js');
+
+const logger = createLogger('weather');
   const weatherPlugin = getPlugin('integrations/weather');
   
   if (!weatherPlugin) {

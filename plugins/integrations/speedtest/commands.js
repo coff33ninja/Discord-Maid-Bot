@@ -5,6 +5,7 @@
  */
 
 import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 // These are subcommands under /network
 export const parentCommand = 'network';
@@ -64,7 +65,7 @@ async function handleSpeedTestCommand(interaction) {
     await interaction.editReply({ embeds: [embed] });
     return true;
   } catch (error) {
-    console.error('Speed test command error:', error);
+    logger.error('Speed test command error:', error);
     await interaction.editReply({
       content: `❌ Failed to run speed test: ${error.message}`,
       ephemeral: true
@@ -118,7 +119,7 @@ async function handleSpeedHistoryCommand(interaction) {
     await interaction.editReply({ embeds: [embed] });
     return true;
   } catch (error) {
-    console.error('Speed history command error:', error);
+    logger.error('Speed history command error:', error);
     await interaction.editReply({
       content: `❌ Failed to get speed test history: ${error.message}`,
       ephemeral: true
@@ -130,6 +131,8 @@ async function handleSpeedHistoryCommand(interaction) {
 // Export speed test function for use by other plugins (e.g., automation)
 export async function runSpeedtest(userId = null) {
   const { getPlugin } = await import('../../../src/core/plugin-system.js');
+
+const logger = createLogger('speedtest');
   const speedTestPlugin = getPlugin('integrations/speedtest');
   
   if (!speedTestPlugin) {

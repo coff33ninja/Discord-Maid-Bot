@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 /**
  * Core Commands Plugin
@@ -17,21 +18,22 @@ export default class CoreCommandsPlugin extends Plugin {
       '1.0.0',
       'Essential bot commands (help, stats, ping, dashboard, plugin management)'
     );
+    this.logger = createLogger('core-commands');
   }
 
   async onLoad() {
-    console.log('📋 Core Commands plugin loaded');
+    this.logger.info('📋 Core Commands plugin loaded');
   }
 
   async onEnable() {
-    console.log('✅ Core Commands plugin enabled');
+    this.logger.info('✅ Core Commands plugin enabled');
   }
 
   async onDisable() {
-    console.log('⏸️  Core Commands plugin disabled');
+    this.logger.info('⏸️  Core Commands plugin disabled');
   }
 
   async onUnload() {
-    console.log('👋 Core Commands plugin unloaded');
+    this.logger.info('👋 Core Commands plugin unloaded');
   }
 }

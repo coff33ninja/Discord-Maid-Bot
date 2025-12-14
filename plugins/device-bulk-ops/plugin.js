@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 /**
  * Device Bulk Operations Plugin
@@ -9,10 +10,11 @@ import { Plugin } from '../../src/core/plugin-system.js';
 export default class DeviceBulkOpsPlugin extends Plugin {
   constructor() {
     super('1.0.0.0-beta', '1.0.0', 'Bulk operations for device management');
+    this.logger = createLogger('device-bulk-ops');
   }
   
   async onLoad() {
-    console.log('📦 Device Bulk Operations plugin loaded');
+    this.logger.info('📦 Device Bulk Operations plugin loaded');
   }
   
   async bulkRename(pattern, prefix = '', suffix = '') {

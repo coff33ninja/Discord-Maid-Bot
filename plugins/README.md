@@ -1,163 +1,387 @@
-# Plugin System - Dynamic Command Loading
+# Discord Maid Bot - Plugins
 
-## Overview
+**Version:** 1.0.0.0-beta  
+**Last Updated:** December 14, 2025  
+**Total Plugins:** 17
 
-The plugin system supports **fully dynamic command loading** without touching core files. Plugins can define their own slash commands that are automatically discovered and registered.
+Complete plugin system for Discord Maid Bot with dynamic command loading and plugin-first architecture.
 
-## How It Works
+---
 
-### 1. Plugin Structure
+## 📋 Quick Links
 
-```
-plugins/
-└── my-plugin/
-    ├── plugin.js             # Plugin logic (required)
-    └── commands.js           # Slash command definitions (optional)
-```
+- **[Plugin Catalog](PLUGIN_CATALOG.md)** - Complete list of all 17 plugins
+- **[Architecture Documentation](../REFACTOR_PLUGIN_ARCHITECTURE.md)** - Plugin architecture details
+- **[Validation Report](../PLUGIN_VALIDATION_REPORT.md)** - Plugin validation results
+- **[Development Guide](#plugin-development)** - Create your own plugins
 
-### 2. Command Definition
+---
 
-Create a `commands.js` file in a folder matching your plugin name:
+## 🆕 What's New in 1.0.0.0-beta
+
+### New Plugin: Power Management 🔌
+Complete device power control with Wake-on-LAN and remote shutdown/restart.
+
+**Features:**
+- Wake devices using Wake-on-LAN
+- Remote shutdown via API
+- Remote restart via API
+- Power status monitoring
+- Device configuration with API keys
+
+**Commands:** `/power control wake|shutdown|restart|status|configure`
+
+**Documentation:** [View Docs](power-management/docs/README.md)
+
+### Plugin-First Architecture 🏗️
+Complete refactor to plugin-first architecture:
+- ✅ 17 independent plugins
+- ✅ Clean separation of concerns
+- ✅ Schema extension system
+- ✅ Core handler system
+- ✅ Zero architecture violations
+- ✅ 100% validated
+
+### Comprehensive Documentation 📚
+Every plugin now has complete documentation:
+- `README.md` - Plugin overview
+- `COMMANDS.md` - Command reference
+- `EXAMPLES.md` - Usage examples
+- `CHANGELOG.md` - Version history
+
+---
+
+## 📦 Plugin Categories
+
+### Core Plugins (3)
+Essential bot functionality:
+- **Core Commands** - Help, stats, ping, dashboard
+- **Automation** - Scheduler, triggers, device automation
+- **Network Management** - Scanning, WOL, device management
+
+### AI Plugins (3)
+Powered by Google Gemini:
+- **Conversational AI** - Natural language chat
+- **Personality** - 10+ unique AI personalities
+- **Research** - AI-powered research and web search
+
+### Network Plugins (6)
+Network management and monitoring:
+- **Power Management** 🆕 - Remote power control
+- **Device Health** - Uptime and reliability monitoring
+- **Device Triggers** - Automation based on device status
+- **Speed Alerts** - Internet speed monitoring
+- **Network Insights** - AI-powered network analytics
+- **Device Bulk Ops** - Bulk device operations
+
+### Automation Plugins (2)
+Task automation:
+- **Smart Reminders** - Context-aware reminders
+- *(Automation plugin also provides scheduling)*
+
+### Entertainment Plugins (1)
+Games and fun:
+- **Games** - 18 interactive games
+
+### Integration Plugins (3)
+External service integrations:
+- **Home Assistant** - Smart home control
+- **Speed Test** - Internet speed testing
+- **Weather** - Weather information
+
+---
+
+## 🚀 Plugin System Features
+
+### Dynamic Command Loading
+Plugins can define their own slash commands without modifying core files:
 
 ```javascript
-import { SlashCommandSubcommandGroupBuilder } from 'discord.js';
-
-// Define the command group
+// plugins/my-plugin/commands.js
 export const commandGroup = new SlashCommandSubcommandGroupBuilder()
   .setName('mycommand')
-  .setDescription('My plugin commands')
-  .addSubcommand(subcommand =>
-    subcommand
-      .setName('action')
-      .setDescription('Do something'));
+  .setDescription('My plugin commands');
 
-// Specify which parent command to attach to
-export const parentCommand = 'automation'; // or 'network', 'device', 'bot', etc.
+export const parentCommand = 'automation'; // Attach to /automation
 
-// Command handler
 export async function handleCommand(interaction, plugin) {
-  const subcommand = interaction.options.getSubcommand();
+  // Handle command
+}
+```
+
+### Schema Extensions
+Plugins can extend database schema safely:
+
+```javascript
+// In plugin constructor
+this.registerSchemaExtension('devices', [
+  { name: 'my_field', type: 'TEXT', defaultValue: null }
+]);
+```
+
+### Core Handlers
+Plugins can request services from core:
+
+```javascript
+// Request Gemini AI generation
+const { result } = await this.requestFromCore('gemini-generate', { prompt });
+
+// Save to SMB
+await this.requestFromCore('smb-save', { filename, content });
+```
+
+### Plugin Communication
+Plugins can communicate with each other:
+
+```javascript
+const { getPlugin } = await import('../../src/core/plugin-system.js');
+const otherPlugin = getPlugin('other-plugin');
+const result = await otherPlugin.someMethod();
+```
+
+---
+
+## 📖 Plugin Development
+
+### Creating a New Plugin
+
+1. **Create plugin directory:**
+```bash
+mkdir plugins/my-plugin
+```
+
+2. **Create plugin.js:**
+```javascript
+import { Plugin } from '../../src/core/plugin-system.js';
+
+export default class MyPlugin extends Plugin {
+  constructor() {
+    super('my-plugin', '1.0.0', 'My plugin description');
+  }
   
-  if (subcommand === 'action') {
-    await interaction.reply('Action executed!');
+  async onLoad() {
+    console.log('My plugin loaded!');
   }
 }
-
-// Autocomplete handler (optional)
-export async function handleAutocomplete(interaction, plugin) {
-  const focusedOption = interaction.options.getFocused(true);
-  // Return autocomplete suggestions
-  await interaction.respond([
-    { name: 'Option 1', value: 'opt1' },
-    { name: 'Option 2', value: 'opt2' }
-  ]);
-}
 ```
 
-### 3. Automatic Registration
+3. **Create commands.js (optional):**
+```javascript
+export const commandGroup = /* ... */;
+export const parentCommand = 'automation';
+export async function handleCommand(interaction, plugin) { /* ... */ }
+```
 
-When your plugin loads:
-1. Plugin manager detects `plugins/my-plugin/commands.js`
-2. Commands are automatically injected into the parent command
-3. Routing is handled automatically via the `plugin:` prefix
-4. No core files are touched!
+4. **Create documentation:**
+```bash
+node scripts/create-plugin-docs.js
+```
 
-## Example: Device Health Plugin
+### Plugin Lifecycle
+
+```javascript
+constructor()  // Plugin initialization
+onLoad()       // Called when plugin loads
+onEnable()     // Called when plugin is enabled
+onDisable()    // Called when plugin is disabled
+onUnload()     // Called when plugin unloads
+```
+
+### Best Practices
+
+✅ **DO:**
+- Import from `../../src/database/db.js` for READ access
+- Use `registerSchemaExtension()` for schema changes
+- Use core handlers for shared services
+- Store plugin data in `bot_config` table
+- Provide comprehensive documentation
+
+❌ **DON'T:**
+- Import from `src/config/` (use core handlers)
+- Modify database schema directly
+- Import plugins from core (use dynamic imports)
+- Create tight coupling between plugins
+
+---
+
+## 🔧 Plugin Management
+
+### Enable/Disable Plugins
+
+```javascript
+// Via dashboard or commands
+/bot plugin list          // List all plugins
+/bot plugin enable <name>  // Enable plugin
+/bot plugin disable <name> // Disable plugin
+/bot plugin reload <name>  // Reload plugin
+```
+
+### Plugin Configuration
+
+Each plugin can store configuration in the `bot_config` table:
+
+```javascript
+const { configOps } = await import('../../src/database/db.js');
+
+// Save config
+configOps.set('myplugin_config', JSON.stringify(config));
+
+// Load config
+const saved = configOps.get('myplugin_config');
+const config = saved ? JSON.parse(saved) : defaultConfig;
+```
+
+---
+
+## 📊 Plugin Statistics
+
+**Total Plugins:** 17
+- Core: 3
+- AI: 3
+- Network: 6
+- Automation: 2
+- Entertainment: 1
+- Integration: 3
+
+**Total Commands:** 100+
+
+**Code Metrics:**
+- Core: 35 lines (down from 3,553)
+- Plugins: ~15,000 lines
+- Average plugin size: ~880 lines
+- Documentation: 68 files
+
+---
+
+## 🏗️ Architecture
+
+### Plugin-First Design
 
 ```
+src/
+├── core/
+│   ├── bot.js              # Minimal bot core (35 lines)
+│   ├── plugin-system.js    # Plugin management
+│   └── ...
+└── ...
+
 plugins/
-└── device-health/
-    ├── plugin.js              # Plugin with health tracking logic
-    └── commands.js            # Defines /automation health commands
+├── conversational-ai/      # AI chat plugin
+├── personality/            # Personality system
+├── network-management/     # Network features
+├── power-management/       # Power control (NEW!)
+└── ...                     # 13 more plugins
 ```
 
-**Result:** `/automation health report`, `/automation health summary`, etc.
+### Benefits
 
-## Parent Commands
+✅ **Maintainability** - Each plugin is independent  
+✅ **Scalability** - Easy to add new features  
+✅ **Testability** - Plugins can be tested in isolation  
+✅ **Flexibility** - Enable/disable features as needed  
+✅ **Clarity** - Clear separation of concerns
 
-You can attach plugin commands to any parent command:
+---
 
-- `automation` - For automation and monitoring features
-- `network` - For network-related features
-- `device` - For device management features
-- `bot` - For bot utilities
-- `admin` - For admin features (requires permissions)
-- `research` - For research/AI features
-- `game` - For game features
+## 📚 Documentation
 
-## Command Routing
+### Plugin Documentation Structure
 
-The system automatically routes commands:
+Each plugin has its own `docs/` folder:
 
-1. User runs `/automation health report`
-2. Dynamic router detects `health` is a plugin command group
-3. Routes to `plugin:device-health`
-4. Plugin manager calls `handleCommand()` with the plugin instance
-5. Your handler processes the command
+```
+plugins/my-plugin/
+├── plugin.js
+├── commands.js
+└── docs/
+    ├── README.md       # Overview
+    ├── COMMANDS.md     # Command reference
+    ├── EXAMPLES.md     # Usage examples
+    └── CHANGELOG.md    # Version history
+```
 
-## Autocomplete
+### Generate Documentation
 
-Autocomplete is also automatic:
+```bash
+node scripts/create-plugin-docs.js
+```
 
-1. User types in `/automation health report [device]`
-2. Dynamic autocomplete handler detects plugin command
-3. Calls your `handleAutocomplete()` function
-4. Returns suggestions to Discord
+This creates documentation for all plugins automatically.
 
-## Hot Reload
+---
 
-Plugin commands support hot reload:
+## 🔍 Validation
 
-1. Edit `plugins/my-plugin/commands.js`
-2. Plugin manager detects the change
-3. Reloads the plugin and commands
-4. Commands are re-registered automatically
+All plugins are validated against the backup code to ensure functionality is preserved:
 
-## Best Practices
+```bash
+node scripts/validate-plugins.js    # Validate plugin structure
+node scripts/compare-features.js    # Compare with backup
+```
 
-1. **Keep commands self-contained** - All logic should be in the plugin
-2. **Use the plugin instance** - Access plugin methods via the `plugin` parameter
-3. **Handle errors gracefully** - Wrap in try/catch and reply with error messages
-4. **Use defer for slow operations** - `await interaction.deferReply()`
-5. **Provide autocomplete** - Makes commands easier to use
+**Validation Results:**
+- ✅ All 17 plugins validated
+- ✅ All features preserved
+- ✅ Zero breaking changes
+- ✅ Architecture 100% clean
 
-## Example Plugins
+See [PLUGIN_VALIDATION_REPORT.md](../PLUGIN_VALIDATION_REPORT.md) for details.
 
-- `device-health` - Device uptime monitoring with `/automation health` commands
-- `speed-alerts` - Speed monitoring with `/automation speedalert` commands
-- `device-triggers` - Device automation with `/automation devicetrigger` commands
+---
 
-## No Core File Changes Required!
+## 🐛 Troubleshooting
 
-The beauty of this system:
-- ✅ Add new plugins → Commands appear automatically
-- ✅ Remove plugins → Commands disappear automatically
-- ✅ Update plugins → Commands update automatically
-- ❌ Never touch `index.js` or `slash-commands.js`
-- ❌ Never touch routing logic
-- ❌ Never touch autocomplete logic
+### Plugin Won't Load
 
-Everything is **100% dynamic and self-contained**!
+1. Check plugin.js exists
+2. Verify plugin exports default class
+3. Check console for errors
+4. Verify plugin extends Plugin base class
 
-## Future: Plugin Store 🏪
+### Commands Not Working
 
-We're planning a **Plugin Store** system that will allow you to:
+1. Check commands.js exists
+2. Verify commandGroup is exported
+3. Check parentCommand is valid
+4. Verify handleCommand is exported
 
-- 📦 Browse available plugins from a central repository
-- ⬇️ Install plugins directly from the dashboard or bot commands
-- 🔄 Update plugins with one click
-- 🌟 Rate and review plugins
-- 📝 Submit your own plugins to the store
-- 🔍 Search and filter by category (automation, games, utilities, etc.)
+### Schema Extensions Not Applied
 
-**Planned Features:**
-- Central GitHub repository for community plugins
-- Plugin manifest with metadata (author, version, dependencies)
-- Automatic dependency resolution
-- Sandboxed plugin execution for security
-- Plugin marketplace with featured plugins
-- One-command installation: `/bot plugin install plugin-name`
+1. Check registerSchemaExtension() is called in constructor
+2. Verify core applies extensions (check logs)
+3. Check database for new columns
 
-**Timeline:** Coming in a future update!
+---
 
-Stay tuned for announcements. This will make extending the bot as easy as installing an app on your phone!
+## 🤝 Contributing
+
+Want to contribute a plugin?
+
+1. Fork the repository
+2. Create your plugin following best practices
+3. Add comprehensive documentation
+4. Test thoroughly
+5. Submit a pull request
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for details.
+
+---
+
+## 📄 License
+
+See [LICENSE](../LICENSE) for details.
+
+---
+
+## 🆘 Support
+
+- **Issues:** Open an issue on GitHub
+- **Documentation:** Check plugin docs folders
+- **Logs:** Check bot console output
+- **Community:** Join our Discord server
+
+---
+
+**Last Updated:** December 14, 2025  
+**Version:** 1.0.0.0-beta  
+**Plugins:** 17 active

@@ -5,6 +5,7 @@
  */
 
 import { SlashCommandSubcommandGroupBuilder, EmbedBuilder } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
 import { deviceOps } from '../../src/database/db.js';
 import { broadcastUpdate } from '../../src/dashboard/server.js';
 
@@ -176,7 +177,7 @@ async function handleWake(interaction, plugin) {
     });
     
   } catch (error) {
-    console.error('Wake error:', error);
+    logger.error('Wake error:', error);
     await interaction.editReply(`❌ Failed to wake device: ${error.message}`);
   }
 }
@@ -225,7 +226,7 @@ async function handleShutdown(interaction, plugin) {
     });
     
   } catch (error) {
-    console.error('Shutdown error:', error);
+    logger.error('Shutdown error:', error);
     await interaction.editReply(`❌ Failed to shutdown device: ${error.message}`);
   }
 }
@@ -274,7 +275,7 @@ async function handleRestart(interaction, plugin) {
     });
     
   } catch (error) {
-    console.error('Restart error:', error);
+    logger.error('Restart error:', error);
     await interaction.editReply(`❌ Failed to restart device: ${error.message}`);
   }
 }
@@ -376,6 +377,8 @@ async function handleConfigure(interaction, plugin) {
   try {
     // Update device with shutdown configuration
     const { default: db } = await import('../../src/database/db.js');
+
+const logger = createLogger('power-management');
     const stmt = db.prepare(`
       UPDATE devices 
       SET shutdown_api_key = ?, shutdown_port = ? 
@@ -398,7 +401,7 @@ async function handleConfigure(interaction, plugin) {
     await interaction.editReply({ embeds: [embed] });
     
   } catch (error) {
-    console.error('Configure error:', error);
+    logger.error('Configure error:', error);
     await interaction.editReply(`❌ Failed to configure device: ${error.message}`);
   }
 }

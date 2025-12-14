@@ -5,8 +5,11 @@
  */
 
 import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
 import { configOps } from '../../src/database/db.js';
 import { getPersonality, getPersonalityOptions, DEFAULT_PERSONALITY } from './personalities.js';
+
+const logger = createLogger('personality');
 
 // Helper functions
 function getUserPersonality(userId) {
@@ -88,7 +91,7 @@ export async function handleCommand(interaction, commandName, subcommand) {
     return true;
 
   } catch (error) {
-    console.error('Personality command error:', error);
+    logger.error('Personality command error:', error);
     await interaction.reply({
       content: `❌ Failed to change personality: ${error.message}`,
       ephemeral: true

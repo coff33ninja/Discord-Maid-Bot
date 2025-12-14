@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 import { PERSONALITIES, getPersonality, getPersonalityOptions, DEFAULT_PERSONALITY } from './personalities.js';
 
 /**
@@ -22,15 +23,16 @@ import { PERSONALITIES, getPersonality, getPersonalityOptions, DEFAULT_PERSONALI
 export default class PersonalityPlugin extends Plugin {
   constructor() {
     super('personality', '1.0.0.0-beta', 'Bot personality management system');
+    this.logger = createLogger('personality');
   }
   
   async onLoad() {
-    console.log('🎭 Personality plugin loaded');
-    console.log(`   ${Object.keys(PERSONALITIES).length} personalities available`);
+    this.logger.info('🎭 Personality plugin loaded');
+    this.logger.info(`   ${Object.keys(PERSONALITIES).length} personalities available`);
   }
   
   async onUnload() {
-    console.log('🎭 Personality plugin unloaded');
+    this.logger.info('🎭 Personality plugin unloaded');
   }
   
   // Public API for other plugins

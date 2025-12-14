@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 /**
  * Network Management Plugin
@@ -16,17 +17,18 @@ import { Plugin } from '../../src/core/plugin-system.js';
 export default class NetworkManagementPlugin extends Plugin {
   constructor() {
     super('1.0.0.0-beta', '1.0.0', 'Network scanning, device management, and WOL');
+    this.logger = createLogger('network-management');
     this.networkDevices = [];
     this.lastScanTime = null;
   }
   
   async onLoad() {
-    console.log('🌐 Network Management plugin loaded');
-    console.log('   Features: Scan, Devices, WOL, Config, Groups');
+    this.logger.info('🌐 Network Management plugin loaded');
+    this.logger.info('   Features: Scan, Devices, WOL, Config, Groups');
   }
   
   async onUnload() {
-    console.log('🌐 Network Management plugin unloaded');
+    this.logger.info('🌐 Network Management plugin unloaded');
   }
   
   // Provide network device cache to other plugins

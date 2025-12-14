@@ -5,6 +5,7 @@
  */
 
 import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
 import { taskOps } from '../../src/database/db.js';
 import { checkUserPermission } from '../../src/core/permission-manager.js';
 import { PERMISSIONS } from '../../src/auth/auth.js';
@@ -76,7 +77,7 @@ export async function handleCommand(interaction, commandName, subcommand) {
         return true;
     }
   } catch (error) {
-    console.error('Schedule command error:', error);
+    logger.error('Schedule command error:', error);
     await interaction.reply({
       content: `❌ Failed to manage schedule: ${error.message}`,
       ephemeral: true
@@ -177,7 +178,7 @@ async function handleAddTask(interaction) {
       automationPlugin.scheduleTask(task);
     }
   } catch (error) {
-    console.error('Failed to schedule task:', error);
+    logger.error('Failed to schedule task:', error);
   }
   
   const embed = new EmbedBuilder()
@@ -249,7 +250,7 @@ async function handleToggleTask(interaction) {
       }
     }
   } catch (error) {
-    console.error('Failed to update task:', error);
+    logger.error('Failed to update task:', error);
   }
   
   const status = newState ? '🟢 Enabled' : '🔴 Disabled';
@@ -299,13 +300,15 @@ async function handleDeleteTask(interaction) {
   // Stop task if running
   try {
     const { getPlugin } = await import('../../src/core/plugin-system.js');
+
+const logger = createLogger('automation');
     const automationPlugin = getPlugin('automation');
     
     if (automationPlugin) {
       automationPlugin.stopTask(task.id);
     }
   } catch (error) {
-    console.error('Failed to stop task:', error);
+    logger.error('Failed to stop task:', error);
   }
   
   // Delete from database

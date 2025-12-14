@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 /**
  * Power Management Plugin
@@ -21,6 +22,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
 export default class PowerManagementPlugin extends Plugin {
   constructor() {
     super('power-management', '1.0.0.0-beta', 'Complete device power control (WOL + Shutdown)');
+    this.logger = createLogger('power-management');
     
     // Register schema extensions for device shutdown configuration
     this.registerSchemaExtension('devices', [
@@ -33,8 +35,8 @@ export default class PowerManagementPlugin extends Plugin {
   }
   
   async onLoad() {
-    console.log('⚡ Power Management plugin loaded');
-    console.log('   Features: Wake, Shutdown, Restart, Bulk Ops, Scheduling');
+    this.logger.info('⚡ Power Management plugin loaded');
+    this.logger.info('   Features: Wake, Shutdown, Restart, Bulk Ops, Scheduling');
     
     // Listen for network scan updates to track power states
     // This will be called by network management plugin
@@ -47,7 +49,7 @@ export default class PowerManagementPlugin extends Plugin {
     }
     this.scheduledTasks.clear();
     
-    console.log('⚡ Power Management plugin unloaded');
+    this.logger.info('⚡ Power Management plugin unloaded');
   }
   
   /**
@@ -70,7 +72,7 @@ export default class PowerManagementPlugin extends Plugin {
       // Emit power state change event if state changed
       if (previousState && previousState.state !== currentState) {
         // Could trigger automations here
-        console.log(`⚡ Power state changed: ${device.hostname || device.ip} ${previousState.state} → ${currentState}`);
+        this.logger.info(`⚡ Power state changed: ${device.hostname || device.ip} ${previousState.state} → ${currentState}`);
       }
     }
   }
@@ -110,7 +112,7 @@ export default class PowerManagementPlugin extends Plugin {
         }
         this.scheduledTasks.delete(taskId);
       } catch (error) {
-        console.error(`Scheduled power task ${taskId} failed:`, error);
+        this.logger.error(`Scheduled power task ${taskId} failed:`, error);
       }
     }, delay);
     

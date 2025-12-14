@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 /**
  * Device Health Monitoring Plugin
@@ -15,13 +16,14 @@ import { Plugin } from '../../src/core/plugin-system.js';
 export default class DeviceHealthPlugin extends Plugin {
   constructor() {
     super('1.0.0.0-beta', '1.0.0', 'Track device uptime and health metrics');
+    this.logger = createLogger('device-health');
     this.healthData = new Map(); // deviceMac -> health stats
     this.checkInterval = null;
     this.client = null;
   }
   
   async onLoad() {
-    console.log('🏥 Device Health Monitoring plugin loaded');
+    this.logger.info('🏥 Device Health Monitoring plugin loaded');
     
     // Load historical health data from database
     await this.loadHealthData();
@@ -29,7 +31,7 @@ export default class DeviceHealthPlugin extends Plugin {
     // Start periodic health checks (every 5 minutes)
     this.startHealthChecks();
     
-    console.log(`   Monitoring ${this.healthData.size} device(s)`);
+    this.logger.info(`   Monitoring ${this.healthData.size} device(s)`);
   }
   
   async onUnload() {
@@ -41,7 +43,7 @@ export default class DeviceHealthPlugin extends Plugin {
     // Save health data
     await this.saveHealthData();
     
-    console.log('🏥 Device Health Monitoring plugin unloaded');
+    this.logger.info('🏥 Device Health Monitoring plugin unloaded');
   }
   
   setClient(client) {
@@ -57,7 +59,7 @@ export default class DeviceHealthPlugin extends Plugin {
         const parsed = JSON.parse(savedData);
         this.healthData = new Map(Object.entries(parsed));
       } catch (e) {
-        console.error('   Failed to parse health data:', e);
+        this.logger.error('   Failed to parse health data:', e);
       }
     }
   }

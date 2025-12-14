@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 /**
  * Games Plugin
@@ -24,18 +25,19 @@ import { Plugin } from '../../src/core/plugin-system.js';
 export default class GamesPlugin extends Plugin {
   constructor() {
     super('1.0.0.0-beta', '1.0.0', 'Interactive games collection with 18+ games');
+    this.logger = createLogger('games');
     this.activeGames = new Map(); // Track active game sessions
   }
   
   async onLoad() {
-    console.log('🎮 Games plugin loaded');
-    console.log('   18 games available');
+    this.logger.info('🎮 Games plugin loaded');
+    this.logger.info('   18 games available');
   }
   
   async onUnload() {
-    console.log('🎮 Stopping all active games...');
+    this.logger.info('🎮 Stopping all active games...');
     this.activeGames.clear();
-    console.log('🎮 Games plugin unloaded');
+    this.logger.info('🎮 Games plugin unloaded');
   }
   
   // Register an active game

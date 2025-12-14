@@ -5,6 +5,7 @@
  */
 
 import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 // These are subcommands under /research
 export const parentCommand = 'research';
@@ -75,7 +76,7 @@ async function handleResearchQuery(interaction) {
     await interaction.editReply({ embeds: [embed] });
     return true;
   } catch (error) {
-    console.error('Research query error:', error);
+    logger.error('Research query error:', error);
     await interaction.editReply({
       content: `❌ Research failed: ${error.message}`,
       ephemeral: true
@@ -130,7 +131,7 @@ async function handleResearchHistory(interaction) {
     await interaction.editReply({ embeds: [embed] });
     return true;
   } catch (error) {
-    console.error('Research history error:', error);
+    logger.error('Research history error:', error);
     await interaction.editReply({
       content: `❌ Failed to get research history: ${error.message}`,
       ephemeral: true
@@ -187,7 +188,7 @@ async function handleResearchSearch(interaction) {
     await interaction.editReply({ embeds: [embed] });
     return true;
   } catch (error) {
-    console.error('Research search error:', error);
+    logger.error('Research search error:', error);
     await interaction.editReply({
       content: `❌ Failed to search research: ${error.message}`,
       ephemeral: true
@@ -210,6 +211,8 @@ async function handleWebSearch(interaction) {
 // Export research function for use by other plugins
 export async function webResearch(query, userId = null) {
   const { getPlugin } = await import('../../src/core/plugin-system.js');
+
+const logger = createLogger('research');
   const researchPlugin = getPlugin('research');
   
   if (!researchPlugin) {

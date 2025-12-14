@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 /**
  * AI-Powered Network Insights Plugin
@@ -14,13 +15,14 @@ import { Plugin } from '../../src/core/plugin-system.js';
 export default class NetworkInsightsPlugin extends Plugin {
   constructor() {
     super('1.0.0.0-beta', '1.0.0', 'AI-powered network analysis and insights');
+    this.logger = createLogger('network-insights');
     this.insights = [];
     this.lastAnalysis = null;
     this.client = null;
   }
   
   async onLoad() {
-    console.log('🧠 Network Insights plugin loaded');
+    this.logger.info('🧠 Network Insights plugin loaded');
     
     // Load insights history from database
     const { configOps } = await import('../../src/database/db.js');
@@ -29,9 +31,9 @@ export default class NetworkInsightsPlugin extends Plugin {
     if (savedInsights) {
       try {
         this.insights = JSON.parse(savedInsights);
-        console.log(`   Loaded ${this.insights.length} historical insight(s)`);
+        this.logger.info(`   Loaded ${this.insights.length} historical insight(s)`);
       } catch (e) {
-        console.error('   Failed to parse insights history:', e);
+        this.logger.error('   Failed to parse insights history:', e);
       }
     }
   }
@@ -119,7 +121,7 @@ Be concise, actionable, and friendly. Use emojis where appropriate.`;
         throw new Error('Failed to generate insights');
       }
     } catch (error) {
-      console.error('Failed to generate network insights:', error);
+      this.logger.error('Failed to generate network insights:', error);
       throw error;
     }
   }
@@ -252,14 +254,14 @@ Be concise, actionable, and friendly. Use emojis where appropriate.`;
   async onNetworkScan(devices) {
     // Could trigger automatic analysis on certain conditions
     // For now, just log
-    console.log(`🧠 Network Insights: Scan detected ${devices.length} devices`);
+    this.logger.info(`🧠 Network Insights: Scan detected ${devices.length} devices`);
     return { processed: true };
   }
   
   // Event handler: Speed test completed
   async onSpeedTest(results) {
     // Could trigger automatic analysis if speed drops significantly
-    console.log(`🧠 Network Insights: Speed test ${results.download} Mbps`);
+    this.logger.info(`🧠 Network Insights: Speed test ${results.download} Mbps`);
     return { processed: true };
   }
 }

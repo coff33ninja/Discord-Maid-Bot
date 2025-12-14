@@ -5,6 +5,7 @@
  */
 
 import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
 import { deviceOps } from '../../src/database/db.js';
 import { broadcastUpdate } from '../../src/dashboard/server.js';
 import { scanUnifiedNetwork, quickPingCheck, isTailscaleAvailable, getTailscaleStatus } from './scanner.js';
@@ -45,6 +46,8 @@ async function scanNetwork() {
   // Emit to other plugins
   try {
     const { emitToPlugins } = await import('../../src/core/plugin-system.js');
+
+const logger = createLogger('network-management');
     await emitToPlugins('networkScan', result.all);
   } catch (error) {
     // Plugin system not available
@@ -126,7 +129,7 @@ async function handleScanCommand(interaction) {
     await interaction.editReply({ embeds: [embed] });
     return true;
   } catch (error) {
-    console.error('Scan command error:', error);
+    logger.error('Scan command error:', error);
     await interaction.editReply({
       content: `❌ Failed to scan network: ${error.message}`,
       ephemeral: true
@@ -181,7 +184,7 @@ async function handleDevicesCommand(interaction) {
     await interaction.editReply({ embeds: [embed] });
     return true;
   } catch (error) {
-    console.error('Devices command error:', error);
+    logger.error('Devices command error:', error);
     await interaction.editReply({
       content: `❌ Failed to list devices: ${error.message}`,
       ephemeral: true
@@ -234,7 +237,7 @@ async function handleWolCommand(interaction) {
     await interaction.editReply({ embeds: [embed] });
     return true;
   } catch (error) {
-    console.error('WOL command error:', error);
+    logger.error('WOL command error:', error);
     await interaction.editReply({
       content: `❌ Failed to wake device: ${error.message}`,
       ephemeral: true

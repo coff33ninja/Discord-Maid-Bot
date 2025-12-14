@@ -14,6 +14,7 @@
  */
 
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 export default class ConversationalAIPlugin extends Plugin {
   constructor() {
@@ -23,14 +24,15 @@ export default class ConversationalAIPlugin extends Plugin {
       author: 'Discord Maid Bot',
       keywords: ['chat', 'ai', 'conversation', 'gemini']
     });
+    this.logger = createLogger('conversational-ai');
   }
 
   async onLoad() {
-    console.log(`[${this.name}] Loading conversational AI plugin...`);
-    console.log(`[${this.name}] ✅ Conversational AI plugin loaded`);
+    this.logger.info(`[${this.name}] Loading conversational AI plugin...`);
+    this.logger.info(`[${this.name}] ✅ Conversational AI plugin loaded`);
   }
 
   async onUnload() {
-    console.log(`[${this.name}] Unloading conversational AI plugin...`);
+    this.logger.info(`[${this.name}] Unloading conversational AI plugin...`);
   }
 }

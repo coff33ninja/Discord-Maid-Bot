@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 import { researchOps } from '../../src/database/db.js';
 
 /**
@@ -16,20 +17,21 @@ import { researchOps } from '../../src/database/db.js';
 export default class ResearchPlugin extends Plugin {
   constructor() {
     super('1.0.0.0-beta', '1.0.0', 'AI-powered research and web search');
+    this.logger = createLogger('research');
   }
   
   async onLoad() {
-    console.log('🔎 Research plugin loaded');
-    console.log('   Features: AI Research, Web Search, History');
+    this.logger.info('🔎 Research plugin loaded');
+    this.logger.info('   Features: AI Research, Web Search, History');
   }
   
   async onUnload() {
-    console.log('🔎 Research plugin unloaded');
+    this.logger.info('🔎 Research plugin unloaded');
   }
   
   // Perform AI-powered research
   async webResearch(query, userId = null) {
-    console.log('🔎 Researching:', query);
+    this.logger.info('🔎 Researching:', query);
     const prompt = `Research this topic and provide a comprehensive summary: ${query}
     
     Include:
@@ -50,14 +52,14 @@ export default class ResearchPlugin extends Plugin {
       if (response && typeof response.text === 'function' && response.candidates && response.candidates.length > 0) {
         responseText = response.text();
         successful = true;
-        console.log(`✅ Research completed using key: ${keyUsed}`);
+        this.logger.info(`✅ Research completed using key: ${keyUsed}`);
       } else {
         const finishReason = response?.promptFeedback?.blockReason || 'unknown reason';
         responseText = `Research blocked or failed. Reason: ${finishReason}`;
-        console.warn(`Research for query "${query}" failed. Reason: ${finishReason}`, response);
+        this.logger.warn(`Research for query "${query}" failed. Reason: ${finishReason}`, response);
       }
     } catch (error) {
-      console.error(`Error during web research for query "${query}":`, error);
+      this.logger.error(`Error during web research for query "${query}":`, error);
       responseText = `An internal error occurred during research. Details: ${error.message}`;
     }
 
@@ -69,7 +71,7 @@ export default class ResearchPlugin extends Plugin {
     try {
       smbSaveResult = await this.requestFromCore('smb-save', { filename, content });
     } catch(smbError) {
-      console.error('SMB save error during research logging:', smbError);
+      this.logger.error('SMB save error during research logging:', smbError);
       smbSaveResult.error = smbError.message;
     }
 
@@ -82,7 +84,7 @@ export default class ResearchPlugin extends Plugin {
         userId
       });
     } catch (dbError) {
-      console.error('CRITICAL: Failed to save research log to database even after sanitizing.', dbError);
+      this.logger.error('CRITICAL: Failed to save research log to database even after sanitizing.', dbError);
       throw dbError;
     }
     

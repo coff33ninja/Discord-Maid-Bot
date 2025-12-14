@@ -5,6 +5,7 @@
  */
 
 import { EmbedBuilder } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
 
 // These are subcommands under /game
 export const parentCommand = 'game';
@@ -97,7 +98,7 @@ async function handleStopGame(interaction) {
     });
     return true;
   } catch (error) {
-    console.error('Stop game error:', error);
+    logger.error('Stop game error:', error);
     await interaction.reply({ content: `❌ Failed to stop game: ${error.message}`, ephemeral: true });
     return true;
   }
@@ -109,6 +110,8 @@ async function handleStopGame(interaction) {
 async function handleGameStats(interaction) {
   try {
     const { getPlugin } = await import('../../src/core/plugin-system.js');
+
+const logger = createLogger('games');
     const gamesPlugin = getPlugin('games');
     
     if (!gamesPlugin) {
@@ -137,7 +140,7 @@ async function handleGameStats(interaction) {
     await interaction.reply({ embeds: [embed] });
     return true;
   } catch (error) {
-    console.error('Game stats error:', error);
+    logger.error('Game stats error:', error);
     await interaction.reply({ content: `❌ Failed to get stats: ${error.message}`, ephemeral: true });
     return true;
   }

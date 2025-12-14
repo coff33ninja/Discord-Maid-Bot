@@ -6,6 +6,7 @@
  */
 
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
 import { deviceOps, speedTestOps, chatOps, taskOps } from '../../src/database/db.js';
 import { checkUserPermission } from '../../src/core/permission-manager.js';
 import { PERMISSIONS } from '../../src/auth/auth.js';
@@ -16,6 +17,8 @@ import {
   reloadPlugin, 
   getPluginStats 
 } from '../../src/core/plugin-system.js';
+
+const logger = createLogger('core-commands');
 
 /**
  * Command group configuration
@@ -309,7 +312,7 @@ export async function handleCommand(interaction, plugin) {
     }
 
   } catch (error) {
-    console.error('Core command error:', error);
+    logger.error('Core command error:', error);
     const errorMessage = `❌ An error occurred: ${error.message}`;
     
     if (interaction.deferred) {

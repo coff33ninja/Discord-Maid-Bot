@@ -238,6 +238,27 @@ const PLUGIN_INFO = {
       'Channel notifications',
     ],
   },
+  'power-management': {
+    name: 'Power Management',
+    category: 'Network',
+    author: 'Discord Maid Bot Team',
+    description: 'Device power control with Wake-on-LAN and remote shutdown/restart',
+    commands: [
+      { name: '/power control wake', description: 'Wake device using WOL' },
+      { name: '/power control shutdown', description: 'Shutdown device remotely' },
+      { name: '/power control restart', description: 'Restart device remotely' },
+      { name: '/power control status', description: 'Check device power status' },
+      { name: '/power control configure', description: 'Configure device for remote power control' },
+    ],
+    features: [
+      'Wake-on-LAN support',
+      'Remote shutdown (via API)',
+      'Remote restart (via API)',
+      'Power status monitoring',
+      'Device configuration',
+      'Schema extensions for API keys',
+    ],
+  },
 };
 
 const INTEGRATION_INFO = {

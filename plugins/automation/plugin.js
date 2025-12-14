@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { createLogger } from '../../src/logging/logger.js';
 import cron from 'node-cron';
 import { taskOps } from '../../src/database/db.js';
 
@@ -23,23 +24,24 @@ export default class AutomationPlugin extends Plugin {
       author: 'Discord Maid Bot',
       keywords: ['scheduler', 'cron', 'tasks', 'automation']
     });
+    this.logger = createLogger('automation');
     this.activeTasks = new Map();
     this.client = null;
   }
   
   async onLoad() {
-    console.log('⏰ Automation plugin loaded');
-    console.log('   Features: Scheduler, Triggers, Alerts');
+    this.logger.info('⏰ Automation plugin loaded');
+    this.logger.info('   Features: Scheduler, Triggers, Alerts');
   }
   
   async onUnload() {
-    console.log('⏰ Stopping all scheduled tasks...');
+    this.logger.info('⏰ Stopping all scheduled tasks...');
     // Stop all active tasks
     for (const [taskId, task] of this.activeTasks) {
       task.stop();
     }
     this.activeTasks.clear();
-    console.log('⏰ Automation plugin unloaded');
+    this.logger.info('⏰ Automation plugin unloaded');
   }
   
   setClient(client) {
@@ -50,18 +52,18 @@ export default class AutomationPlugin extends Plugin {
   // Initialize scheduler with saved tasks
   initScheduler() {
     if (!this.client) {
-      console.warn('⚠️  Client not set, cannot initialize scheduler');
+      this.logger.warn('⚠️  Client not set, cannot initialize scheduler');
       return;
     }
     
-    console.log('⏰ Initializing task scheduler...');
+    this.logger.info('⏰ Initializing task scheduler...');
     const tasks = taskOps.getEnabled();
     
     for (const task of tasks) {
       this.scheduleTask(task);
     }
     
-    console.log(`✅ Scheduled ${tasks.length} tasks`);
+    this.logger.info(`✅ Scheduled ${tasks.length} tasks`);
   }
   
   // Schedule a single task
@@ -69,7 +71,7 @@ export default class AutomationPlugin extends Plugin {
     try {
       // Validate cron expression
       if (!cron.validate(task.cron_expression)) {
-        console.error(`❌ Invalid cron expression for task ${task.name}: ${task.cron_expression}`);
+        this.logger.error(`❌ Invalid cron expression for task ${task.name}: ${task.cron_expression}`);
         return false;
       }
 
@@ -84,17 +86,17 @@ export default class AutomationPlugin extends Plugin {
       });
 
       this.activeTasks.set(task.id, scheduledTask);
-      console.log(`✅ Scheduled task: ${task.name} (${task.cron_expression})`);
+      this.logger.info(`✅ Scheduled task: ${task.name} (${task.cron_expression})`);
       return true;
     } catch (error) {
-      console.error(`❌ Failed to schedule task ${task.name}:`, error);
+      this.logger.error(`❌ Failed to schedule task ${task.name}:`, error);
       return false;
     }
   }
   
   // Execute a scheduled task
   async executeTask(task) {
-    console.log(`⏰ Running scheduled task: ${task.name}`);
+    this.logger.info(`⏰ Running scheduled task: ${task.name}`);
     
     try {
       // Update last run time
@@ -118,12 +120,12 @@ export default class AutomationPlugin extends Plugin {
           break;
           
         default:
-          console.warn(`Unknown command: ${task.command}`);
+          this.logger.warn(`Unknown command: ${task.command}`);
       }
       
-      console.log(`✅ Task completed: ${task.name}`);
+      this.logger.info(`✅ Task completed: ${task.name}`);
     } catch (error) {
-      console.error(`❌ Task failed: ${task.name}`, error);
+      this.logger.error(`❌ Task failed: ${task.name}`, error);
     }
   }
   
@@ -138,7 +140,7 @@ export default class AutomationPlugin extends Plugin {
         await channel.send(`🔍 Scheduled network scan complete: ${result.count} devices found`);
       }
     } catch (error) {
-      console.error('Scan task error:', error);
+      this.logger.error('Scan task error:', error);
       if (channel) {
         await channel.send(`❌ Scheduled scan failed: ${error.message}`);
       }
@@ -167,7 +169,7 @@ export default class AutomationPlugin extends Plugin {
         });
       }
     } catch (error) {
-      console.error('Speedtest task error:', error);
+      this.logger.error('Speedtest task error:', error);
       if (channel) {
         await channel.send(`❌ Scheduled speedtest failed: ${error.message}`);
       }
@@ -195,7 +197,7 @@ export default class AutomationPlugin extends Plugin {
         });
       }
     } catch (error) {
-      console.error('Weather task error:', error);
+      this.logger.error('Weather task error:', error);
       if (channel) {
         await channel.send(`❌ Scheduled weather update failed: ${error.message}`);
       }
@@ -207,7 +209,7 @@ export default class AutomationPlugin extends Plugin {
     if (this.activeTasks.has(taskId)) {
       this.activeTasks.get(taskId).stop();
       this.activeTasks.delete(taskId);
-      console.log(`✅ Stopped task: ${taskId}`);
+      this.logger.info(`✅ Stopped task: ${taskId}`);
       return true;
     }
     return false;

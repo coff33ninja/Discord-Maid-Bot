@@ -1,275 +1,538 @@
 # Plugin Catalog
 
-This document lists all available plugins for the Discord Maid Bot.
+**Version:** 1.0.0.0-beta  
+**Last Updated:** December 14, 2025  
+**Total Plugins:** 17
 
-## 🎯 Active Plugins (7)
-
-### 1. 🏥 Device Health Monitoring
-**Plugin:** `device-health`  
-**Version:** 1.0.0  
-**Commands:** `/automation health`  
-**Description:** Track device uptime, response times, and generate health reports
-
-**Features:**
-- Uptime percentage tracking per device
-- Response time trends and averages
-- Offline duration tracking
-- Predictive alerts (device usually online at this time)
-- Health reports and comparisons
-- Reliability rankings
-
-**Subcommands:**
-- `/automation health report [device]` - View device health report
-- `/automation health summary` - Network health overview
-- `/automation health unhealthy` - List devices with poor health (<90% uptime)
-- `/automation health reliable` - List most reliable devices (>99% uptime)
-- `/automation health compare <device1> <device2>` - Compare two devices
-- `/automation health alerts` - Check for predictive alerts
+Complete catalog of all available plugins for Discord Maid Bot.
 
 ---
 
-### 2. 🔔 Device Automation Triggers
-**Plugin:** `device-triggers`  
-**Version:** 1.0.0  
-**Commands:** `/automation devicetrigger`  
-**Description:** Create automation rules based on device network status
+## Table of Contents
+
+- [Core Plugins](#core-plugins) (3)
+- [AI Plugins](#ai-plugins) (3)
+- [Network Plugins](#network-plugins) (6)
+- [Automation Plugins](#automation-plugins) (2)
+- [Entertainment Plugins](#entertainment-plugins) (1)
+- [Utility Plugins](#utility-plugins) (1)
+- [Integration Plugins](#integration-plugins) (3)
+
+---
+
+## Core Plugins
+
+Essential plugins that provide fundamental bot functionality.
+
+### 1. Core Commands
+**Path:** `plugins/core-commands/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+Essential bot commands and utilities.
+
+**Commands:**
+- `/help` - Show all available commands
+- `/stats` - Display bot statistics
+- `/ping` - Check bot latency
+- `/dashboard` - Get dashboard URL
+- `/bot plugin` - Manage plugins (admin only)
 
 **Features:**
-- Trigger on device online/offline events
-- Trigger on unknown device detection
-- Discord DM or channel notifications
-- Home Assistant integration
-- Custom messages and context
-- Enable/disable triggers
+- Bot management
+- System utilities
+- Plugin management
+- Help system
 
-**Subcommands:**
-- `/automation devicetrigger add` - Create a new trigger
+**Documentation:** [View Docs](core-commands/docs/README.md)
+
+---
+
+### 2. Automation
+**Path:** `plugins/automation/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+Scheduler, triggers, and automation system for recurring tasks.
+
+**Commands:**
+- `/automation schedule` - Manage scheduled tasks
+- `/automation devicetrigger` - Device-based automation
+- `/automation health` - Device health monitoring
+- `/automation speedalert` - Internet speed alerts
+
+**Features:**
+- Cron-based task scheduling
+- Device status triggers
+- Speed monitoring and alerts
+- Device health tracking
+
+**Documentation:** [View Docs](automation/docs/README.md)
+
+---
+
+### 3. Network Management
+**Path:** `plugins/network-management/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+Network scanning, device management, and Wake-on-LAN.
+
+**Commands:**
+- `/network scan` - Scan network for devices
+- `/network devices` - List all devices
+- `/network wol` - Wake device with WOL
+- `/device config` - Configure device
+- `/device group` - Manage device groups
+
+**Features:**
+- Network scanning (local + Tailscale)
+- Device discovery
+- Wake-on-LAN
+- Device groups
+- Friendly names and emoji
+
+**Documentation:** [View Docs](network-management/docs/README.md)
+
+---
+
+## AI Plugins
+
+Plugins powered by Google Gemini AI.
+
+### 4. Conversational AI
+**Path:** `plugins/conversational-ai/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+AI-powered conversational chat using Google Gemini.
+
+**Commands:**
+- `/chat` - Chat with the AI bot
+
+**Features:**
+- Natural language conversations
+- Personality-aware responses
+- Chat history tracking
+- Context-aware replies
+
+**Dependencies:** personality (optional)
+
+**Documentation:** [View Docs](conversational-ai/docs/README.md)
+
+---
+
+### 5. Personality
+**Path:** `plugins/personality/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+AI personality system with 10+ unique personalities.
+
+**Commands:**
+- `/bot personality` - Manage AI personalities
+
+**Features:**
+- 10+ unique personalities (maid, tsundere, kuudere, etc.)
+- Per-user personality settings
+- Custom personality prompts
+- Personality-aware responses
+
+**Personalities:**
+- � Maid - PolSite and helpful
+- �  Tsundere - Defensive but caring
+- ❄️ Kuudere - Cool and collected
+- 🌺 Deredere - Cheerful and energetic
+- 😊 Dandere - Shy and quiet
+- 🎭 Yandere - Obsessively devoted
+- 🤖 Robot - Logical and precise
+- 🎩 Butler - Professional and refined
+- 😈 Sarcastic - Witty and snarky
+- 🧙 Wizard - Mystical and wise
+
+**Documentation:** [View Docs](personality/docs/README.md)
+
+---
+
+### 6. Research
+**Path:** `plugins/research/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+AI-powered research and web search using Gemini.
+
+**Commands:**
+- `/research query` - AI-powered research
+- `/research history` - View research history
+- `/research search` - Search past research
+- `/research web` - Web search
+
+**Features:**
+- AI-powered research
+- Web search integration
+- Research history
+- SMB file saving
+
+**Documentation:** [View Docs](research/docs/README.md)
+
+---
+
+## Network Plugins
+
+Plugins for network management and monitoring.
+
+### 7. Power Management
+**Path:** `plugins/power-management/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active  
+**NEW!** 🆕
+
+Device power control with Wake-on-LAN and remote shutdown/restart.
+
+**Commands:**
+- `/power control wake` - Wake device using WOL
+- `/power control shutdown` - Shutdown device remotely
+- `/power control restart` - Restart device remotely
+- `/power control status` - Check device power status
+- `/power control configure` - Configure device for remote power control
+
+**Features:**
+- Wake-on-LAN support
+- Remote shutdown (via API)
+- Remote restart (via API)
+- Power status monitoring
+- Device configuration
+- Schema extensions for API keys
+
+**Schema Extensions:**
+- `shutdown_api_key` - API key for shutdown server
+- `shutdown_port` - Port for shutdown server (default: 5000)
+
+**Complements:** `scripts/remote-shutdown/` server implementation
+
+**Documentation:** [View Docs](power-management/docs/README.md)
+
+---
+
+### 8. Device Health Monitoring
+**Path:** `plugins/device-health/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+Monitor device uptime, health metrics, and reliability.
+
+**Commands:**
+- `/automation health report` - Generate health report
+- `/automation health summary` - Quick health summary
+- `/automation health unhealthy` - List unhealthy devices
+- `/automation health reliable` - List most reliable devices
+- `/automation health compare` - Compare device reliability
+- `/automation health alerts` - Configure health alerts
+
+**Features:**
+- Uptime tracking
+- Response time monitoring
+- Health reports
+- Reliability metrics
+
+**Documentation:** [View Docs](device-health/docs/README.md)
+
+---
+
+### 9. Device Triggers
+**Path:** `plugins/device-triggers/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+Automation triggers based on device network status.
+
+**Commands:**
+- `/automation devicetrigger add` - Add new trigger
 - `/automation devicetrigger list` - List all triggers
-- `/automation devicetrigger remove <trigger>` - Remove a trigger
-- `/automation devicetrigger toggle <trigger> <enabled>` - Enable/disable trigger
-
-**Example Use Cases:**
-- "When my gaming PC comes online, send me a DM"
-- "When my phone disconnects, turn off bedroom lights"
-- "Alert me when unknown devices join the network"
-
----
-
-### 3. 🚨 Speed Alerts
-**Plugin:** `speed-alerts`  
-**Version:** 1.0.0  
-**Commands:** `/automation speedalert`  
-**Description:** Monitor internet speed and send alerts when speed drops
+- `/automation devicetrigger remove` - Remove trigger
+- `/automation devicetrigger toggle` - Enable/disable trigger
 
 **Features:**
-- Configurable speed threshold
-- Automatic alerts on speed drops
-- Critical vs warning severity levels
-- Performance percentage tracking
-- Channel-based notifications
+- Device online/offline triggers
+- Custom actions
+- Notification system
+- Rule management
 
-**Subcommands:**
-- `/automation speedalert config <threshold> <channel>` - Configure alerts
-- `/automation speedalert status` - View current settings
-- `/automation speedalert enable` - Enable speed alerts
-- `/automation speedalert disable` - Disable speed alerts
+**Documentation:** [View Docs](device-triggers/docs/README.md)
 
 ---
 
-### 4. 🧠 Network Insights
-**Plugin:** `network-insights`  
-**Version:** 1.0.0  
-**Commands:** `/network insights`  
-**Description:** AI-powered network analysis and insights using Gemini
+### 10. Speed Alerts
+**Path:** `plugins/speed-alerts/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+Internet speed monitoring with automatic alerts.
+
+**Commands:**
+- `/automation speedalert add` - Add speed alert
+- `/automation speedalert list` - List all alerts
+- `/automation speedalert remove` - Remove alert
+- `/automation speedalert test` - Test alert
 
 **Features:**
-- Network statistics analysis
-- Speed trend detection (improving/declining/stable)
-- Device pattern recognition
-- AI-generated actionable insights
-- Insight history tracking
-- Anomaly detection
+- Automatic speed monitoring
+- Threshold-based alerts
+- Speed history tracking
+- Channel notifications
 
-**Subcommands:**
-- `/network insights analyze` - Generate AI insights about your network
-- `/network insights latest` - View the latest network insights
-- `/network insights history [limit]` - View past network insights
-
-**What It Analyzes:**
-- Device uptime patterns
-- Speed test trends
-- New and unknown devices
-- Device type distribution (mobile, computers, IoT)
-- Performance issues and optimization opportunities
+**Documentation:** [View Docs](speed-alerts/docs/README.md)
 
 ---
 
-### 5. ⏰ Smart Reminders & Automation
-**Plugin:** `smart-reminders`  
-**Version:** 1.0.0  
-**Commands:** `/bot reminder`  
-**Description:** Comprehensive reminder and automation system with multi-user support
+### 11. Network Insights
+**Path:** `plugins/network-insights/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+AI-powered network analytics and insights using Gemini.
+
+**Commands:**
+- `/network insights analyze` - Analyze network patterns
+- `/network insights latest` - View latest insights
+- `/network insights history` - View insight history
 
 **Features:**
-- ⏰ Time-based reminders (5m, 2h, 1d, or absolute time like 18:00)
-- 🔁 Recurring reminders with intervals
-- 📱 Presence-based reminders (when device comes online)
-- 👥 **Remind others** - Create reminders for specific users
-- 👑 **Role reminders** - Remind entire roles/groups
-- 😴 **Snooze functionality** - Postpone reminders (up to 3 times)
-- 🤖 **Automation actions** (Home Assistant, Wake-on-LAN, Network Scan, Speed Test)
-- 🎯 **Conditional execution** - Only trigger if conditions are met
-- 📝 Context storage and message links
-- 🤖 AI-generated message variations
-- 📬 Multiple delivery options (DM, channel, role mention)
-- ✅ Enable/disable reminders
+- AI-powered analysis
+- Network statistics
+- Trend detection
+- Actionable insights
 
-**Subcommands:**
-- `/bot reminder add <message> <when>` - Create a time-based reminder for yourself
-- `/bot reminder for <user> <message> <when>` - Create reminder for someone else
-- `/bot reminder role <role> <message> <when> <channel>` - Remind an entire role
-- `/bot reminder automation <name> <when> <action_type>` - Create automation with actions
-- `/bot reminder recurring <message> <interval>` - Create recurring reminder
-- `/bot reminder presence <message> <device>` - Remind when device comes online
-- `/bot reminder snooze <reminder> <duration>` - Snooze a reminder
-- `/bot reminder list` - List your reminders
-- `/bot reminder remove <reminder>` - Remove a reminder
-- `/bot reminder toggle <reminder> <active>` - Enable/disable reminder
-
-**Automation Actions:**
-- 🏠 **Home Assistant** - Control lights, switches, scenes, etc.
-- 💻 **Wake-on-LAN** - Wake up devices automatically
-- 🌐 **Network Scan** - Trigger network scans
-- 📊 **Speed Test** - Run speed tests
-
-**Conditions (Advanced):**
-- `user_online` - Only trigger if user's device is online
-- `speed_above` - Only trigger if internet speed is above threshold
-- `time_range` - Only trigger during specific hours
-- `weekday` - Only trigger on weekdays
-
-**Example Use Cases:**
-- "Remind me to check the oven in 30m"
-- "Remind @John to submit the report at 17:00"
-- "Remind @Developers role about standup at 09:00 tomorrow"
-- "Turn on my PC at 18:00 every day" (automation + WOL)
-- "Turn on lights when I get home" (presence + Home Assistant)
-- "Run network scan every morning at 8:00, but only on weekdays" (automation + conditions)
-- "Snooze this reminder for 10 more minutes"
+**Documentation:** [View Docs](network-insights/docs/README.md)
 
 ---
 
-### 6. 📝 Example Plugin
-**Plugin:** `example-plugin`  
-**Version:** 1.0.0  
-**Commands:** None (demonstration only)  
-**Description:** Example plugin demonstrating the plugin system
+### 12. Device Bulk Operations
+**Path:** `plugins/device-bulk-ops/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+Bulk operations for managing multiple devices at once.
+
+**Commands:**
+- `/device bulk assign` - Bulk group assignment
+- `/device bulk addmultiple` - Add multiple devices to group
+- `/device bulk assignpattern` - Assign by pattern
+- `/device bulk assignall` - Assign all filtered devices
 
 **Features:**
-- Shows plugin lifecycle hooks
-- Demonstrates event handlers
-- Example custom commands
-- Reference implementation
+- Bulk device configuration
+- Group assignments
+- Pattern matching
+- Filter-based operations
+
+**Documentation:** [View Docs](device-bulk-ops/docs/README.md)
 
 ---
 
-## 📊 Plugin Statistics
+## Automation Plugins
 
-- **Total Plugins:** 6
-- **Active Plugins:** 6
-- **Commands Added:** 6 command groups
-- **Total Subcommands:** 33+
-- **Lines of Code:** ~2,800+
+Plugins for task automation and scheduling.
 
----
+### 13. Smart Reminders
+**Path:** `plugins/smart-reminders/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
 
-### 7. 📦 Device Bulk Operations
-**Plugin:** `device-bulk-ops`  
-**Version:** 1.0.0  
-**Commands:** `/device bulk`  
-**Description:** Perform bulk operations on multiple devices at once
+Context-aware reminder system with time and presence-based triggers.
+
+**Commands:**
+- `/bot reminder add` - Add time-based reminder
+- `/bot reminder recurring` - Add recurring reminder
+- `/bot reminder presence` - Add presence-based reminder
+- `/bot reminder list` - List all reminders
+- `/bot reminder remove` - Remove reminder
+- `/bot reminder toggle` - Enable/disable reminder
 
 **Features:**
-- Bulk rename devices matching a pattern
-- Bulk set emoji for devices
-- Bulk assign devices to groups
-- Regex pattern matching
-- Prefix/suffix support for renaming
-- Shows preview of affected devices
+- Time-based reminders (5m, 2h, 1d)
+- Recurring reminders with intervals
+- Presence-based reminders (when device comes online)
+- Context storage for reminders
+- AI-generated message variations
+- DM or channel delivery
 
-**Subcommands:**
-- `/device bulk rename <pattern> [prefix] [suffix]` - Bulk rename devices
-- `/device bulk emoji <pattern> <emoji>` - Bulk set emoji
-- `/device bulk group <pattern> <group>` - Bulk assign to group
-
-**Example Use Cases:**
-- Rename all PCs: `/device bulk rename pattern:PC prefix:Gaming-`
-- Set emoji for phones: `/device bulk emoji pattern:phone emoji:📱`
-- Group all IoT devices: `/device bulk group pattern:ESP group:Smart Home`
-
-**Architecture:**
-- Uses `requestFromCore()` method - never imports core files
-- Pure injection pattern - fully self-contained
-- Hot-reloadable without touching core system
+**Documentation:** [View Docs](smart-reminders/docs/README.md)
 
 ---
 
-## 🔮 Planned Plugins
+## Entertainment Plugins
 
-### 🎤 Voice Message Transcription
-**Status:** Planned  
-**Description:** Transcribe Discord voice messages using speech-to-text
+Plugins for games and entertainment.
 
-### 🎵 Collaborative Playlist Manager
-**Status:** Planned  
-**Description:** Integrate music control with Spotify/YouTube Music
+### 14. Games
+**Path:** `plugins/games/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
 
-### 📊 Discord Server Analytics
-**Status:** Planned  
-**Description:** Track and visualize server activity with AI sentiment analysis
+18 interactive games including trivia, hangman, word games, and more.
 
-### 🎨 Custom Emoji/Sticker Generator
-**Status:** Planned  
-**Description:** Generate custom emoji and stickers using AI image generation
+**Commands:**
+- `/game trivia` - Trivia game (AI, Research, Speed modes)
+- `/game hangman` - Hangman game
+- `/game wordchain` - Word chain game
+- `/game tictactoe` - Tic Tac Toe
+- `/game connect4` - Connect Four
+- `/game rps` - Rock Paper Scissors
+- `/game numguess` - Number guessing
+- `/game riddles` - Riddle game
+- `/game 20questions` - 20 Questions with AI
+- `/game emojidecode` - Emoji decoding
+- `/game wouldyourather` - Would You Rather
+- `/game caption` - Caption contest
+- `/game acronym` - Acronym game
+- `/game story` - Collaborative story builder
+- `/game mathblitz` - Math blitz
+- `/game reaction` - Reaction race
+- `/game mafia` - Mafia/Werewolf
+- `/game stats` - Game statistics
+- `/game leaderboard` - View leaderboards
+- `/game stop` - Stop active game
 
-### 🗣️ Natural Language Automation Builder
-**Status:** Planned  
-**Description:** Create automations using plain English with Gemini NLP
+**Features:**
+- 18 different games
+- Single and multiplayer support
+- Statistics tracking
+- Leaderboards
+- AI-powered game content
 
----
-
-## 🏪 Plugin Store (Future)
-
-We're planning a **Plugin Store** system that will allow you to:
-- 📦 Browse available plugins from a central repository
-- ⬇️ Install plugins directly from the dashboard or bot commands
-- 🔄 Update plugins with one click
-- 🌟 Rate and review plugins
-- 📝 Submit your own plugins to the store
-
-**Timeline:** Coming in a future update!
-
----
-
-## 🛠️ Creating Your Own Plugin
-
-See `plugins/README.md` for detailed documentation on creating plugins.
-
-**Quick Start:**
-1. Create `plugins/my-plugin.js` with your plugin logic
-2. Create `plugins/my-plugin/commands.js` with slash command definitions
-3. Plugin manager auto-discovers and loads your plugin
-4. Commands are automatically injected into parent commands
-5. Zero core file changes needed!
-
-**Example Structure:**
-```
-plugins/
-├── my-plugin.js              # Plugin logic
-└── my-plugin/
-    └── commands.js           # Slash command definitions
-```
+**Documentation:** [View Docs](games/docs/README.md)
 
 ---
 
-*Last updated: December 13, 2025*
+## Utility Plugins
+
+General utility plugins.
+
+*No utility plugins currently installed.*
+
+---
+
+## Integration Plugins
+
+Plugins that integrate with external services.
+
+### 15. Home Assistant
+**Path:** `plugins/integrations/homeassistant/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+Control Home Assistant devices from Discord.
+
+**Commands:**
+- `/homeassistant lights` - List all lights
+- `/homeassistant light` - Control a light
+- `/homeassistant switches` - List all switches
+- `/homeassistant switch` - Control a switch
+- `/homeassistant sensors` - List all sensors
+- `/homeassistant sensor` - Read a sensor
+- `/homeassistant scenes` - List all scenes
+- `/homeassistant scene` - Activate a scene
+- `/homeassistant automations` - List automations
+- `/homeassistant scripts` - List scripts
+
+**Features:**
+- Light control (on/off, brightness, color)
+- Switch control
+- Sensor reading
+- Scene activation
+- Automation triggers
+- Script execution
+
+**Configuration Required:** Home Assistant URL and API token in `.env`
+
+**Documentation:** [View Docs](integrations/homeassistant/docs/README.md)
+
+---
+
+### 16. Speed Test
+**Path:** `plugins/integrations/speedtest/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+Internet speed testing and monitoring.
+
+**Commands:**
+- `/network speedtest` - Run speed test
+- `/network speedhistory` - View speed history
+
+**Features:**
+- Download/upload speed testing
+- Ping measurement
+- Speed history
+- Statistics and trends
+
+**Documentation:** [View Docs](integrations/speedtest/docs/README.md)
+
+---
+
+### 17. Weather
+**Path:** `plugins/integrations/weather/`  
+**Version:** 1.0.0.0-beta  
+**Status:** ✅ Active
+
+Weather information and forecasts.
+
+**Commands:**
+- `/weather` - Get weather information
+
+**Features:**
+- Current weather
+- Weather forecasts
+- Multiple locations
+- Temperature units
+
+**Configuration Required:** Weather API key in `.env`
+
+**Documentation:** [View Docs](integrations/weather/docs/README.md)
+
+---
+
+## Plugin Statistics
+
+**Total Plugins:** 17
+- Core: 3
+- AI: 3
+- Network: 6
+- Automation: 2
+- Entertainment: 1
+- Utility: 0
+- Integration: 3
+
+**Total Commands:** 100+
+
+**New in 1.0.0.0-beta:**
+- ✨ Power Management plugin with remote shutdown/restart
+- ✨ Schema extension system for plugins
+- ✨ Core handler system for shared services
+- ✨ Complete plugin-first architecture
+- ✨ Comprehensive documentation for all plugins
+
+---
+
+## Plugin Development
+
+Want to create your own plugin? See:
+- [Plugin Development Guide](../docs/developer/plugin-development.md)
+- [Plugin Template](example-plugin/)
+- [Architecture Documentation](../REFACTOR_PLUGIN_ARCHITECTURE.md)
+
+---
+
+## Support
+
+For issues or questions:
+- Open an issue on GitHub
+- Check plugin documentation
+- Review bot logs
+- Contact bot administrators
+
+---
+
+**Last Updated:** December 14, 2025  
+**Documentation Version:** 1.0.0.0-beta
