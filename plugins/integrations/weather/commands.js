@@ -5,7 +5,9 @@
  */
 
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { createLogger } from '../../src/logging/logger.js';
+import { createLogger } from '../../../src/logging/logger.js';
+
+const logger = createLogger('weather');
 
 // This is a standalone command
 export const parentCommand = null;
@@ -81,8 +83,6 @@ export async function handleCommand(interaction, commandName, subcommand) {
 // Export weather function for use by other plugins (e.g., automation)
 export async function getWeather(city = 'Cape Town') {
   const { getPlugin } = await import('../../../src/core/plugin-system.js');
-
-const logger = createLogger('weather');
   const weatherPlugin = getPlugin('integrations/weather');
   
   if (!weatherPlugin) {

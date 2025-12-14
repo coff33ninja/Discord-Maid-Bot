@@ -8,6 +8,8 @@ import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createLogger } from '../../src/logging/logger.js';
 import { chatOps, configOps } from '../../src/database/db.js';
 
+const logger = createLogger('conversational-ai');
+
 // Get personality functions from personality plugin
 // Note: This creates a soft dependency - chat works even if personality plugin is disabled
 async function getPersonalityPlugin() {
@@ -107,8 +109,6 @@ export async function handleCommand(interaction, commandName, subcommand) {
     let networkContext = null;
     try {
       const { deviceOps } = await import('../../src/database/db.js');
-
-const logger = createLogger('conversational-ai');
       const devices = deviceOps.getAll();
       networkContext = {
         deviceCount: devices.filter(d => d.online).length

@@ -5,7 +5,9 @@
  */
 
 import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
-import { createLogger } from '../../src/logging/logger.js';
+import { createLogger } from '../../../src/logging/logger.js';
+
+const logger = createLogger('speedtest');
 
 // These are subcommands under /network
 export const parentCommand = 'network';
@@ -131,9 +133,7 @@ async function handleSpeedHistoryCommand(interaction) {
 // Export speed test function for use by other plugins (e.g., automation)
 export async function runSpeedtest(userId = null) {
   const { getPlugin } = await import('../../../src/core/plugin-system.js');
-
-const logger = createLogger('speedtest');
-  const speedTestPlugin = getPlugin('integrations/speedtest');
+  const speedTestPlugin = getPlugin('integrations');
   
   if (!speedTestPlugin) {
     throw new Error('Speed test plugin not available');
