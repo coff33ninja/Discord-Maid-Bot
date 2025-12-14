@@ -13,7 +13,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
  */
 export default class SmartRemindersPlugin extends Plugin {
   constructor() {
-    super('smart-reminders', '1.0.0', 'Context-aware reminder system');
+    super('1.0.0.0-beta', '1.0.0', 'Context-aware reminder system');
     this.reminders = [];
     this.client = null;
     this.checkInterval = null;

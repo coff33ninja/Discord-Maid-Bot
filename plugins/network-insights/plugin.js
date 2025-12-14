@@ -13,7 +13,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
  */
 export default class NetworkInsightsPlugin extends Plugin {
   constructor() {
-    super('network-insights', '1.0.0', 'AI-powered network analysis and insights');
+    super('1.0.0.0-beta', '1.0.0', 'AI-powered network analysis and insights');
     this.insights = [];
     this.lastAnalysis = null;
     this.client = null;

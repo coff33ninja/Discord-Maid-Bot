@@ -14,7 +14,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
  */
 export default class DeviceHealthPlugin extends Plugin {
   constructor() {
-    super('device-health', '1.0.0', 'Track device uptime and health metrics');
+    super('1.0.0.0-beta', '1.0.0', 'Track device uptime and health metrics');
     this.healthData = new Map(); // deviceMac -> health stats
     this.checkInterval = null;
     this.client = null;

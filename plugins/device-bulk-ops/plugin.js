@@ -8,7 +8,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
  */
 export default class DeviceBulkOpsPlugin extends Plugin {
   constructor() {
-    super('device-bulk-ops', '1.0.0', 'Bulk operations for device management');
+    super('1.0.0.0-beta', '1.0.0', 'Bulk operations for device management');
   }
   
   async onLoad() {

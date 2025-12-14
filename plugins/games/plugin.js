@@ -23,7 +23,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
  */
 export default class GamesPlugin extends Plugin {
   constructor() {
-    super('games', '1.0.0', 'Interactive games collection with 18+ games');
+    super('1.0.0.0-beta', '1.0.0', 'Interactive games collection with 18+ games');
     this.activeGames = new Map(); // Track active game sessions
   }
   

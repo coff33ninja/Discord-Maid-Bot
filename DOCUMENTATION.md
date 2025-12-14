@@ -233,6 +233,6 @@ Regular tasks:
 ---
 
 **Last Updated:** December 14, 2025  
-**Version:** 2.0.0 (Plugin-First Architecture)
+**Version:** 1.0.0.0-beta
 
 For the complete refactor story, see [docs/archive/REFACTOR_SUMMARY.md](docs/archive/REFACTOR_SUMMARY.md)

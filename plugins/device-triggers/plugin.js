@@ -10,7 +10,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
  */
 export default class DeviceTriggersPlugin extends Plugin {
   constructor() {
-    super('device-triggers', '1.0.0', 'Automation rules based on device network status');
+    super('1.0.0.0-beta', '1.0.0', 'Automation rules based on device network status');
     this.triggers = [];
     this.client = null;
     this.knownDevices = new Set();

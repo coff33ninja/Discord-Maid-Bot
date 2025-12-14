@@ -2,7 +2,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
 
 export default class ExamplePlugin extends Plugin {
   constructor() {
-    super('example-plugin', '1.0.0', 'An example plugin demonstrating the plugin system');
+    super('1.0.0.0-beta', '1.0.0', 'An example plugin demonstrating the plugin system');
   }
   
   async onLoad() {

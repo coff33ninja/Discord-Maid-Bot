@@ -6,7 +6,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
  */
 export default class SpeedAlertsPlugin extends Plugin {
   constructor() {
-    super('speed-alerts', '1.0.0', 'Alert when internet speed drops below threshold');
+    super('1.0.0.0-beta', '1.0.0', 'Alert when internet speed drops below threshold');
     this.threshold = 50; // Default 50 Mbps
     this.alertChannel = null;
     this.client = null;

@@ -15,7 +15,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
  */
 export default class NetworkManagementPlugin extends Plugin {
   constructor() {
-    super('network-management', '1.0.0', 'Network scanning, device management, and WOL');
+    super('1.0.0.0-beta', '1.0.0', 'Network scanning, device management, and WOL');
     this.networkDevices = [];
     this.lastScanTime = null;
   }

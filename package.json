@@ -1,6 +1,6 @@
 {
   "name": "discord-maid-bot",
-  "version": "1.0.0",
+  "version": "1.0.0.0-beta",
   "description": "AI-powered Discord maid bot with network management, WoL, speedtest, web research, and SMB storage",
   "main": "index.js",
   "type": "module",

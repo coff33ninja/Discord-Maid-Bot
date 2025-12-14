@@ -14,7 +14,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
  */
 export default class PersonalityPlugin extends Plugin {
   constructor() {
-    super('personality', '1.0.0', 'Bot personality management system');
+    super('1.0.0.0-beta', '1.0.0', 'Bot personality management system');
   }
   
   async onLoad() {

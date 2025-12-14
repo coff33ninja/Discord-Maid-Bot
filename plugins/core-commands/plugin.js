@@ -13,7 +13,7 @@ import { Plugin } from '../../src/core/plugin-system.js';
 export default class CoreCommandsPlugin extends Plugin {
   constructor() {
     super(
-      'core-commands',
+      '1.0.0.0-beta',
       '1.0.0',
       'Essential bot commands (help, stats, ping, dashboard, plugin management)'
     );

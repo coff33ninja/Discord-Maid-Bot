@@ -17,7 +17,7 @@ import { generateWithRotation } from '../../src/config/gemini-keys.js';
  */
 export default class ResearchPlugin extends Plugin {
   constructor() {
-    super('research', '1.0.0', 'AI-powered research and web search');
+    super('1.0.0.0-beta', '1.0.0', 'AI-powered research and web search');
   }
   
   async onLoad() {
