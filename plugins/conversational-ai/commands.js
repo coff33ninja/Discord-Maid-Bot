@@ -5,23 +5,43 @@
  */
 
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { chatOps } from '../../src/database/db.js';
+import { chatOps, configOps } from '../../src/database/db.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
-import { getPersonality } from '../../src/config/personalities.js';
 
-// Import personality helper from personality plugin
+// Get personality functions from personality plugin
 // Note: This creates a soft dependency - chat works even if personality plugin is disabled
-let getUserPersonality;
-try {
-  const personalityPlugin = await import('../personality/commands.js');
-  getUserPersonality = personalityPlugin.getUserPersonality;
-} catch (error) {
+async function getPersonalityPlugin() {
+  try {
+    const { getPlugin } = await import('../../src/core/plugin-system.js');
+    return getPlugin('personality');
+  } catch (e) {
+    return null;
+  }
+}
+
+async function getUserPersonality(userId) {
+  const personalityPlugin = await getPersonalityPlugin();
+  if (personalityPlugin) {
+    return personalityPlugin.getUserPersonality(userId);
+  }
+  
   // Fallback if personality plugin not available
-  const { configOps } = await import('../../src/database/db.js');
-  const { DEFAULT_PERSONALITY } = await import('../../src/config/personalities.js');
-  getUserPersonality = (userId) => {
-    const saved = configOps.get(`personality_${userId}`);
-    return saved || DEFAULT_PERSONALITY;
+  const saved = configOps.get(`personality_${userId}`);
+  return saved || 'maid';
+}
+
+async function getPersonality(key) {
+  const personalityPlugin = await getPersonalityPlugin();
+  if (personalityPlugin) {
+    return personalityPlugin.getPersonality(key);
+  }
+  
+  // Fallback - return basic maid personality
+  return {
+    name: 'Maid',
+    emoji: '🌸',
+    description: 'Polite and helpful',
+    prompt: 'You are a helpful AI assistant.'
   };
 }
 

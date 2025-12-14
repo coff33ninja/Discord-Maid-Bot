@@ -6,7 +6,7 @@
 
 import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
 import { configOps } from '../../src/database/db.js';
-import { getPersonality, getPersonalityOptions, DEFAULT_PERSONALITY } from '../../src/config/personalities.js';
+import { getPersonality, getPersonalityOptions, DEFAULT_PERSONALITY } from './personalities.js';
 
 // Helper functions
 function getUserPersonality(userId) {

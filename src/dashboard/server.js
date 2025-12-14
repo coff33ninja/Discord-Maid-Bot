@@ -18,9 +18,8 @@ import {
   ROLES
 } from '../auth/auth.js';
 import { getSMBConfig, setSMBConfig, testSMBConnection, toggleSMB, listSMBFiles } from '../config/smb-config.js';
-import { getPersonality, getPersonalityOptions, DEFAULT_PERSONALITY } from '../config/personalities.js';
 import { geminiKeys } from '../config/gemini-keys.js';
-import { getLoadedPlugins, enablePlugin, disablePlugin, reloadPlugin, getPluginStats } from '../core/plugin-system.js';
+import { getLoadedPlugins, enablePlugin, disablePlugin, reloadPlugin, getPluginStats, getPlugin } from '../core/plugin-system.js';
 import { scanUnifiedNetwork, isTailscaleAvailable, getTailscaleStatus } from '../../plugins/network-management/scanner.js';
 import { 
   getEntities, 
@@ -582,15 +581,23 @@ export function startDashboard(port = 3000) {
 
   // Personality Settings
   app.get('/api/personalities', requireAuth, (req, res) => {
-    const options = getPersonalityOptions();
+    const personalityPlugin = getPlugin('personality');
+    if (!personalityPlugin) {
+      return res.status(503).json({ error: 'Personality plugin not available' });
+    }
+    const options = personalityPlugin.getPersonalityOptions();
     res.json(options);
   });
   
   app.get('/api/personality/:discordUserId', requireAuth, (req, res) => {
+    const personalityPlugin = getPlugin('personality');
+    if (!personalityPlugin) {
+      return res.status(503).json({ error: 'Personality plugin not available' });
+    }
+    
     const { discordUserId } = req.params;
-    const saved = configOps.get(`personality_${discordUserId}`);
-    const personalityKey = saved || DEFAULT_PERSONALITY;
-    const personality = getPersonality(personalityKey);
+    const personalityKey = personalityPlugin.getUserPersonality(discordUserId);
+    const personality = personalityPlugin.getPersonality(personalityKey);
     res.json({ 
       key: personalityKey, 
       ...personality 
@@ -599,11 +606,16 @@ export function startDashboard(port = 3000) {
   
   app.post('/api/personality/:discordUserId', requireAuth, (req, res) => {
     try {
+      const personalityPlugin = getPlugin('personality');
+      if (!personalityPlugin) {
+        return res.status(503).json({ error: 'Personality plugin not available' });
+      }
+      
       const { discordUserId } = req.params;
       const { personality } = req.body;
       
       // Validate personality exists
-      const personalityData = getPersonality(personality);
+      const personalityData = personalityPlugin.getPersonality(personality);
       if (!personalityData) {
         return res.status(400).json({ error: 'Invalid personality' });
       }

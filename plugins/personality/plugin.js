@@ -1,4 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
+import { PERSONALITIES, getPersonality, getPersonalityOptions, DEFAULT_PERSONALITY } from './personalities.js';
 
 /**
  * Personality Plugin
@@ -11,18 +12,47 @@ import { Plugin } from '../../src/core/plugin-system.js';
  * - Per-user personality preferences
  * - Personality preview and switching
  * - Integration with conversational AI
+ * 
+ * API for other plugins:
+ * - getPersonality(key) - Get personality data by key
+ * - getPersonalityOptions() - Get all available personalities
+ * - getUserPersonality(userId) - Get user's selected personality
+ * - DEFAULT_PERSONALITY - Default personality key
  */
 export default class PersonalityPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'Bot personality management system');
+    super('personality', '1.0.0.0-beta', 'Bot personality management system');
   }
   
   async onLoad() {
     console.log('🎭 Personality plugin loaded');
-    console.log('   10 personalities available');
+    console.log(`   ${Object.keys(PERSONALITIES).length} personalities available`);
   }
   
   async onUnload() {
     console.log('🎭 Personality plugin unloaded');
+  }
+  
+  // Public API for other plugins
+  getPersonality(key) {
+    return getPersonality(key);
+  }
+  
+  getPersonalityOptions() {
+    return getPersonalityOptions();
+  }
+  
+  getUserPersonality(userId) {
+    const { configOps } = require('../../src/database/db.js');
+    const saved = configOps.get(`personality_${userId}`);
+    return saved || DEFAULT_PERSONALITY;
+  }
+  
+  getDefaultPersonality() {
+    return DEFAULT_PERSONALITY;
+  }
+  
+  getAllPersonalities() {
+    return PERSONALITIES;
   }
 }
