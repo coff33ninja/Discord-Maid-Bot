@@ -1,0 +1,13 @@
+[Unit]
+Description=System Maintenance (Updates and Upgrades)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/system-maintenance.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
