@@ -251,6 +251,19 @@ export async function handleCommandInteraction(interaction) {
       }
     }
 
+    // Route research commands to research plugin
+    if (commandName === 'research') {
+      try {
+        const { handleCommand } = await import('./plugins/research/commands.js');
+        const subcommand = interaction.options.getSubcommand();
+        const handled = await handleCommand(interaction, commandName, subcommand);
+        if (handled) return;
+      } catch (error) {
+        console.error('Research plugin error:', error);
+        // Fall through to show refactor message
+      }
+    }
+
     // HELP COMMAND (temporary - will move to core-commands plugin)
     if (commandName === 'help') {
       const embed = new EmbedBuilder()
