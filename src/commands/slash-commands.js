@@ -187,63 +187,8 @@ export const commands = [
   new SlashCommandBuilder()
     .setName('automation')
     .setDescription('⚙️ Automation and triggers')
-    // Plugin commands (speedalert, devicetrigger, health) are injected dynamically
-    .addSubcommandGroup(group =>
-      group
-        .setName('schedule')
-        .setDescription('Task scheduling')
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('add')
-            .setDescription('Add scheduled task')
-            .addStringOption(option =>
-              option.setName('name')
-                .setDescription('Task name')
-                .setRequired(true))
-            .addStringOption(option =>
-              option.setName('cron')
-                .setDescription('Cron expression (e.g., "0 9 * * *")')
-                .setRequired(true))
-            .addStringOption(option =>
-              option.setName('command')
-                .setDescription('Command to run')
-                .setRequired(true)
-                .addChoices(
-                  { name: 'Network Scan', value: 'scan' },
-                  { name: 'Speed Test', value: 'speedtest' },
-                  { name: 'Weather Update', value: 'weather' }
-                ))
-            .addChannelOption(option =>
-              option.setName('channel')
-                .setDescription('Channel to post results')))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('list')
-            .setDescription('List all scheduled tasks'))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('remove')
-            .setDescription('Remove a scheduled task')
-            .addStringOption(option =>
-              option.setName('name')
-                .setDescription('Task name')
-                .setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('enable')
-            .setDescription('Enable a task')
-            .addStringOption(option =>
-              option.setName('name')
-                .setDescription('Task name')
-                .setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('disable')
-            .setDescription('Disable a task')
-            .addStringOption(option =>
-              option.setName('name')
-                .setDescription('Task name')
-                .setRequired(true)))),
+    // Plugin commands (speedalert, devicetrigger, health, schedule) are injected dynamically
+    ,
 
   // /research - Research & Search
   new SlashCommandBuilder()
