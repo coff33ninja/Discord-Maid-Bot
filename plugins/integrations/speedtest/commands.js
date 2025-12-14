@@ -39,17 +39,17 @@ async function handleSpeedTestCommand(interaction) {
   await interaction.deferReply();
   
   try {
-    // Get plugin instance
+    // Get plugin instance through integrations parent
     const { getPlugin } = await import('../../../src/core/plugin-system.js');
-    const speedTestPlugin = getPlugin('integrations/speedtest');
+    const integrationsPlugin = getPlugin('integrations');
     
-    if (!speedTestPlugin) {
+    if (!integrationsPlugin || !integrationsPlugin.speedtest) {
       await interaction.editReply('❌ Speed test plugin not available!');
       return true;
     }
     
     const userId = interaction.user.id;
-    const result = await speedTestPlugin.runSpeedtest(userId);
+    const result = await integrationsPlugin.speedtest.runSpeedtest(userId);
     
     const embed = new EmbedBuilder()
       .setColor('#FF6B6B')
@@ -83,16 +83,16 @@ async function handleSpeedHistoryCommand(interaction) {
   await interaction.deferReply();
   
   try {
-    // Get plugin instance
+    // Get plugin instance through integrations parent
     const { getPlugin } = await import('../../../src/core/plugin-system.js');
-    const speedTestPlugin = getPlugin('integrations/speedtest');
+    const integrationsPlugin = getPlugin('integrations');
     
-    if (!speedTestPlugin) {
+    if (!integrationsPlugin || !integrationsPlugin.speedtest) {
       await interaction.editReply('❌ Speed test plugin not available!');
       return true;
     }
     
-    const history = speedTestPlugin.getHistory(10);
+    const history = integrationsPlugin.speedtest.getHistory(10);
     
     if (history.length === 0) {
       await interaction.editReply('📊 No speed test history yet! Run `/network speedtest` first.');
@@ -133,11 +133,11 @@ async function handleSpeedHistoryCommand(interaction) {
 // Export speed test function for use by other plugins (e.g., automation)
 export async function runSpeedtest(userId = null) {
   const { getPlugin } = await import('../../../src/core/plugin-system.js');
-  const speedTestPlugin = getPlugin('integrations');
+  const integrationsPlugin = getPlugin('integrations');
   
-  if (!speedTestPlugin) {
+  if (!integrationsPlugin || !integrationsPlugin.speedtest) {
     throw new Error('Speed test plugin not available');
   }
   
-  return await speedTestPlugin.runSpeedtest(userId);
+  return await integrationsPlugin.speedtest.runSpeedtest(userId);
 }

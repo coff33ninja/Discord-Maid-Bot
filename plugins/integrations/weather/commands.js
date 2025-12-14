@@ -34,16 +34,16 @@ export async function handleCommand(interaction, commandName, subcommand) {
   try {
     const city = interaction.options.getString('city') || 'Cape Town';
     
-    // Get plugin instance
+    // Get plugin instance through integrations parent
     const { getPlugin } = await import('../../../src/core/plugin-system.js');
-    const weatherPlugin = getPlugin('integrations/weather');
+    const integrationsPlugin = getPlugin('integrations');
     
-    if (!weatherPlugin) {
+    if (!integrationsPlugin || !integrationsPlugin.weather) {
       await interaction.editReply('❌ Weather plugin not available!');
       return true;
     }
     
-    const weather = await weatherPlugin.getWeather(city);
+    const weather = await integrationsPlugin.weather.getWeather(city);
     
     const embed = new EmbedBuilder()
       .setColor('#87CEEB')
@@ -83,11 +83,11 @@ export async function handleCommand(interaction, commandName, subcommand) {
 // Export weather function for use by other plugins (e.g., automation)
 export async function getWeather(city = 'Cape Town') {
   const { getPlugin } = await import('../../../src/core/plugin-system.js');
-  const weatherPlugin = getPlugin('integrations/weather');
+  const integrationsPlugin = getPlugin('integrations');
   
-  if (!weatherPlugin) {
+  if (!integrationsPlugin || !integrationsPlugin.weather) {
     throw new Error('Weather plugin not available');
   }
   
-  return await weatherPlugin.getWeather(city);
+  return await integrationsPlugin.weather.getWeather(city);
 }
