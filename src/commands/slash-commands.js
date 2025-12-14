@@ -214,113 +214,11 @@ export const commands = [
                 .setRequired(true)))),
 
   // ============================================
-  // STANDALONE COMMANDS
+  // STANDALONE COMMANDS - NOW IN PLUGINS
   // ============================================
   
-  // weather command now provided by integrations/weather plugin
-
-  new SlashCommandBuilder()
-    .setName('homeassistant')
-    .setDescription('🏠 Control Home Assistant devices')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('lights')
-        .setDescription('List all lights'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('light')
-        .setDescription('Control a light')
-        .addStringOption(option =>
-          option.setName('entity')
-            .setDescription('Entity ID (e.g., light.living_room)')
-            .setRequired(true)
-            .setAutocomplete(true))
-        .addBooleanOption(option =>
-          option.setName('state')
-            .setDescription('Turn on or off')
-            .setRequired(true))
-        .addIntegerOption(option =>
-          option.setName('brightness')
-            .setDescription('Brightness (0-255)')
-            .setMinValue(0)
-            .setMaxValue(255)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('switches')
-        .setDescription('List all switches'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('switch')
-        .setDescription('Control a switch')
-        .addStringOption(option =>
-          option.setName('entity')
-            .setDescription('Entity ID (e.g., switch.fan)')
-            .setRequired(true)
-            .setAutocomplete(true))
-        .addBooleanOption(option =>
-          option.setName('state')
-            .setDescription('Turn on or off')
-            .setRequired(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('sensors')
-        .setDescription('List all sensors'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('sensor')
-        .setDescription('Read a sensor')
-        .addStringOption(option =>
-          option.setName('entity')
-            .setDescription('Entity ID (e.g., sensor.temperature)')
-            .setRequired(true)
-            .setAutocomplete(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('esp')
-        .setDescription('List ESP devices'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('diagnose')
-        .setDescription('Run Home Assistant diagnostics'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('scenes')
-        .setDescription('List all scenes'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('scene')
-        .setDescription('Activate a scene (Admin only)')
-        .addStringOption(option =>
-          option.setName('entity')
-            .setDescription('Scene entity ID (e.g., scene.movie_time)')
-            .setRequired(true)
-            .setAutocomplete(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('automations')
-        .setDescription('List all automations'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('automation')
-        .setDescription('Trigger an automation (Admin only)')
-        .addStringOption(option =>
-          option.setName('entity')
-            .setDescription('Automation entity ID (e.g., automation.lights_on)')
-            .setRequired(true)
-            .setAutocomplete(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('scripts')
-        .setDescription('List all scripts'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('script')
-        .setDescription('Run a script (Admin only)')
-        .addStringOption(option =>
-          option.setName('entity')
-            .setDescription('Script entity ID (e.g., script.goodnight)')
-            .setRequired(true)
-            .setAutocomplete(true))),
+  // /weather - NOW DEFINED IN plugins/integrations/weather/commands.js
+  // /homeassistant - NOW DEFINED IN plugins/integrations/homeassistant/commands.js
 ];
 
 // Register commands with Discord
@@ -472,40 +370,55 @@ async function loadStandalonePluginCommands() {
     const __dirname = path.dirname(__filename);
     const pluginsDir = path.join(__dirname, '../../plugins');
     
+    // Helper to load commands from a directory
+    async function loadFromDir(dirPath, pluginName) {
+      const commandsPath = path.join(dirPath, 'commands.js');
+      try {
+        await fs.access(commandsPath);
+        
+        const commandsUrl = pathToFileURL(commandsPath).href;
+        const commandsModule = await import(`${commandsUrl}?t=${Date.now()}`);
+        
+        if (commandsModule.parentCommand === null) {
+          if (commandsModule.commands && Array.isArray(commandsModule.commands)) {
+            standaloneCommands.push({
+              pluginName,
+              commands: commandsModule.commands
+            });
+          } else if (commandsModule.commandGroup) {
+            standaloneCommands.push({
+              pluginName,
+              commands: [commandsModule.commandGroup]
+            });
+          }
+        }
+      } catch (err) {
+        // No commands.js or error loading - skip
+      }
+    }
+    
     const files = await fs.readdir(pluginsDir);
     
     for (const file of files) {
-      // Check if it's a directory
       const filePath = path.join(pluginsDir, file);
       const stats = await fs.stat(filePath);
       
       if (stats.isDirectory()) {
-        // Check if commands.js exists
-        const commandsPath = path.join(filePath, 'commands.js');
+        // Load from main plugin directory
+        await loadFromDir(filePath, file);
+        
+        // Also check for subplugins (e.g., integrations/homeassistant)
         try {
-          await fs.access(commandsPath);
-          
-          // Load the commands module
-          const commandsUrl = pathToFileURL(commandsPath).href;
-          const commandsModule = await import(`${commandsUrl}?t=${Date.now()}`);
-          
-          // Check if it's a standalone command (parentCommand = null)
-          if (commandsModule.parentCommand === null) {
-            // Support both 'commands' array and single 'commandGroup'
-            if (commandsModule.commands && Array.isArray(commandsModule.commands)) {
-              standaloneCommands.push({
-                pluginName: file,
-                commands: commandsModule.commands
-              });
-            } else if (commandsModule.commandGroup) {
-              standaloneCommands.push({
-                pluginName: file,
-                commands: [commandsModule.commandGroup]
-              });
+          const subFiles = await fs.readdir(filePath);
+          for (const subFile of subFiles) {
+            const subPath = path.join(filePath, subFile);
+            const subStats = await fs.stat(subPath);
+            if (subStats.isDirectory()) {
+              await loadFromDir(subPath, `${file}/${subFile}`);
             }
           }
         } catch (err) {
-          // No commands.js or error loading - skip
+          // Can't read subdirectories - skip
         }
       }
     }

@@ -4,15 +4,46 @@
  * Handles Home Assistant device control commands.
  */
 
-import { EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createLogger } from '../../../src/logging/logger.js';
 
 const logger = createLogger('homeassistant-commands');
 
-// This is a standalone command
+// Standalone plugin - defines its own commands
 export const parentCommand = null;
-export const commandGroup = null;
 export const handlesCommands = ['homeassistant'];
+
+/**
+ * Command definitions - /homeassistant
+ */
+export const commands = [
+  new SlashCommandBuilder()
+    .setName('homeassistant')
+    .setDescription('🏠 Control Home Assistant devices')
+    .addSubcommand(sub => sub.setName('lights').setDescription('List all lights'))
+    .addSubcommand(sub => sub.setName('light').setDescription('Control a light')
+      .addStringOption(opt => opt.setName('entity').setDescription('Entity ID').setRequired(true).setAutocomplete(true))
+      .addBooleanOption(opt => opt.setName('state').setDescription('Turn on or off').setRequired(true))
+      .addIntegerOption(opt => opt.setName('brightness').setDescription('Brightness (0-255)').setMinValue(0).setMaxValue(255)))
+    .addSubcommand(sub => sub.setName('switches').setDescription('List all switches'))
+    .addSubcommand(sub => sub.setName('switch').setDescription('Control a switch')
+      .addStringOption(opt => opt.setName('entity').setDescription('Entity ID').setRequired(true).setAutocomplete(true))
+      .addBooleanOption(opt => opt.setName('state').setDescription('Turn on or off').setRequired(true)))
+    .addSubcommand(sub => sub.setName('sensors').setDescription('List all sensors'))
+    .addSubcommand(sub => sub.setName('sensor').setDescription('Read a sensor')
+      .addStringOption(opt => opt.setName('entity').setDescription('Entity ID').setRequired(true).setAutocomplete(true)))
+    .addSubcommand(sub => sub.setName('esp').setDescription('List ESP devices'))
+    .addSubcommand(sub => sub.setName('diagnose').setDescription('Run Home Assistant diagnostics'))
+    .addSubcommand(sub => sub.setName('scenes').setDescription('List all scenes'))
+    .addSubcommand(sub => sub.setName('scene').setDescription('Activate a scene')
+      .addStringOption(opt => opt.setName('entity').setDescription('Scene entity ID').setRequired(true).setAutocomplete(true)))
+    .addSubcommand(sub => sub.setName('automations').setDescription('List all automations'))
+    .addSubcommand(sub => sub.setName('automation').setDescription('Trigger an automation')
+      .addStringOption(opt => opt.setName('entity').setDescription('Automation entity ID').setRequired(true).setAutocomplete(true)))
+    .addSubcommand(sub => sub.setName('scripts').setDescription('List all scripts'))
+    .addSubcommand(sub => sub.setName('script').setDescription('Run a script')
+      .addStringOption(opt => opt.setName('entity').setDescription('Script entity ID').setRequired(true).setAutocomplete(true)))
+];
 
 /**
  * Handle homeassistant commands
