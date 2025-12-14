@@ -4,19 +4,63 @@
  * Handles AI-powered research and web search functionality.
  */
 
-import { EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createLogger } from '../../src/logging/logger.js';
 
 const logger = createLogger('research');
 
-// These are subcommands under /research
-export const parentCommand = 'research';
+// Standalone plugin - defines its own commands
+export const parentCommand = null;
 
 // Commands this plugin handles (for routing)
 export const handlesCommands = ['research'];
 
-// We'll handle multiple subcommands via bridge routing
-export const commandGroup = null; // Special case - handled in bridge
+/**
+ * Command definitions - /research
+ */
+export const commands = [
+  new SlashCommandBuilder()
+    .setName('research')
+    .setDescription('🔎 Research and search tools')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('query')
+        .setDescription('Research a topic with AI')
+        .addStringOption(option =>
+          option.setName('query')
+            .setDescription('What to research')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('history')
+        .setDescription('View past research')
+        .addIntegerOption(option =>
+          option.setName('limit')
+            .setDescription('Number of results')
+            .setMinValue(5)
+            .setMaxValue(50)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('search')
+        .setDescription('Search through past research')
+        .addStringOption(option =>
+          option.setName('query')
+            .setDescription('Search terms')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('web')
+        .setDescription('Search the web (DuckDuckGo)')
+        .addStringOption(option =>
+          option.setName('query')
+            .setDescription('What to search for')
+            .setRequired(true))
+        .addIntegerOption(option =>
+          option.setName('results')
+            .setDescription('Number of results (1-10)')
+            .setMinValue(1)
+            .setMaxValue(10)))
+];
 
 /**
  * Handle research commands

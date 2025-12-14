@@ -4,19 +4,48 @@
  * Handles all game-related commands and game management.
  */
 
-import { EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createLogger } from '../../src/logging/logger.js';
 
 const logger = createLogger('games');
 
-// These are subcommands under /game
-export const parentCommand = 'game';
+// Standalone plugin - defines its own commands
+export const parentCommand = null;
 
 // Commands this plugin handles (for routing)
 export const handlesCommands = ['game'];
 
-// We'll handle multiple game subcommands via bridge routing
-export const commandGroup = null; // Special case - handled in bridge
+/**
+ * Command definitions - /game (18 games)
+ */
+export const commands = [
+  new SlashCommandBuilder()
+    .setName('game')
+    .setDescription('🎮 Play games')
+    .addSubcommand(sub => sub.setName('trivia').setDescription('Trivia game'))
+    .addSubcommand(sub => sub.setName('hangman').setDescription('Hangman game'))
+    .addSubcommand(sub => sub.setName('wordchain').setDescription('Word chain game'))
+    .addSubcommand(sub => sub.setName('tictactoe').setDescription('Tic Tac Toe')
+      .addUserOption(opt => opt.setName('opponent').setDescription('Player to challenge').setRequired(true)))
+    .addSubcommand(sub => sub.setName('connect4').setDescription('Connect Four')
+      .addUserOption(opt => opt.setName('opponent').setDescription('Player to challenge').setRequired(true)))
+    .addSubcommand(sub => sub.setName('rps').setDescription('Rock Paper Scissors')
+      .addUserOption(opt => opt.setName('opponent').setDescription('Player to challenge').setRequired(true)))
+    .addSubcommand(sub => sub.setName('numguess').setDescription('Number guessing game'))
+    .addSubcommand(sub => sub.setName('riddle').setDescription('Riddle game'))
+    .addSubcommand(sub => sub.setName('20questions').setDescription('20 Questions with AI'))
+    .addSubcommand(sub => sub.setName('emojidecode').setDescription('Guess from emojis'))
+    .addSubcommand(sub => sub.setName('wouldyourather').setDescription('Would You Rather'))
+    .addSubcommand(sub => sub.setName('caption').setDescription('Caption contest'))
+    .addSubcommand(sub => sub.setName('acronym').setDescription('Acronym game'))
+    .addSubcommand(sub => sub.setName('story').setDescription('Collaborative story builder'))
+    .addSubcommand(sub => sub.setName('mathblitz').setDescription('Math blitz'))
+    .addSubcommand(sub => sub.setName('reaction').setDescription('Reaction race'))
+    .addSubcommand(sub => sub.setName('mafia').setDescription('Mafia/Werewolf game'))
+    .addSubcommand(sub => sub.setName('stats').setDescription('View your game statistics'))
+    .addSubcommand(sub => sub.setName('stop').setDescription('Stop the current game'))
+    .addSubcommand(sub => sub.setName('leaderboard').setDescription('View the games leaderboard'))
+];
 
 /**
  * Handle game commands

@@ -1,476 +1,23 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
 // Command definitions
+// NOTE: Many commands are now defined in plugins and loaded dynamically
+// See plugins/*/commands.js for command definitions
 export const commands = [
   // ============================================
-  // UNIFIED COMMANDS (New Structure)
+  // COMMANDS DEFINED HERE (will be moved to plugins)
   // ============================================
   
-  // /network - Network Operations
-  new SlashCommandBuilder()
-    .setName('network')
-    .setDescription('🌐 Network operations and monitoring')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('scan')
-        .setDescription('Scan network for devices'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('devices')
-        .setDescription('List all known devices')
-        .addStringOption(option =>
-          option.setName('filter')
-            .setDescription('Filter devices')
-            .addChoices(
-              { name: 'Online Only', value: 'online' },
-              { name: 'Offline Only', value: 'offline' },
-              { name: 'All Devices', value: 'all' }
-            )))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('wol')
-        .setDescription('Wake device with Wake-on-LAN')
-        .addStringOption(option =>
-          option.setName('device')
-            .setDescription('Device to wake')
-            .setRequired(true)
-            .setAutocomplete(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('speedtest')
-        .setDescription('Run internet speed test'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('speedhistory')
-        .setDescription('View speed test history')
-        .addIntegerOption(option =>
-          option.setName('days')
-            .setDescription('Number of days to show')
-            .setMinValue(1)
-            .setMaxValue(30))),
-
-  // /device - Device Management
-  new SlashCommandBuilder()
-    .setName('device')
-    .setDescription('📱 Device management and configuration')
-    .addSubcommandGroup(group =>
-      group
-        .setName('group')
-        .setDescription('Manage device groups')
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('assign')
-            .setDescription('Assign device to a group')
-            .addStringOption(option =>
-              option.setName('device')
-                .setDescription('Device to assign')
-                .setRequired(true)
-                .setAutocomplete(true))
-            .addStringOption(option =>
-              option.setName('group')
-                .setDescription('Group name')
-                .setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('addmultiple')
-            .setDescription('Add multiple devices to a group')
-            .addStringOption(option =>
-              option.setName('group')
-                .setDescription('Group name')
-                .setRequired(true))
-            .addStringOption(option =>
-              option.setName('device1')
-                .setDescription('First device')
-                .setRequired(true)
-                .setAutocomplete(true))
-            .addStringOption(option =>
-              option.setName('device2')
-                .setDescription('Second device')
-                .setAutocomplete(true))
-            .addStringOption(option =>
-              option.setName('device3')
-                .setDescription('Third device')
-                .setAutocomplete(true))
-            .addStringOption(option =>
-              option.setName('device4')
-                .setDescription('Fourth device')
-                .setAutocomplete(true))
-            .addStringOption(option =>
-              option.setName('device5')
-                .setDescription('Fifth device')
-                .setAutocomplete(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('assignpattern')
-            .setDescription('Assign devices by name pattern')
-            .addStringOption(option =>
-              option.setName('group')
-                .setDescription('Group name')
-                .setRequired(true))
-            .addStringOption(option =>
-              option.setName('pattern')
-                .setDescription('Pattern to match')
-                .setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('assignall')
-            .setDescription('Assign all devices matching filter')
-            .addStringOption(option =>
-              option.setName('group')
-                .setDescription('Group name')
-                .setRequired(true))
-            .addStringOption(option =>
-              option.setName('filter')
-                .setDescription('Which devices to add')
-                .setRequired(true)
-                .addChoices(
-                  { name: 'All Online Devices', value: 'online' },
-                  { name: 'All Offline Devices', value: 'offline' },
-                  { name: 'All Devices', value: 'all' },
-                  { name: 'Local Network Only', value: 'local' },
-                  { name: 'Tailscale Only', value: 'tailscale' }
-                )))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('list')
-            .setDescription('List all groups'))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('view')
-            .setDescription('View devices in a group')
-            .addStringOption(option =>
-              option.setName('group')
-                .setDescription('Group name')
-                .setRequired(true)
-                .setAutocomplete(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('remove')
-            .setDescription('Remove device from its group')
-            .addStringOption(option =>
-              option.setName('device')
-                .setDescription('Device to remove')
-                .setRequired(true)
-                .setAutocomplete(true))))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('config')
-        .setDescription('Configure device properties')
-        .addStringOption(option =>
-          option.setName('device')
-            .setDescription('Device to configure')
-            .setRequired(true)
-            .setAutocomplete(true))
-        .addStringOption(option =>
-          option.setName('name')
-            .setDescription('Friendly name'))
-        .addStringOption(option =>
-          option.setName('emoji')
-            .setDescription('Emoji (e.g., 🎮 💻 📱)'))
-        .addStringOption(option =>
-          option.setName('group')
-            .setDescription('Group name')))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('list')
-        .setDescription('List all known devices')
-        .addStringOption(option =>
-          option.setName('filter')
-            .setDescription('Filter devices')
-            .addChoices(
-              { name: 'Online Only', value: 'online' },
-              { name: 'Offline Only', value: 'offline' },
-              { name: 'All Devices', value: 'all' }
-            ))),
-
-  // /automation - Automation & Triggers
+  // /automation - Automation & Triggers (parent for plugin subcommands)
   new SlashCommandBuilder()
     .setName('automation')
-    .setDescription('⚙️ Automation and triggers')
+    .setDescription('⚙️ Automation and triggers'),
     // Plugin commands (speedalert, devicetrigger, health, schedule) are injected dynamically
-    ,
 
-  // /research - Research & Search
-  new SlashCommandBuilder()
-    .setName('research')
-    .setDescription('🔎 Research and search tools')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('query')
-        .setDescription('Research a topic with AI')
-        .addStringOption(option =>
-          option.setName('query')
-            .setDescription('What to research')
-            .setRequired(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('history')
-        .setDescription('View past research')
-        .addIntegerOption(option =>
-          option.setName('limit')
-            .setDescription('Number of results')
-            .setMinValue(5)
-            .setMaxValue(50)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('search')
-        .setDescription('Search through past research')
-        .addStringOption(option =>
-          option.setName('query')
-            .setDescription('Search terms')
-            .setRequired(true))
-        .addIntegerOption(option =>
-          option.setName('id')
-            .setDescription('View full result by ID')))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('web')
-        .setDescription('Search the web (DuckDuckGo)')
-        .addStringOption(option =>
-          option.setName('query')
-            .setDescription('What to search for')
-            .setRequired(true))
-        .addIntegerOption(option =>
-          option.setName('results')
-            .setDescription('Number of results (1-10)')
-            .setMinValue(1)
-            .setMaxValue(10))),
-
-  // /game - Games (18 games consolidated)
-  new SlashCommandBuilder()
-    .setName('game')
-    .setDescription('🎮 Play games')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('trivia')
-        .setDescription('Trivia game')
-        .addStringOption(option =>
-          option.setName('category')
-            .setDescription('Category')
-            .addChoices(
-              { name: 'General Knowledge', value: 'general' },
-              { name: 'Science', value: 'science' },
-              { name: 'History', value: 'history' },
-              { name: 'Geography', value: 'geography' },
-              { name: 'Entertainment', value: 'entertainment' },
-              { name: 'Sports', value: 'sports' },
-              { name: 'Random', value: 'random' }
-            ))
-        .addStringOption(option =>
-          option.setName('difficulty')
-            .setDescription('Difficulty')
-            .addChoices(
-              { name: 'Easy', value: 'easy' },
-              { name: 'Medium', value: 'medium' },
-              { name: 'Hard', value: 'hard' }
-            ))
-        .addIntegerOption(option =>
-          option.setName('rounds')
-            .setDescription('Number of rounds')
-            .setMinValue(1)
-            .setMaxValue(20)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('hangman')
-        .setDescription('Hangman game')
-        .addStringOption(option =>
-          option.setName('category')
-            .setDescription('Word category')
-            .addChoices(
-              { name: 'Animals', value: 'animals' },
-              { name: 'Countries', value: 'countries' },
-              { name: 'Movies', value: 'movies' },
-              { name: 'Random', value: 'random' }
-            ))
-        .addStringOption(option =>
-          option.setName('difficulty')
-            .setDescription('Difficulty')
-            .addChoices(
-              { name: 'Easy', value: 'easy' },
-              { name: 'Medium', value: 'medium' },
-              { name: 'Hard', value: 'hard' }
-            )))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('wordchain')
-        .setDescription('Word chain game')
-        .addIntegerOption(option =>
-          option.setName('rounds')
-            .setDescription('Number of rounds')
-            .setMinValue(5)
-            .setMaxValue(50))
-        .addBooleanOption(option =>
-          option.setName('trust_mode')
-            .setDescription('Trust mode (no validation)'))
-        .addBooleanOption(option =>
-          option.setName('hints')
-            .setDescription('Enable hints')))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('tictactoe')
-        .setDescription('Tic Tac Toe')
-        .addUserOption(option =>
-          option.setName('opponent')
-            .setDescription('Player to challenge')
-            .setRequired(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('connect4')
-        .setDescription('Connect Four')
-        .addUserOption(option =>
-          option.setName('opponent')
-            .setDescription('Player to challenge')
-            .setRequired(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('rps')
-        .setDescription('Rock Paper Scissors')
-        .addUserOption(option =>
-          option.setName('opponent')
-            .setDescription('Player to challenge')
-            .setRequired(true))
-        .addIntegerOption(option =>
-          option.setName('rounds')
-            .setDescription('Best of')
-            .addChoices(
-              { name: 'Best of 3', value: 3 },
-              { name: 'Best of 5', value: 5 },
-              { name: 'Best of 7', value: 7 }
-            )))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('numguess')
-        .setDescription('Number guessing game')
-        .addIntegerOption(option =>
-          option.setName('max')
-            .setDescription('Maximum number')
-            .setMinValue(10)
-            .setMaxValue(1000)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('riddle')
-        .setDescription('Riddle game')
-        .addStringOption(option =>
-          option.setName('difficulty')
-            .setDescription('Difficulty')
-            .addChoices(
-              { name: 'Easy', value: 'easy' },
-              { name: 'Medium', value: 'medium' },
-              { name: 'Hard', value: 'hard' }
-            )))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('20questions')
-        .setDescription('20 Questions with AI')
-        .addStringOption(option =>
-          option.setName('category')
-            .setDescription('Category')
-            .addChoices(
-              { name: 'Animals', value: 'animals' },
-              { name: 'Objects', value: 'objects' },
-              { name: 'People', value: 'people' },
-              { name: 'Places', value: 'places' },
-              { name: 'Random', value: 'random' }
-            )))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('emojidecode')
-        .setDescription('Guess from emojis')
-        .addStringOption(option =>
-          option.setName('category')
-            .setDescription('Category')
-            .addChoices(
-              { name: 'Movies', value: 'movies' },
-              { name: 'Songs', value: 'songs' },
-              { name: 'Books', value: 'books' },
-              { name: 'Random', value: 'random' }
-            )))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('wouldyourather')
-        .setDescription('Would You Rather')
-        .addStringOption(option =>
-          option.setName('category')
-            .setDescription('Category')
-            .addChoices(
-              { name: 'Funny', value: 'funny' },
-              { name: 'Serious', value: 'serious' },
-              { name: 'Random', value: 'random' }
-            )))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('caption')
-        .setDescription('Caption contest'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('acronym')
-        .setDescription('Acronym game')
-        .addIntegerOption(option =>
-          option.setName('length')
-            .setDescription('Acronym length')
-            .setMinValue(3)
-            .setMaxValue(6)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('story')
-        .setDescription('Collaborative story builder')
-        .addStringOption(option =>
-          option.setName('genre')
-            .setDescription('Story genre')
-            .addChoices(
-              { name: 'Fantasy', value: 'fantasy' },
-              { name: 'Sci-Fi', value: 'scifi' },
-              { name: 'Horror', value: 'horror' },
-              { name: 'Comedy', value: 'comedy' },
-              { name: 'Random', value: 'random' }
-            ))
-        .addIntegerOption(option =>
-          option.setName('rounds')
-            .setDescription('Number of rounds')
-            .setMinValue(3)
-            .setMaxValue(20)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('mathblitz')
-        .setDescription('Math blitz')
-        .addStringOption(option =>
-          option.setName('difficulty')
-            .setDescription('Difficulty')
-            .addChoices(
-              { name: 'Easy', value: 'easy' },
-              { name: 'Medium', value: 'medium' },
-              { name: 'Hard', value: 'hard' }
-            ))
-        .addIntegerOption(option =>
-          option.setName('rounds')
-            .setDescription('Number of rounds')
-            .setMinValue(5)
-            .setMaxValue(30)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('reaction')
-        .setDescription('Reaction race'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('mafia')
-        .setDescription('Mafia/Werewolf game')
-        .addIntegerOption(option =>
-          option.setName('players')
-            .setDescription('Number of players')
-            .setMinValue(5)
-            .setMaxValue(20)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('stats')
-        .setDescription('View your game statistics'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('stop')
-        .setDescription('Stop the current game in this channel'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('leaderboard')
-        .setDescription('View the games leaderboard')),
+  // /network - NOW DEFINED IN plugins/network-management/commands.js
+  // /device - NOW DEFINED IN plugins/device-management/commands.js
+  // /research - NOW DEFINED IN plugins/research/commands.js
+  // /game - NOW DEFINED IN plugins/games/commands.js
 
   // /bot - Bot Management
   new SlashCommandBuilder()
@@ -805,14 +352,28 @@ async function injectPluginCommands() {
     const { getPluginCommands } = await import('../core/plugin-system.js');
     const pluginCommands = getPluginCommands();
     
-    // Also load standalone commands from plugins
+    // FIRST: Load standalone commands from plugins (these define new top-level commands)
     const standaloneCommands = await loadStandalonePluginCommands();
     
-    if (pluginCommands.length === 0 && standaloneCommands.length === 0) {
-      return;
+    // Add standalone commands FIRST so subcommands can be injected into them
+    if (standaloneCommands.length > 0) {
+      console.log(`📦 Adding ${standaloneCommands.length} standalone plugin command(s)...`);
+      
+      for (const { pluginName, commands: pluginCmds } of standaloneCommands) {
+        for (const cmd of pluginCmds) {
+          // Check if command already exists (avoid duplicates)
+          const existing = commands.find(c => c.name === cmd.name);
+          if (!existing) {
+            commands.push(cmd);
+            console.log(`   ✅ Added /${cmd.name} (${pluginName})`);
+          } else {
+            console.log(`   ⚠️  Skipped /${cmd.name} (already exists)`);
+          }
+        }
+      }
     }
     
-    // Inject subcommand groups into parent commands
+    // THEN: Inject subcommand groups into parent commands (including newly added ones)
     if (pluginCommands.length > 0) {
       console.log(`📦 Injecting ${pluginCommands.length} plugin subcommand(s)...`);
       
@@ -892,18 +453,6 @@ async function injectPluginCommands() {
         }
       }
     }
-    
-    // Add standalone commands from plugins
-    if (standaloneCommands.length > 0) {
-      console.log(`📦 Adding ${standaloneCommands.length} standalone plugin command(s)...`);
-      
-      for (const { pluginName, commands: pluginCmds } of standaloneCommands) {
-        for (const cmd of pluginCmds) {
-          commands.push(cmd);
-          console.log(`   ✅ Added /${cmd.name} (${pluginName})`);
-        }
-      }
-    }
   } catch (error) {
     console.error('Failed to inject plugin commands:', error);
   }
@@ -941,11 +490,19 @@ async function loadStandalonePluginCommands() {
           const commandsModule = await import(`${commandsUrl}?t=${Date.now()}`);
           
           // Check if it's a standalone command (parentCommand = null)
-          if (commandsModule.parentCommand === null && commandsModule.commandGroup) {
-            standaloneCommands.push({
-              pluginName: file,
-              commands: [commandsModule.commandGroup] // Wrap in array for consistency
-            });
+          if (commandsModule.parentCommand === null) {
+            // Support both 'commands' array and single 'commandGroup'
+            if (commandsModule.commands && Array.isArray(commandsModule.commands)) {
+              standaloneCommands.push({
+                pluginName: file,
+                commands: commandsModule.commands
+              });
+            } else if (commandsModule.commandGroup) {
+              standaloneCommands.push({
+                pluginName: file,
+                commands: [commandsModule.commandGroup]
+              });
+            }
           }
         } catch (err) {
           // No commands.js or error loading - skip

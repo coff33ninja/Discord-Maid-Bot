@@ -4,7 +4,7 @@
  * Handles all network-related commands: scan, devices, WOL, config, groups
  */
 
-import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createLogger } from '../../src/logging/logger.js';
 import { deviceOps } from '../../src/database/db.js';
 import { broadcastUpdate } from '../../src/dashboard/server.js';
@@ -69,43 +69,79 @@ async function wakeDevice(mac) {
   });
 }
 
-// This plugin provides subcommands for /network and /device commands
-// Commands are already defined in slash-commands.js, this plugin only provides handlers
-export const parentCommand = null; // Special: multiple parents
-export const commandGroup = null; // Handler-only plugin (commands defined in slash-commands.js)
+// Standalone plugin - defines its own commands
+export const parentCommand = null;
 
-// List of parent commands this plugin handles
-export const handlesCommands = ['network', 'device'];
+// Commands this plugin handles
+export const handlesCommands = ['network'];
+
+/**
+ * Command definitions - /network
+ */
+export const commands = [
+  new SlashCommandBuilder()
+    .setName('network')
+    .setDescription('🌐 Network operations and monitoring')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('scan')
+        .setDescription('Scan network for devices'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('devices')
+        .setDescription('List all known devices')
+        .addStringOption(option =>
+          option.setName('filter')
+            .setDescription('Filter devices')
+            .addChoices(
+              { name: 'Online Only', value: 'online' },
+              { name: 'Offline Only', value: 'offline' },
+              { name: 'All Devices', value: 'all' }
+            )))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('wol')
+        .setDescription('Wake device with Wake-on-LAN')
+        .addStringOption(option =>
+          option.setName('device')
+            .setDescription('Device to wake')
+            .setRequired(true)
+            .setAutocomplete(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('speedtest')
+        .setDescription('Run internet speed test'))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('speedhistory')
+        .setDescription('View speed test history')
+        .addIntegerOption(option =>
+          option.setName('days')
+            .setDescription('Number of days to show')
+            .setMinValue(1)
+            .setMaxValue(30)))
+];
 
 /**
  * Handle network management commands
  */
 export async function handleCommand(interaction, commandName, subcommand) {
-  const userId = interaction.user.id;
+  if (commandName !== 'network') return false;
   
-  // Handle /network commands
-  if (commandName === 'network') {
-    if (subcommand === 'scan') {
+  switch (subcommand) {
+    case 'scan':
       return await handleScanCommand(interaction);
-    } else if (subcommand === 'devices') {
+    case 'devices':
       return await handleDevicesCommand(interaction);
-    } else if (subcommand === 'wol') {
+    case 'wol':
       return await handleWolCommand(interaction);
-    }
+    case 'speedtest':
+      return await handleSpeedtestCommand(interaction);
+    case 'speedhistory':
+      return await handleSpeedhistoryCommand(interaction);
+    default:
+      return false;
   }
-  
-  // Handle /device commands
-  if (commandName === 'device') {
-    if (subcommand === 'config') {
-      return await handleDeviceConfigCommand(interaction);
-    } else if (subcommand === 'list') {
-      return await handleDeviceListCommand(interaction);
-    } else if (subcommand === 'group') {
-      return await handleDeviceGroupCommand(interaction);
-    }
-  }
-  
-  return false;
 }
 
 /**
@@ -250,32 +286,89 @@ async function handleWolCommand(interaction) {
 }
 
 /**
- * /device config - Configure device settings
+ * /network speedtest - Run internet speed test
  */
-async function handleDeviceConfigCommand(interaction) {
-  await interaction.reply({
-    content: '🚧 Device configuration coming soon!\n\nThis command will allow you to set device names, emojis, and other properties.',
-    ephemeral: true
-  });
-  return true;
+async function handleSpeedtestCommand(interaction) {
+  await interaction.deferReply();
+  
+  try {
+    // Delegate to integrations/speedtest plugin if available
+    const { getPlugin } = await import('../../src/core/plugin-system.js');
+    const integrationsPlugin = getPlugin('integrations');
+    
+    if (integrationsPlugin && integrationsPlugin.speedtest) {
+      const result = await integrationsPlugin.speedtest.runSpeedTest();
+      
+      const embed = new EmbedBuilder()
+        .setColor('#667eea')
+        .setTitle('🚀 Speed Test Results')
+        .addFields(
+          { name: '⬇️ Download', value: `${result.download.toFixed(2)} Mbps`, inline: true },
+          { name: '⬆️ Upload', value: `${result.upload.toFixed(2)} Mbps`, inline: true },
+          { name: '📶 Ping', value: `${result.ping.toFixed(0)} ms`, inline: true }
+        )
+        .setFooter({ text: `Server: ${result.server || 'Auto'}` })
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      return true;
+    }
+    
+    await interaction.editReply('❌ Speed test plugin not available!');
+    return true;
+  } catch (error) {
+    logger.error('Speedtest command error:', error);
+    await interaction.editReply({
+      content: `❌ Speed test failed: ${error.message}`,
+      ephemeral: true
+    });
+    return true;
+  }
 }
 
 /**
- * /device list - List devices (alias for /network devices)
+ * /network speedhistory - View speed test history
  */
-async function handleDeviceListCommand(interaction) {
-  return await handleDevicesCommand(interaction);
-}
-
-/**
- * /device group - Manage device groups
- */
-async function handleDeviceGroupCommand(interaction) {
-  await interaction.reply({
-    content: '🚧 Device groups coming soon!\n\nThis command will allow you to organize devices into groups.',
-    ephemeral: true
-  });
-  return true;
+async function handleSpeedhistoryCommand(interaction) {
+  await interaction.deferReply();
+  
+  try {
+    const days = interaction.options.getInteger('days') || 7;
+    const { speedTestOps } = await import('../../src/database/db.js');
+    
+    const history = speedTestOps.getRecent(days * 4); // ~4 tests per day
+    
+    if (!history || history.length === 0) {
+      await interaction.editReply('📊 No speed test history found. Run `/network speedtest` first!');
+      return true;
+    }
+    
+    const avgDownload = history.reduce((sum, t) => sum + t.download, 0) / history.length;
+    const avgUpload = history.reduce((sum, t) => sum + t.upload, 0) / history.length;
+    const avgPing = history.reduce((sum, t) => sum + t.ping, 0) / history.length;
+    
+    const embed = new EmbedBuilder()
+      .setColor('#667eea')
+      .setTitle(`📊 Speed Test History (${days} days)`)
+      .setDescription(`${history.length} test(s) recorded`)
+      .addFields(
+        { name: '⬇️ Avg Download', value: `${avgDownload.toFixed(2)} Mbps`, inline: true },
+        { name: '⬆️ Avg Upload', value: `${avgUpload.toFixed(2)} Mbps`, inline: true },
+        { name: '📶 Avg Ping', value: `${avgPing.toFixed(0)} ms`, inline: true }
+      )
+      .setFooter({ text: 'View detailed graphs on the dashboard' })
+      .setTimestamp();
+    
+    await interaction.editReply({ embeds: [embed] });
+    return true;
+  } catch (error) {
+    logger.error('Speedhistory command error:', error);
+    await interaction.editReply({
+      content: `❌ Failed to get speed history: ${error.message}`,
+      ephemeral: true
+    });
+    return true;
+  }
 }
 
 /**
