@@ -20,7 +20,7 @@ export default class DeviceTriggersPlugin extends Plugin {
     console.log('🔔 Device Triggers plugin loaded');
     
     // Load triggers from database
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     const savedTriggers = configOps.get('device_triggers');
     
     if (savedTriggers) {
@@ -34,7 +34,7 @@ export default class DeviceTriggersPlugin extends Plugin {
     }
     
     // Initialize known devices set
-    const { deviceOps } = await import('../src/database/db.js');
+    const { deviceOps } = await import('../../src/database/db.js');
     const devices = deviceOps.getAll();
     devices.forEach(d => this.knownDevices.add(d.mac));
   }
@@ -44,7 +44,7 @@ export default class DeviceTriggersPlugin extends Plugin {
   }
   
   async saveTriggers() {
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     configOps.set('device_triggers', JSON.stringify(this.triggers));
   }
   
@@ -110,7 +110,7 @@ export default class DeviceTriggersPlugin extends Plugin {
       return { processed: false };
     }
     
-    const { deviceOps } = await import('../src/database/db.js');
+    const { deviceOps } = await import('../../src/database/db.js');
     const triggeredActions = [];
     
     // Check each device for status changes
@@ -215,7 +215,7 @@ export default class DeviceTriggersPlugin extends Plugin {
         
       case 'homeassistant':
         if (trigger.actionData?.entityId && trigger.actionData?.service) {
-          const { callService } = await import('../src/integrations/homeassistant.js');
+          const { callService } = await import('../../src/integrations/homeassistant.js');
           const [domain, service] = trigger.actionData.service.split('.');
           await callService(domain, service, {
             entity_id: trigger.actionData.entityId

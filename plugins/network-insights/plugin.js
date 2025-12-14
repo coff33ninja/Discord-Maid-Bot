@@ -23,7 +23,7 @@ export default class NetworkInsightsPlugin extends Plugin {
     console.log('🧠 Network Insights plugin loaded');
     
     // Load insights history from database
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     const savedInsights = configOps.get('network_insights_history');
     
     if (savedInsights) {
@@ -41,15 +41,15 @@ export default class NetworkInsightsPlugin extends Plugin {
   }
   
   async saveInsights() {
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     // Keep only last 50 insights
     const recentInsights = this.insights.slice(-50);
     configOps.set('network_insights_history', JSON.stringify(recentInsights));
   }
   
   async generateInsights() {
-    const { deviceOps, speedTestOps } = await import('../src/database/db.js');
-    const { generateWithRotation } = await import('../src/config/gemini-keys.js');
+    const { deviceOps, speedTestOps } = await import('../../src/database/db.js');
+    const { generateWithRotation } = await import('../../src/config/gemini-keys.js');
     
     // Gather data
     const devices = deviceOps.getAll();

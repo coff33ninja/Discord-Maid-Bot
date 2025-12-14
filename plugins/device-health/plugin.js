@@ -49,7 +49,7 @@ export default class DeviceHealthPlugin extends Plugin {
   }
   
   async loadHealthData() {
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     const savedData = configOps.get('device_health_data');
     
     if (savedData) {
@@ -63,7 +63,7 @@ export default class DeviceHealthPlugin extends Plugin {
   }
   
   async saveHealthData() {
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     const dataObj = Object.fromEntries(this.healthData);
     configOps.set('device_health_data', JSON.stringify(dataObj));
   }
@@ -76,7 +76,7 @@ export default class DeviceHealthPlugin extends Plugin {
   }
   
   async performHealthCheck() {
-    const { deviceOps } = await import('../src/database/db.js');
+    const { deviceOps } = await import('../../src/database/db.js');
     const devices = deviceOps.getAll();
     const now = Date.now();
     
@@ -287,7 +287,7 @@ export default class DeviceHealthPlugin extends Plugin {
   
   // Predictive alert: Check if device should be online but isn't
   async checkPredictiveAlerts() {
-    const { deviceOps } = await import('../src/database/db.js');
+    const { deviceOps } = await import('../../src/database/db.js');
     const devices = deviceOps.getAll();
     const now = new Date();
     const currentHour = now.getHours();

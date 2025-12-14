@@ -16,7 +16,7 @@ export default class SpeedAlertsPlugin extends Plugin {
     console.log('🚨 Speed Alerts plugin loaded');
     
     // Load settings from database
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     const savedThreshold = configOps.get('speed_alert_threshold');
     const savedChannel = configOps.get('speed_alert_channel');
     
@@ -38,14 +38,14 @@ export default class SpeedAlertsPlugin extends Plugin {
   
   async setThreshold(mbps) {
     this.threshold = mbps;
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     configOps.set('speed_alert_threshold', mbps.toString());
     return { success: true, threshold: mbps };
   }
   
   async setAlertChannel(channelId) {
     this.alertChannel = channelId;
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     configOps.set('speed_alert_channel', channelId);
     return { success: true, channelId };
   }

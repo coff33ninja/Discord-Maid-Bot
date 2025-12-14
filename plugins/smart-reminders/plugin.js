@@ -23,7 +23,7 @@ export default class SmartRemindersPlugin extends Plugin {
     console.log('⏰ Smart Reminders plugin loaded');
     
     // Load reminders from database
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     const savedReminders = configOps.get('smart_reminders');
     
     if (savedReminders) {
@@ -52,7 +52,7 @@ export default class SmartRemindersPlugin extends Plugin {
   }
   
   async saveReminders() {
-    const { configOps } = await import('../src/database/db.js');
+    const { configOps } = await import('../../src/database/db.js');
     configOps.set('smart_reminders', JSON.stringify(this.reminders));
   }
   
@@ -246,14 +246,14 @@ export default class SmartRemindersPlugin extends Plugin {
         switch (condition.type) {
           case 'user_online':
             // Check if user's device is online
-            const { deviceOps } = await import('../src/database/db.js');
+            const { deviceOps } = await import('../../src/database/db.js');
             const device = deviceOps.getByMac(condition.deviceMac);
             if (!device || !device.online) return false;
             break;
             
           case 'speed_above':
             // Check if speed is above threshold
-            const { speedTestOps } = await import('../src/database/db.js');
+            const { speedTestOps } = await import('../../src/database/db.js');
             const recentTests = speedTestOps.getRecent(1);
             if (recentTests.length === 0) return false;
             if (parseFloat(recentTests[0].download) < condition.threshold) return false;
@@ -309,7 +309,7 @@ export default class SmartRemindersPlugin extends Plugin {
   }
   
   async executeHomeAssistantAction(action) {
-    const { callService } = await import('../src/integrations/homeassistant.js');
+    const { callService } = await import('../../src/integrations/homeassistant.js');
     const [domain, service] = action.service.split('.');
     
     await callService(domain, service, {
@@ -330,7 +330,7 @@ export default class SmartRemindersPlugin extends Plugin {
   }
   
   async executeNetworkScan() {
-    const { scanUnifiedNetwork } = await import('../src/network/unified-scanner.js');
+    const { scanUnifiedNetwork } = await import('../../src/network/unified-scanner.js');
     const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';
     await scanUnifiedNetwork(subnet);
   }
@@ -342,7 +342,7 @@ export default class SmartRemindersPlugin extends Plugin {
   
   async generateVariation(originalMessage) {
     try {
-      const { generateWithRotation } = await import('../src/config/gemini-keys.js');
+      const { generateWithRotation } = await import('../../src/config/gemini-keys.js');
       
       const prompt = `Generate a friendly variation of this reminder message. Keep the same meaning but use different words. Be concise and natural.
 

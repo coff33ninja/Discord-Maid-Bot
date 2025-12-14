@@ -51,7 +51,7 @@ export default class SpeedTestPlugin extends Plugin {
     
     // Emit to other plugins
     try {
-      const { emitToPlugins } = await import('../src/core/plugin-system.js');
+      const { emitToPlugins } = await import('../../src/core/plugin-system.js');
       await emitToPlugins('speedTest', testResult);
     } catch (error) {
       // Plugin system not available
