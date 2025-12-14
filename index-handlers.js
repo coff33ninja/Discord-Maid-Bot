@@ -229,6 +229,19 @@ export async function handleCommandInteraction(interaction) {
     const userId = interaction.user.id;
     const username = interaction.user.username;
 
+    // Route network and device commands to network-management plugin
+    if (commandName === 'network' || commandName === 'device') {
+      try {
+        const { handleCommand } = await import('./plugins/network-management/commands.js');
+        const subcommand = interaction.options.getSubcommand();
+        const handled = await handleCommand(interaction, commandName, subcommand);
+        if (handled) return;
+      } catch (error) {
+        console.error('Network management plugin error:', error);
+        // Fall through to show refactor message
+      }
+    }
+
     // HELP COMMAND (temporary - will move to core-commands plugin)
     if (commandName === 'help') {
       const embed = new EmbedBuilder()
