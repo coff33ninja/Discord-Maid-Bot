@@ -18,8 +18,8 @@ import { startWordChain } from './games/wordchain.js';
 import { start20Questions } from './games/twenty-questions.js';
 import { startEmojiDecode } from './games/emojidecode.js';
 import { startWouldYouRather } from './games/wouldyourather.js';
-import { startCaption } from './games/caption.js';
-import { startAcronym } from './games/acronym.js';
+import { startCaptionContest } from './games/caption.js';
+import { startAcronymGame } from './games/acronym.js';
 import { startStoryBuilder } from './games/storybuilder.js';
 import { challengeConnect4, playConnect4AI } from './games/connectfour.js';
 import { startMathBlitz } from './games/mathblitz.js';
@@ -374,13 +374,13 @@ async function handleWouldYouRather(interaction) {
 }
 
 async function handleCaption(interaction) {
-  await startCaption(interaction);
+  await startCaptionContest(interaction);
   return true;
 }
 
 async function handleAcronym(interaction) {
   const length = interaction.options.getInteger('length') || 4;
-  await startAcronym(interaction, length);
+  await startAcronymGame(interaction, 5, length);
   return true;
 }
 
