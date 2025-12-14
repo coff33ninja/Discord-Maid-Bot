@@ -1,5 +1,6 @@
 import { Plugin } from '../../src/core/plugin-system.js';
 import { createLogger } from '../../src/logging/logger.js';
+import { configOps } from '../../src/database/db.js';
 import { PERSONALITIES, getPersonality, getPersonalityOptions, DEFAULT_PERSONALITY } from './personalities.js';
 
 /**
@@ -45,7 +46,6 @@ export default class PersonalityPlugin extends Plugin {
   }
   
   getUserPersonality(userId) {
-    const { configOps } = require('../../src/database/db.js');
     const saved = configOps.get(`personality_${userId}`);
     return saved || DEFAULT_PERSONALITY;
   }
