@@ -11,6 +11,8 @@ import { broadcastUpdate } from '../../src/dashboard/server.js';
 import { scanUnifiedNetwork, quickPingCheck, isTailscaleAvailable, getTailscaleStatus } from './scanner.js';
 import wol from 'wake_on_lan';
 
+const logger = createLogger('network-management');
+
 // Network device cache (shared with plugin)
 let networkDevices = [];
 let lastScanTime = null;
@@ -46,8 +48,6 @@ async function scanNetwork() {
   // Emit to other plugins
   try {
     const { emitToPlugins } = await import('../../src/core/plugin-system.js');
-
-const logger = createLogger('network-management');
     await emitToPlugins('networkScan', result.all);
   } catch (error) {
     // Plugin system not available
