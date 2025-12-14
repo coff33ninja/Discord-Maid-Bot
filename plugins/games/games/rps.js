@@ -172,8 +172,8 @@ async function resolveRound(channel, challenge, challengeKey) {
     embed.addFields({ name: '👑 Winner', value: `**${finalWinnerName}** wins the match!`, inline: false });
     
     // Update stats
-    updateGameStats(finalWinnerId, 'rps', true, 50);
-    updateGameStats(loserId, 'rps', false, 10);
+    await updateGameStats(finalWinnerId, 'rps', true, 50);
+    await updateGameStats(loserId, 'rps', false, 10);
     
     activeChallenges.delete(challengeKey);
     
@@ -274,7 +274,7 @@ export async function quickRPS(interaction) {
       .setFooter({ text: 'Use /rps to play again!' });
     
     if (won) {
-      updateGameStats(interaction.user.id, 'rps', true, 20);
+      await updateGameStats(interaction.user.id, 'rps', true, 20);
       resultEmbed.addFields({ name: '🏆 Points', value: '+20', inline: true });
     }
     

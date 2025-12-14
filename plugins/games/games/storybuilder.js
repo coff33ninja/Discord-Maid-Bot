@@ -226,7 +226,7 @@ function endStoryBuilder(channel, channelId) {
   let contributorList = '';
   for (const c of contributors) {
     contributorList += `• **${c.username}** - ${c.contributions} contributions\n`;
-    updateGameStats(c.odId, 'storybuilder', true, c.contributions * 20);
+    await updateGameStats(c.odId, 'storybuilder', true, c.contributions * 20);
   }
   
   if (!contributorList) contributorList = 'No human contributors!';

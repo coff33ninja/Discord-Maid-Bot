@@ -203,7 +203,7 @@ function endMathBlitz(channel, channelId) {
     const medal = medals[i] || `${i + 1}.`;
     leaderboard += `${medal} **${score.username}** - ${score.points} pts (${score.correct}/${game.totalRounds})\n`;
     
-    updateGameStats(score.odId, 'mathblitz', score.correct > 0, score.points);
+    await updateGameStats(score.odId, 'mathblitz', score.correct > 0, score.points);
   }
   
   if (!leaderboard) leaderboard = 'No one scored!';

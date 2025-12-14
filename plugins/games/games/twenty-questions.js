@@ -189,7 +189,7 @@ function setup20QCollector(channel, channelId) {
           game.winner = odId;
           
           const points = Math.max(10, (game.maxQuestions - game.questionsAsked + 1) * 10);
-          updateGameStats(odId, '20questions', true, points);
+          await updateGameStats(odId, '20questions', true, points);
           
           const embed = new EmbedBuilder()
             .setColor('#10b981')

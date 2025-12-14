@@ -243,7 +243,7 @@ function endEmojiGame(channel, channelId) {
     const medal = medals[i] || `${i + 1}.`;
     leaderboard += `${medal} **${score.odName}** - ${score.points} pts (${score.correct}/${game.totalRounds})\n`;
     
-    updateGameStats(score.odId, 'emojidecode', score.correct > 0, score.points);
+    await updateGameStats(score.odId, 'emojidecode', score.correct > 0, score.points);
   }
   
   if (!leaderboard) leaderboard = 'No one scored!';

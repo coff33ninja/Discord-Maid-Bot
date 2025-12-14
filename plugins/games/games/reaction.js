@@ -180,7 +180,7 @@ function endReactionRace(channel, channelId) {
     const medal = medals[i] || `${i + 1}.`;
     leaderboard += `${medal} **${score.username}** - ${score.points} pts (${score.wins} wins, best: ${score.bestTime}ms)\n`;
     
-    updateGameStats(score.odId, 'reaction', score.wins > 0, score.points);
+    await updateGameStats(score.odId, 'reaction', score.wins > 0, score.points);
   }
   
   if (!leaderboard) leaderboard = 'No one played!';

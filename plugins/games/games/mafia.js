@@ -430,7 +430,7 @@ function endMafiaGame(channel, channelId, winner) {
     // Update stats
     const won = (winner === 'village' && roleInfo.team === 'village') || 
                 (winner === 'mafia' && roleInfo.team === 'mafia');
-    updateGameStats(playerId, 'mafia', won, won ? 100 : 25);
+    await updateGameStats(playerId, 'mafia', won, won ? 100 : 25);
   }
   
   const embed = new EmbedBuilder()

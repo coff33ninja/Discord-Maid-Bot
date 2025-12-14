@@ -302,7 +302,7 @@ async function showGameEnd(channel, game, winner = null) {
     
     // Award points
     const points = Math.max(10, (6 - game.mistakes) * 20);
-    updateGameStats(winner.id, 'hangman', true, points);
+    await updateGameStats(winner.id, 'hangman', true, points);
     embed.addFields({ name: '🎯 Points Earned', value: `+${points}`, inline: true });
   }
   
@@ -324,7 +324,7 @@ async function showGameEnd(channel, game, winner = null) {
   // Update stats for all players
   for (const [odId, player] of game.players) {
     if (odId !== game.winner) {
-      updateGameStats(odId, 'hangman', false, player.correct);
+      await updateGameStats(odId, 'hangman', false, player.correct);
     }
   }
 }

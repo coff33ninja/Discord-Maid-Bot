@@ -295,7 +295,7 @@ async function showGameOver(interaction, game, result, gameKey) {
     // Give both players some points
     for (const odId of Object.keys(game.players)) {
       if (odId !== 'ai') {
-        updateGameStats(odId, 'tictactoe', false, 10);
+        await updateGameStats(odId, 'tictactoe', false, 10);
       }
     }
   } else {
@@ -307,13 +307,13 @@ async function showGameOver(interaction, game, result, gameKey) {
     color = '#10b981';
     
     if (winnerId !== 'ai') {
-      updateGameStats(winnerId, 'tictactoe', true, 50);
+      await updateGameStats(winnerId, 'tictactoe', true, 50);
     }
     
     // Loser gets participation points
     for (const odId of Object.keys(game.players)) {
       if (odId !== 'ai' && odId !== winnerId) {
-        updateGameStats(odId, 'tictactoe', false, 5);
+        await updateGameStats(odId, 'tictactoe', false, 5);
       }
     }
   }

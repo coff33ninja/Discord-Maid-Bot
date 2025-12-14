@@ -251,7 +251,7 @@ function endRiddleGame(channel, channelId) {
     leaderboard += `${medal} **${score.odName}** - ${score.points} pts (${score.correct}/${game.totalRounds})\n`;
     
     // Update game stats
-    updateGameStats(score.odId, 'riddles', score.correct > 0, score.points);
+    await updateGameStats(score.odId, 'riddles', score.correct > 0, score.points);
   }
   
   if (!leaderboard) leaderboard = 'No one scored!';

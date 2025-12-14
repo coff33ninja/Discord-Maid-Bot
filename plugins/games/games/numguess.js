@@ -87,7 +87,7 @@ function setupNumberCollector(channel, channelId) {
       await message.react('🎉');
       
       const points = Math.max(10, (game.maxAttempts - game.attempts + 1) * 15);
-      updateGameStats(odId, 'numguess', true, points);
+      await updateGameStats(odId, 'numguess', true, points);
       
       const embed = new EmbedBuilder()
         .setColor('#10b981')

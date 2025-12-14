@@ -588,13 +588,13 @@ async function handleAnswer(interaction, channelId, answer, isButton = false) {
     points = Math.round(100 * (1 + timeBonus));
     
     // Streak bonus
-    const stats = getTriviaStats(userId);
-    if (stats.streak >= 3) points += 50;
-    if (stats.streak >= 5) points += 100;
+    const prevStats = await getTriviaStats(userId);
+    if (prevStats.streak >= 3) points += 50;
+    if (prevStats.streak >= 5) points += 100;
   }
   
   // Update stats
-  const stats = updateTriviaStats(userId, correct, points);
+  const stats = await updateTriviaStats(userId, correct, points);
   
   // Update session scores
   const currentScore = session.scores.get(userId) || { correct: 0, total: 0, points: 0 };
@@ -632,13 +632,13 @@ async function handleTypedAnswer(message, channelId, answer) {
     const timeBonus = Math.max(0, (timeLimit - responseTime) / timeLimit);
     points = Math.round(100 * (1 + timeBonus));
     
-    const stats = getTriviaStats(userId);
-    if (stats.streak >= 3) points += 50;
-    if (stats.streak >= 5) points += 100;
+    const prevStats = await getTriviaStats(userId);
+    if (prevStats.streak >= 3) points += 50;
+    if (prevStats.streak >= 5) points += 100;
   }
   
   // Update stats
-  const stats = updateTriviaStats(userId, correct, points);
+  await updateTriviaStats(userId, correct, points);
   
   // Update session scores
   const currentScore = session.scores.get(userId) || { correct: 0, total: 0, points: 0 };

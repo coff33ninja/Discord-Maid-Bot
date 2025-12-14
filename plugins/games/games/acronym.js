@@ -247,7 +247,7 @@ function endAcronymGame(channel, channelId) {
     const medal = medals[i] || `${i + 1}.`;
     leaderboard += `${medal} **${score.username}** - ${score.points} pts (${score.wins} wins)\n`;
     
-    updateGameStats(score.odId, 'acronym', score.wins > 0, score.points);
+    await updateGameStats(score.odId, 'acronym', score.wins > 0, score.points);
   }
   
   if (!leaderboard) leaderboard = 'No one played!';

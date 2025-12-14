@@ -232,7 +232,7 @@ function setupWYRCollector(message, channel, channelId) {
 }
 
 // End game
-function endWYRGame(channel, channelId) {
+async function endWYRGame(channel, channelId) {
   const game = getActiveGame(channelId);
   if (!game) return;
   
@@ -244,7 +244,7 @@ function endWYRGame(channel, channelId) {
   for (let i = 0; i < Math.min(players.length, 10); i++) {
     const player = players[i];
     participation += `• **${player.username}** - ${player.votes} votes cast\n`;
-    updateGameStats(player.odId, 'wouldyourather', true, player.votes * 10);
+    await updateGameStats(player.odId, 'wouldyourather', true, player.votes * 10);
   }
   
   if (!participation) participation = 'No one voted!';

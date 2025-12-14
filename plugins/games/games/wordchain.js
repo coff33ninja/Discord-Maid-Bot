@@ -409,7 +409,7 @@ function setupWordChainCollector(channel, channelId) {
 }
 
 // End word chain game
-function endWordChain(channel, channelId) {
+async function endWordChain(channel, channelId) {
   const game = getActiveGame(channelId);
   if (!game) return;
   
@@ -432,7 +432,7 @@ function endWordChain(channel, channelId) {
     const points = Math.round(score.words * 10 * multiplier);
     leaderboard += `${medal} **${score.odName}** - ${score.words} words (+${points} pts)\n`;
     
-    updateGameStats(score.odId, 'wordchain', score.words > 0, points);
+    await updateGameStats(score.odId, 'wordchain', score.words > 0, points);
   }
   
   if (!leaderboard) leaderboard = 'No one played!';

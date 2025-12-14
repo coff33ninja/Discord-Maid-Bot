@@ -256,10 +256,10 @@ function setupConnect4Collector(message, channel, channelId) {
     if (checkWin(game.board, currentPlayer.piece)) {
       game.ended = true;
       
-      updateGameStats(currentPlayer.id, 'connect4', true, 100);
+      await updateGameStats(currentPlayer.id, 'connect4', true, 100);
       if (!game.vsAI) {
         const loser = game.currentPlayer === 1 ? game.player2 : game.player1;
-        updateGameStats(loser.id, 'connect4', false, 10);
+        await updateGameStats(loser.id, 'connect4', false, 10);
       }
       
       const embed = new EmbedBuilder()
@@ -278,8 +278,8 @@ function setupConnect4Collector(message, channel, channelId) {
     if (checkDraw(game.board)) {
       game.ended = true;
       
-      updateGameStats(game.player1.id, 'connect4', false, 25);
-      if (!game.vsAI) updateGameStats(game.player2.id, 'connect4', false, 25);
+      await updateGameStats(game.player1.id, 'connect4', false, 25);
+      if (!game.vsAI) await updateGameStats(game.player2.id, 'connect4', false, 25);
       
       const embed = new EmbedBuilder()
         .setColor('#9e9e9e')
@@ -317,7 +317,7 @@ function setupConnect4Collector(message, channel, channelId) {
         // Check AI win
         if (checkWin(currentGame.board, PLAYER2)) {
           currentGame.ended = true;
-          updateGameStats(currentGame.player1.id, 'connect4', false, 10);
+          await updateGameStats(currentGame.player1.id, 'connect4', false, 10);
           
           const winEmbed = new EmbedBuilder()
             .setColor('#f44336')
@@ -334,7 +334,7 @@ function setupConnect4Collector(message, channel, channelId) {
         // Check draw
         if (checkDraw(currentGame.board)) {
           currentGame.ended = true;
-          updateGameStats(currentGame.player1.id, 'connect4', false, 25);
+          await updateGameStats(currentGame.player1.id, 'connect4', false, 25);
           
           const drawEmbed = new EmbedBuilder()
             .setColor('#9e9e9e')
