@@ -264,6 +264,19 @@ export async function handleCommandInteraction(interaction) {
       }
     }
 
+    // Route game commands to games plugin
+    if (commandName === 'game') {
+      try {
+        const { handleCommand } = await import('./plugins/games/commands.js');
+        const subcommand = interaction.options.getSubcommand();
+        const handled = await handleCommand(interaction, commandName, subcommand);
+        if (handled) return;
+      } catch (error) {
+        console.error('Games plugin error:', error);
+        // Fall through to show refactor message
+      }
+    }
+
     // HELP COMMAND (temporary - will move to core-commands plugin)
     if (commandName === 'help') {
       const embed = new EmbedBuilder()
