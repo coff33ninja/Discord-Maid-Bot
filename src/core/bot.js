@@ -41,6 +41,10 @@ export class MaidBot {
     await initPluginSystem();
     this.logger.info('Plugin system initialized');
 
+    // Apply plugin schema extensions to database
+    const { applyPluginSchemas } = await import('../database/db.js');
+    await applyPluginSchemas();
+
     // Register core handlers for plugins
     await this.registerCoreHandlers();
     this.logger.info('Core handlers registered for plugins');

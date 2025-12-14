@@ -33,6 +33,9 @@ export class Plugin {
     this.category = options.category || 'general'; // Plugin category
     this.author = options.author || 'Unknown';
     this.keywords = options.keywords || [];
+    
+    // Database schema extensions
+    this.schemaExtensions = [];
   }
   
   // Lifecycle hooks
@@ -40,6 +43,21 @@ export class Plugin {
   async onUnload() {}
   async onEnable() {}
   async onDisable() {}
+  
+  // Database schema extension
+  // Plugins can register schema extensions that will be applied by core
+  registerSchemaExtension(tableName, columns) {
+    this.schemaExtensions.push({
+      tableName,
+      columns,
+      pluginName: this.name
+    });
+  }
+  
+  // Get all schema extensions for this plugin
+  getSchemaExtensions() {
+    return this.schemaExtensions;
+  }
   
   // Command registration
   registerCommand(command) {
@@ -596,4 +614,52 @@ export function getPluginCommandByGroup(parentCommand, subcommandGroup) {
     }
   }
   return null;
+}
+
+// Get all schema extensions from all loaded plugins
+export function getAllSchemaExtensions() {
+  const extensions = [];
+  
+  for (const [pluginName, pluginData] of loadedPlugins.entries()) {
+    const plugin = pluginData.plugin;
+    const pluginExtensions = plugin.getSchemaExtensions();
+    
+    if (pluginExtensions.length > 0) {
+      extensions.push(...pluginExtensions);
+    }
+  }
+  
+  return extensions;
+}
+
+// Apply plugin schema extensions to database
+export async function applyPluginSchemaExtensions(db) {
+  const extensions = getAllSchemaExtensions();
+  
+  if (extensions.length === 0) {
+    return;
+  }
+  
+  console.log(`📦 Applying ${extensions.length} plugin schema extension(s)...`);
+  
+  for (const extension of extensions) {
+    try {
+      for (const column of extension.columns) {
+        const { name, type, defaultValue } = column;
+        const defaultClause = defaultValue !== undefined ? `DEFAULT ${defaultValue}` : '';
+        
+        try {
+          db.exec(`ALTER TABLE ${extension.tableName} ADD COLUMN ${name} ${type} ${defaultClause}`);
+          console.log(`   ✅ Added column ${extension.tableName}.${name} (${extension.pluginName})`);
+        } catch (error) {
+          // Column might already exist - that's okay
+          if (!error.message.includes('duplicate column name')) {
+            console.error(`   ⚠️  Failed to add column ${extension.tableName}.${name}:`, error.message);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`   ❌ Failed to apply schema extension from ${extension.pluginName}:`, error);
+    }
+  }
 }

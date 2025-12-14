@@ -148,6 +148,16 @@ export function initDatabase() {
   console.log('✅ Database initialized');
 }
 
+// Apply plugin schema extensions (called after plugins are loaded)
+export async function applyPluginSchemas() {
+  try {
+    const { applyPluginSchemaExtensions } = await import('../core/plugin-system.js');
+    await applyPluginSchemaExtensions(db);
+  } catch (error) {
+    console.error('Failed to apply plugin schema extensions:', error);
+  }
+}
+
 // Device operations
 export const deviceOps = {
   upsert: (device) => {
