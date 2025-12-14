@@ -6,7 +6,6 @@ import { initializeAuth } from '../auth/auth.js';
 import { initPluginSystem } from './plugin-system.js';
 import { startDashboard } from '../dashboard/server.js';
 import { registerCommands } from '../commands/slash-commands.js';
-import { initScheduler } from '../../plugins/automation/scheduler.js';
 import { EventRouter } from './event-router.js';
 
 // Load environment variables
@@ -87,12 +86,7 @@ export class MaidBot {
       startDashboard(dashboardPort);
       this.logger.info(`Dashboard started on port ${dashboardPort}`);
 
-      // Initialize scheduler (will be moved to plugin later)
-      const handlers = {}; // Handlers will come from plugins
-      initScheduler(this.client, handlers);
-      this.logger.info('Scheduler initialized');
-
-      // Pass Discord client to plugins
+      // Pass Discord client to plugins (they will initialize their own services)
       const { getLoadedPlugins, getPlugin } = await import('./plugin-system.js');
       const plugins = getLoadedPlugins();
       for (const pluginData of plugins) {
@@ -205,9 +199,8 @@ export class MaidBot {
     configOps.syncFromEnv('SMB_PASSWORD', 'smb_password', process.env.SMB_PASSWORD);
     configOps.syncFromEnv('SMB_SHARE', 'smb_share', process.env.SMB_SHARE);
 
-    // Initialize Home Assistant (if configured)
-    const { initHomeAssistant } = await import('../../plugins/integrations/homeassistant/plugin.js');
-    initHomeAssistant();
+    // Note: Integrations like Home Assistant are initialized by their plugins
+    // No need to initialize them from core
   }
 
   /**

@@ -20,7 +20,6 @@ import {
 import { getSMBConfig, setSMBConfig, testSMBConnection, toggleSMB, listSMBFiles } from '../config/smb-config.js';
 import { geminiKeys } from '../config/gemini-keys.js';
 import { getLoadedPlugins, enablePlugin, disablePlugin, reloadPlugin, getPluginStats, getPlugin } from '../core/plugin-system.js';
-import { scanUnifiedNetwork, isTailscaleAvailable, getTailscaleStatus } from '../../plugins/network-management/scanner.js';
 import { 
   getEntities, 
   getESPDevices, 
@@ -287,6 +286,7 @@ export function startDashboard(port = 3000) {
   // Unified network scan (local + Tailscale - full discovery)
   app.get('/api/network/unified', requireAuth, async (req, res) => {
     try {
+      const { scanUnifiedNetwork } = await import('../../plugins/network-management/scanner.js');
       const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';
       const result = await scanUnifiedNetwork(subnet);
       res.json(result);
@@ -298,6 +298,7 @@ export function startDashboard(port = 3000) {
   // Legacy Tailscale endpoint (now returns Tailscale portion of unified scan)
   app.get('/api/tailscale/devices', requireAuth, async (req, res) => {
     try {
+      const { scanUnifiedNetwork } = await import('../../plugins/network-management/scanner.js');
       const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';
       const result = await scanUnifiedNetwork(subnet);
       res.json(result.tailscale);
@@ -308,6 +309,7 @@ export function startDashboard(port = 3000) {
   
   app.get('/api/tailscale/status', requireAuth, async (req, res) => {
     try {
+      const { isTailscaleAvailable, getTailscaleStatus } = await import('../../plugins/network-management/scanner.js');
       const available = await isTailscaleAvailable();
       const status = available ? await getTailscaleStatus() : null;
       res.json({ available, status });
@@ -796,6 +798,7 @@ export function startDashboard(port = 3000) {
   
   app.post('/api/quick-actions/scan-network', requireAuth, async (req, res) => {
     try {
+      const { scanUnifiedNetwork } = await import('../../plugins/network-management/scanner.js');
       const subnet = process.env.NETWORK_SUBNET || '192.168.0.0/24';
       const result = await scanUnifiedNetwork(subnet);
       
