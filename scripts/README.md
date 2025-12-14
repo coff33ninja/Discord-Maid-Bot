@@ -234,6 +234,11 @@ Scripts for managing documentation.
 Scripts for database maintenance.
 - `cleanup-devices.js` - Clean up ghost devices
 
+### System Maintenance
+Cross-platform system maintenance scripts.
+- `system-maintenance/` - Automated system updates for Linux, Windows, and macOS
+  - See [system-maintenance/README.md](system-maintenance/README.md) for details
+
 ### Development
 Scripts for development tasks.
 - (Add development scripts here)
