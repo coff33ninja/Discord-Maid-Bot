@@ -7,7 +7,7 @@
 import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
 import { deviceOps } from '../../src/database/db.js';
 import { broadcastUpdate } from '../../src/dashboard/server.js';
-import { scanUnifiedNetwork, quickPingCheck, isTailscaleAvailable, getTailscaleStatus } from '../../src/network/unified-scanner.js';
+import { scanUnifiedNetwork, quickPingCheck, isTailscaleAvailable, getTailscaleStatus } from './scanner.js';
 import wol from 'wake_on_lan';
 
 // Network device cache (shared with plugin)

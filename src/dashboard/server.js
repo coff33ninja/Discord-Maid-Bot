@@ -21,7 +21,7 @@ import { getSMBConfig, setSMBConfig, testSMBConnection, toggleSMB, listSMBFiles 
 import { getPersonality, getPersonalityOptions, DEFAULT_PERSONALITY } from '../config/personalities.js';
 import { geminiKeys } from '../config/gemini-keys.js';
 import { getLoadedPlugins, enablePlugin, disablePlugin, reloadPlugin, getPluginStats } from '../core/plugin-system.js';
-import { scanUnifiedNetwork, isTailscaleAvailable, getTailscaleStatus } from '../network/unified-scanner.js';
+import { scanUnifiedNetwork, isTailscaleAvailable, getTailscaleStatus } from '../../plugins/network-management/scanner.js';
 import { 
   getEntities, 
   getESPDevices, 
@@ -33,7 +33,7 @@ import {
   getAllSensors,
   checkConnection as checkHAConnection,
   configureHomeAssistant
-} from '../integrations/homeassistant.js';
+} from '../../plugins/integrations-homeassistant.js';
 import { logOps, LOG_LEVELS } from '../logging/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -277,7 +277,7 @@ export function startDashboard(port = 3000) {
   // Quick ping check (only pings registered devices - fast)
   app.get('/api/network/quick-ping', requireAuth, async (req, res) => {
     try {
-      const { quickPingCheck } = await import('../network/unified-scanner.js');
+      const { quickPingCheck } = await import('../../plugins/network-management/scanner.js');
       const result = await quickPingCheck();
       res.json(result);
     } catch (error) {

@@ -6,7 +6,7 @@ import { initializeAuth } from '../auth/auth.js';
 import { initPluginSystem } from './plugin-system.js';
 import { startDashboard } from '../dashboard/server.js';
 import { registerCommands } from '../commands/slash-commands.js';
-import { initScheduler } from '../scheduler/tasks.js';
+import { initScheduler } from '../../plugins/automation/scheduler.js';
 import { EventRouter } from './event-router.js';
 
 // Load environment variables
@@ -183,7 +183,7 @@ export class MaidBot {
     configOps.syncFromEnv('SMB_SHARE', 'smb_share', process.env.SMB_SHARE);
 
     // Initialize Home Assistant (if configured)
-    const { initHomeAssistant } = await import('../integrations/homeassistant.js');
+    const { initHomeAssistant } = await import('../../plugins/integrations-homeassistant.js');
     initHomeAssistant();
   }
 
