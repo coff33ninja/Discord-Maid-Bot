@@ -881,7 +881,7 @@ export async function registerCommands(client) {
 // Inject plugin commands into parent commands
 async function injectPluginCommands() {
   try {
-    const { getPluginCommands } = await import('../plugins/plugin-manager.js');
+    const { getPluginCommands } = await import('../core/plugin-system.js');
     const pluginCommands = getPluginCommands();
     
     if (pluginCommands.length === 0) {

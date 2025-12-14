@@ -41,6 +41,10 @@ export class MaidBot {
     await initPluginSystem();
     this.logger.info('Plugin system initialized');
 
+    // Register core handlers for plugins
+    await this.registerCoreHandlers();
+    this.logger.info('Core handlers registered for plugins');
+
     // Create Discord client
     this.client = new Client({
       intents: [
@@ -85,13 +89,16 @@ export class MaidBot {
       this.logger.info('Scheduler initialized');
 
       // Pass Discord client to plugins
-      const { getLoadedPlugins } = await import('./plugin-system.js');
+      const { getLoadedPlugins, getPlugin } = await import('./plugin-system.js');
       const plugins = getLoadedPlugins();
-      plugins.forEach(pluginData => {
-        if (typeof pluginData.plugin.setClient === 'function') {
-          pluginData.plugin.setClient(this.client);
+      for (const pluginData of plugins) {
+        if (pluginData && pluginData.name) {
+          const plugin = getPlugin(pluginData.name);
+          if (plugin && typeof plugin.setClient === 'function') {
+            plugin.setClient(this.client);
+          }
         }
-      });
+      }
       this.logger.info('Discord client passed to plugins');
 
       // Set bot status
@@ -135,6 +142,49 @@ export class MaidBot {
       this.logger.error('Failed to start bot:', error);
       process.exit(1);
     }
+  }
+
+  /**
+   * Register core handlers for plugins
+   * Plugins use these to request data/actions from core without importing core directly
+   */
+  async registerCoreHandlers() {
+    const { registerCoreHandler } = await import('./plugin-system.js');
+    const { deviceOps, configOps } = await import('../database/db.js');
+
+    registerCoreHandler('get-all-devices', async () => {
+      return deviceOps.getAll();
+    });
+
+    registerCoreHandler('update-device-notes', async (data) => {
+      const { deviceId, notes } = data;
+      deviceOps.updateNotes(deviceId, notes);
+      return { success: true };
+    });
+
+    registerCoreHandler('set-device-emoji', async (data) => {
+      const { mac, emoji } = data;
+      deviceOps.setEmoji(mac, emoji);
+      return { success: true };
+    });
+
+    registerCoreHandler('assign-device-group', async (data) => {
+      const { mac, groupName } = data;
+      deviceOps.assignGroup(mac, groupName);
+      return { success: true };
+    });
+
+    // Sync environment variables to database (for integrations)
+    configOps.syncFromEnv('HA_URL', 'ha_url', process.env.HA_URL);
+    configOps.syncFromEnv('HA_TOKEN', 'ha_token', process.env.HA_TOKEN);
+    configOps.syncFromEnv('SMB_HOST', 'smb_host', process.env.SMB_HOST);
+    configOps.syncFromEnv('SMB_USERNAME', 'smb_username', process.env.SMB_USERNAME);
+    configOps.syncFromEnv('SMB_PASSWORD', 'smb_password', process.env.SMB_PASSWORD);
+    configOps.syncFromEnv('SMB_SHARE', 'smb_share', process.env.SMB_SHARE);
+
+    // Initialize Home Assistant (if configured)
+    const { initHomeAssistant } = await import('../integrations/homeassistant.js');
+    initHomeAssistant();
   }
 
   /**
