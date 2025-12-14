@@ -1,6 +1,6 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
-import { generateWithRotation } from '../config/gemini-keys.js';
-import { configOps } from '../database/db.js';
+import { generateWithRotation } from '../../src/config/gemini-keys.js';
+import { configOps } from '../../src/database/db.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 
 // Active trivia sessions

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { configOps } from '../database/db.js';
+import { configOps } from '../src/database/db.js';
 
 let haClient = null;
 

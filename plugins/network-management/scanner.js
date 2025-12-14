@@ -2,7 +2,7 @@ import ping from 'ping';
 import arp from 'node-arp';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { deviceOps } from '../database/db.js';
+import { deviceOps } from '../../src/database/db.js';
 
 const execAsync = promisify(exec);
 

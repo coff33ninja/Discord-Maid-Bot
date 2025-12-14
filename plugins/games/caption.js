@@ -1,6 +1,6 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
-import { generateWithRotation } from '../config/gemini-keys.js';
+import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
 // Generate a scenario to caption
 async function generateScenario() {

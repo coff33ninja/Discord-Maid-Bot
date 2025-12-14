@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { taskOps } from '../database/db.js';
+import { taskOps } from '../../src/database/db.js';
 
 const activeTasks = new Map();
 

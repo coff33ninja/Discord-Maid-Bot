@@ -1,4 +1,4 @@
-import { configOps } from '../database/db.js';
+import { configOps } from '../../src/database/db.js';
 
 // Active games per channel
 const activeGames = new Map();

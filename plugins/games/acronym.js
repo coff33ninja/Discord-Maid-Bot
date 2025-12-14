@@ -1,6 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
-import { generateWithRotation } from '../config/gemini-keys.js';
+import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
 // Generate random letters for acronym
 function generateLetters(length = 3) {
