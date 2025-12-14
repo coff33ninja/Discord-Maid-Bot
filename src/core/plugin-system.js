@@ -21,11 +21,18 @@ export function registerCoreHandler(event, handler) {
 
 // Plugin interface
 export class Plugin {
-  constructor(name, version, description) {
+  constructor(name, version, description, options = {}) {
     this.name = name;
     this.version = version;
     this.description = description;
     this.enabled = true;
+    
+    // Plugin metadata
+    this.dependencies = options.dependencies || []; // Required plugins
+    this.optionalDependencies = options.optionalDependencies || []; // Optional plugins
+    this.category = options.category || 'general'; // Plugin category
+    this.author = options.author || 'Unknown';
+    this.keywords = options.keywords || [];
   }
   
   // Lifecycle hooks
@@ -78,6 +85,61 @@ export async function initPluginSystem() {
   }
 }
 
+// Check plugin dependencies
+function checkDependencies(plugin) {
+  const missing = {
+    required: [],
+    optional: []
+  };
+  
+  // Check required dependencies
+  if (plugin.dependencies && plugin.dependencies.length > 0) {
+    for (const dep of plugin.dependencies) {
+      if (!loadedPlugins.has(dep)) {
+        missing.required.push(dep);
+      }
+    }
+  }
+  
+  // Check optional dependencies
+  if (plugin.optionalDependencies && plugin.optionalDependencies.length > 0) {
+    for (const dep of plugin.optionalDependencies) {
+      if (!loadedPlugins.has(dep)) {
+        missing.optional.push(dep);
+      }
+    }
+  }
+  
+  return missing;
+}
+
+// Get plugin dependencies (for display)
+export function getPluginDependencies(pluginName) {
+  const pluginData = loadedPlugins.get(pluginName);
+  if (!pluginData) return null;
+  
+  const plugin = pluginData.plugin;
+  return {
+    required: plugin.dependencies || [],
+    optional: plugin.optionalDependencies || [],
+    dependents: getPluginDependents(pluginName)
+  };
+}
+
+// Get plugins that depend on this plugin
+function getPluginDependents(pluginName) {
+  const dependents = [];
+  
+  for (const [name, data] of loadedPlugins.entries()) {
+    const plugin = data.plugin;
+    if (plugin.dependencies && plugin.dependencies.includes(pluginName)) {
+      dependents.push(name);
+    }
+  }
+  
+  return dependents;
+}
+
 // Load all plugins
 export async function loadAllPlugins() {
   try {
@@ -127,6 +189,24 @@ export async function loadPlugin(filename) {
     if (!plugin.name) {
       console.error(`Plugin ${filename} has no name`);
       return false;
+    }
+    
+    // Check dependencies
+    const missingDeps = checkDependencies(plugin);
+    if (missingDeps.required.length > 0) {
+      console.warn(`⚠️  Plugin ${plugin.name} has missing required dependencies:`);
+      missingDeps.required.forEach(dep => {
+        console.warn(`   ❌ ${dep} (required)`);
+      });
+      console.warn(`   Install missing plugins to enable ${plugin.name}`);
+      return false;
+    }
+    
+    if (missingDeps.optional.length > 0) {
+      console.warn(`⚠️  Plugin ${plugin.name} has missing optional dependencies:`);
+      missingDeps.optional.forEach(dep => {
+        console.warn(`   ⚠️  ${dep} (optional - some features may not work)`);
+      });
     }
     
     // Unload existing version if present

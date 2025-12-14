@@ -223,9 +223,19 @@ export async function handleCommand(interaction, plugin) {
         
         plugins.forEach(plugin => {
           const status = plugin.enabled ? '✅ Enabled' : '❌ Disabled';
+          let value = `${plugin.description}\n${status}`;
+          
+          // Add dependency info if available
+          if (plugin.dependencies && plugin.dependencies.length > 0) {
+            value += `\n📦 Requires: ${plugin.dependencies.join(', ')}`;
+          }
+          if (plugin.optionalDependencies && plugin.optionalDependencies.length > 0) {
+            value += `\n⚙️ Optional: ${plugin.optionalDependencies.join(', ')}`;
+          }
+          
           embed.addFields({
             name: `${plugin.name} v${plugin.version}`,
-            value: `${plugin.description}\n${status}`,
+            value,
             inline: false
           });
         });
