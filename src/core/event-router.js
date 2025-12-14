@@ -118,10 +118,18 @@ export class EventRouter {
             const commandsUrl = pathToFileURL(commandsPath).href;
             const commandsModule = await import(`${commandsUrl}?t=${Date.now()}`);
             
-            // Check if this plugin has standalone commands
-            if (commandsModule.parentCommand === null && commandsModule.commands) {
-              // Check if any of the commands match
-              const hasCommand = commandsModule.commands.some(cmd => cmd.name === commandName);
+            // Check if this plugin has standalone commands (parentCommand = null)
+            if (commandsModule.parentCommand === null) {
+              let hasCommand = false;
+              
+              // Check if commands array exists and contains this command
+              if (commandsModule.commands) {
+                hasCommand = commandsModule.commands.some(cmd => cmd.name === commandName);
+              }
+              // Or check if commandGroup is a single command with matching name
+              else if (commandsModule.commandGroup && commandsModule.commandGroup.name === commandName) {
+                hasCommand = true;
+              }
               
               if (hasCommand) {
                 // Get the plugin instance
