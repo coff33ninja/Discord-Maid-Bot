@@ -223,29 +223,9 @@ export async function handleAutocomplete(interaction, plugin) {
   
   if (focusedOption.name === 'device') {
     // Device autocomplete
-    const { deviceOps } = await import('../../src/database/db.js');
-    const devices = deviceOps.getAll();
-    const focusedValue = focusedOption.value.toLowerCase();
-    
-    const filtered = devices
-      .filter(d => {
-        if (!focusedValue) return true;
-        return (d.notes || '').toLowerCase().includes(focusedValue) ||
-               (d.hostname || '').toLowerCase().includes(focusedValue) ||
-               d.ip.includes(focusedValue);
-      })
-      .slice(0, 25)
-      .map(d => {
-        const status = d.online ? '🟢' : '🔴';
-        const emoji = d.emoji || '';
-        const name = d.notes || d.hostname || d.ip;
-        return {
-          name: `${status} ${emoji} ${name}`.substring(0, 100),
-          value: d.mac
-        };
-      });
-    
-    await interaction.respond(filtered);
+    const { getDeviceAutocomplete } = await import('../../src/utils/autocomplete-helpers.js');
+    const choices = getDeviceAutocomplete(focusedOption.value);
+    await interaction.respond(choices);
   } else if (focusedOption.name === 'reminder') {
     // Reminder autocomplete
     const reminders = await plugin.listReminders(interaction.user.id);

@@ -75,24 +75,24 @@ export async function handleCommand(interaction, plugin) {
 // Autocomplete handler
 export async function handleAutocomplete(interaction, plugin) {
   const focusedOption = interaction.options.getFocused(true);
-  const focusedValue = focusedOption.value.toLowerCase();
   
-  // Get all devices with health data
-  const allHealth = plugin.getAllDeviceHealth();
-  
-  const filtered = allHealth
-    .filter(h => {
-      if (!focusedValue) return true;
-      return h.name.toLowerCase().includes(focusedValue) ||
-             h.mac.toLowerCase().includes(focusedValue);
-    })
-    .slice(0, 25)
-    .map(h => ({
-      name: `${h.uptimePercentage}% | ${h.name}`,
-      value: h.mac
-    }));
-  
-  await interaction.respond(filtered);
+  try {
+    // Import autocomplete helpers
+    const { getDeviceAutocomplete } = await import('../../src/utils/autocomplete-helpers.js');
+    
+    if (focusedOption.name === 'device' || focusedOption.name.startsWith('device')) {
+      const choices = getDeviceAutocomplete(focusedOption.value);
+      await interaction.respond(choices);
+      return;
+    }
+    
+    // Default: no suggestions
+    await interaction.respond([]);
+    
+  } catch (error) {
+    console.error('Autocomplete error:', error);
+    await interaction.respond([]);
+  }
 }
 
 // Handler implementations

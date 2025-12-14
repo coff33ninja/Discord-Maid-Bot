@@ -104,31 +104,12 @@ export async function handleAutocomplete(interaction, plugin) {
   
   if (focusedOption.name === 'device') {
     // Device autocomplete with "any" option
-    const { deviceOps } = await import('../../src/database/db.js');
-    const devices = deviceOps.getAll();
-    const focusedValue = focusedOption.value.toLowerCase();
+    const { getDeviceAutocomplete } = await import('../../src/utils/autocomplete-helpers.js');
     
     const choices = [{ name: '🌐 Any unknown device', value: 'any' }];
+    const deviceChoices = getDeviceAutocomplete(focusedOption.value, null, { limit: 24 });
     
-    const filtered = devices
-      .filter(d => {
-        if (!focusedValue) return true;
-        return (d.notes || '').toLowerCase().includes(focusedValue) ||
-               (d.hostname || '').toLowerCase().includes(focusedValue) ||
-               d.ip.includes(focusedValue);
-      })
-      .slice(0, 24)
-      .map(d => {
-        const status = d.online ? '🟢' : '🔴';
-        const emoji = d.emoji || '';
-        const name = d.notes || d.hostname || d.ip;
-        return {
-          name: `${status} ${emoji} ${name}`.substring(0, 100),
-          value: d.mac
-        };
-      });
-    
-    await interaction.respond([...choices, ...filtered]);
+    await interaction.respond([...choices, ...deviceChoices]);
   } else if (focusedOption.name === 'trigger') {
     // Trigger autocomplete for remove/toggle
     const triggers = await plugin.listTriggers();
