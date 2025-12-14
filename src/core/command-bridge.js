@@ -97,27 +97,72 @@ export async function handleAutocompleteInteraction(interaction) {
 
 /**
  * Handle command interactions
- * Routes commands to appropriate handlers (plugins or legacy)
- * 
- * Note: This is a fallback handler. Most commands should be handled by plugins.
+ * Routes commands to appropriate plugin handlers
  */
 export async function handleCommandInteraction(interaction) {
   const { commandName } = interaction;
+  const subcommand = interaction.options.getSubcommand(false);
+  const subcommandGroup = interaction.options.getSubcommandGroup(false);
   
   try {
-    // Check if this is a plugin command
-    const { handlePluginCommand } = await import('./plugin-system.js');
+    // Import plugin system
+    const { handlePluginCommand, getLoadedPlugins } = await import('./plugin-system.js');
     
-    // Try to route to plugin first
+    // Handle plugin: prefixed commands
     if (commandName.startsWith('plugin:')) {
       const pluginName = commandName.replace('plugin:', '');
       await handlePluginCommand(pluginName, interaction);
       return;
     }
     
-    // All commands should be handled by plugins now
-    // If we reach here, the command wasn't handled by any plugin
-    logger.warn(`Unhandled command: ${commandName}`);
+    // Route commands to appropriate plugins
+    const routeMap = {
+      // Network commands -> network-management plugin
+      'network': 'network-management',
+      
+      // Device commands -> network-management or device-bulk-ops
+      'device': subcommandGroup === 'group' ? 'device-bulk-ops' : 'network-management',
+      
+      // Automation commands -> automation plugin
+      'automation': 'automation',
+      
+      // Research commands -> research plugin
+      'research': 'research',
+      
+      // Game commands -> games plugin
+      'game': 'games',
+      
+      // Bot commands -> various plugins
+      'bot': subcommand === 'personality' ? 'personality' : 'core-commands',
+      
+      // Admin commands -> core-commands
+      'admin': 'core-commands',
+      
+      // Weather -> integrations/weather
+      'weather': 'integrations/weather',
+      
+      // Home Assistant -> integrations/homeassistant
+      'homeassistant': 'integrations/homeassistant'
+    };
+    
+    const targetPlugin = routeMap[commandName];
+    
+    if (targetPlugin) {
+      // Try to get the plugin and call its command handler
+      const plugins = getLoadedPlugins();
+      const plugin = plugins.find(p => p.name === targetPlugin);
+      
+      if (plugin && plugin.commands) {
+        const commandsModule = plugin.commands;
+        if (commandsModule.handleCommand) {
+          await commandsModule.handleCommand(interaction, commandName, subcommand);
+          return;
+        }
+      }
+    }
+    
+    // If no handler found, log and show error
+    logger.warn(`Unhandled command: ${commandName} (subcommand: ${subcommand}, group: ${subcommandGroup})`);
     
     await interaction.reply({
       content: `❌ Command handler not found for: \`/${commandName}\`\n\nThis command may not be implemented yet or the plugin may be disabled.`,
