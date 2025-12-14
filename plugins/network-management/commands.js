@@ -74,6 +74,9 @@ async function wakeDevice(mac) {
 export const parentCommand = null; // Special: multiple parents
 export const commandGroup = null; // Handler-only plugin (commands defined in slash-commands.js)
 
+// List of parent commands this plugin handles
+export const handlesCommands = ['network', 'device'];
+
 /**
  * Handle network management commands
  */

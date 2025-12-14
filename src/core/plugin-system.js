@@ -530,6 +530,7 @@ async function loadPluginCommands(pluginName) {
       pluginCommands.set(pluginName, {
         commandGroup: null,
         parentCommand: commandsModule.parentCommand,
+        handlesCommands: commandsModule.handlesCommands || [], // List of commands this plugin handles
         handleCommand: commandsModule.handleCommand,
         handleAutocomplete: commandsModule.handleAutocomplete || null
       });
@@ -614,6 +615,40 @@ export function getPluginCommandByGroup(parentCommand, subcommandGroup) {
     }
   }
   return null;
+}
+
+// Get plugin that handles a specific parent command
+export function getPluginByParentCommand(parentCommand) {
+  for (const [pluginName, commandData] of pluginCommands.entries()) {
+    if (commandData.parentCommand === parentCommand) {
+      return pluginName;
+    }
+  }
+  return null;
+}
+
+// Get all plugins that handle a specific parent command (for commands with multiple handlers)
+export function getPluginsByParentCommand(parentCommand) {
+  const plugins = [];
+  for (const [pluginName, commandData] of pluginCommands.entries()) {
+    // Check if plugin explicitly handles this command (for handler-only plugins)
+    if (commandData.handlesCommands && commandData.handlesCommands.includes(parentCommand)) {
+      plugins.push({
+        pluginName,
+        commandGroup: commandData.commandGroup,
+        hasAutocomplete: !!commandData.handleAutocomplete
+      });
+    }
+    // Or if plugin's parentCommand matches
+    else if (commandData.parentCommand === parentCommand) {
+      plugins.push({
+        pluginName,
+        commandGroup: commandData.commandGroup,
+        hasAutocomplete: !!commandData.handleAutocomplete
+      });
+    }
+  }
+  return plugins;
 }
 
 // Get all schema extensions from all loaded plugins

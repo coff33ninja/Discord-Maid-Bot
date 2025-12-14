@@ -97,7 +97,7 @@ export async function handleAutocompleteInteraction(interaction) {
 
 /**
  * Handle command interactions
- * Routes commands to appropriate plugin handlers
+ * Routes commands to appropriate plugin handlers dynamically
  */
 export async function handleCommandInteraction(interaction) {
   const { commandName } = interaction;
@@ -106,9 +106,14 @@ export async function handleCommandInteraction(interaction) {
   
   try {
     // Import plugin system
-    const { getPluginCommandHandler, getPlugin } = await import('./plugin-system.js');
+    const { 
+      getPluginCommandHandler, 
+      getPlugin, 
+      getPluginsByParentCommand,
+      getPluginCommandByGroup 
+    } = await import('./plugin-system.js');
     
-    // Handle plugin: prefixed commands
+    // Handle plugin: prefixed commands (standalone plugin commands)
     if (commandName.startsWith('plugin:')) {
       const pluginName = commandName.replace('plugin:', '');
       const commandHandler = getPluginCommandHandler(pluginName);
@@ -121,37 +126,28 @@ export async function handleCommandInteraction(interaction) {
       throw new Error(`Plugin ${pluginName} has no command handler`);
     }
     
-    // Route commands to appropriate plugins
-    const routeMap = {
-      // Network commands -> network-management plugin
-      'network': 'network-management',
-      
-      // Device commands -> network-management or device-bulk-ops
-      'device': subcommandGroup === 'group' ? 'device-bulk-ops' : 'network-management',
-      
-      // Automation commands -> automation plugin
-      'automation': 'automation',
-      
-      // Research commands -> research plugin
-      'research': 'research',
-      
-      // Game commands -> games plugin
-      'game': 'games',
-      
-      // Bot commands -> various plugins
-      'bot': subcommand === 'personality' ? 'personality' : 'core-commands',
-      
-      // Admin commands -> core-commands
-      'admin': 'core-commands',
-      
-      // Weather -> integrations (weather subplugin)
-      'weather': 'integrations',
-      
-      // Home Assistant -> integrations (homeassistant subplugin)
-      'homeassistant': 'integrations'
-    };
+    // Dynamically find which plugin handles this command
+    let targetPlugin = null;
     
-    const targetPlugin = routeMap[commandName];
+    // If there's a subcommand group, try to find plugin by group name
+    if (subcommandGroup) {
+      targetPlugin = getPluginCommandByGroup(commandName, subcommandGroup);
+    }
+    
+    // If no group match, find all plugins that handle this parent command
+    if (!targetPlugin) {
+      const plugins = getPluginsByParentCommand(commandName);
+      
+      if (plugins.length === 1) {
+        // Only one plugin handles this command
+        targetPlugin = plugins[0].pluginName;
+      } else if (plugins.length > 1) {
+        // Multiple plugins handle this command - need to determine which one
+        // This shouldn't happen in normal operation, but log it
+        logger.warn(`Multiple plugins handle /${commandName}: ${plugins.map(p => p.pluginName).join(', ')}`);
+        targetPlugin = plugins[0].pluginName; // Use first one
+      }
+    }
     
     if (targetPlugin) {
       // Get the plugin
@@ -169,7 +165,13 @@ export async function handleCommandInteraction(interaction) {
       const commandHandler = getPluginCommandHandler(targetPlugin);
       
       if (commandHandler && commandHandler.handleCommand) {
-        await commandHandler.handleCommand(interaction);
+        // Handler-only plugins (like network-management) need commandName and subcommand
+        if (commandHandler.commandGroup === null) {
+          await commandHandler.handleCommand(interaction, commandName, subcommand);
+        } else {
+          // Normal plugins just need interaction
+          await commandHandler.handleCommand(interaction);
+        }
         return;
       }
       
