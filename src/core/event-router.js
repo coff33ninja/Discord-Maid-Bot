@@ -56,12 +56,10 @@ export class EventRouter {
 
   /**
    * Handle autocomplete interactions
-   * Routes to the old autocomplete handler temporarily
+   * Routes to command bridge
    */
   async handleAutocomplete(interaction) {
-    // Import the old handler temporarily
-    // This will be moved to plugins in later phases
-    const { handleAutocompleteInteraction } = await import('../../index-handlers.js');
+    const { handleAutocompleteInteraction } = await import('./command-bridge.js');
     await handleAutocompleteInteraction(interaction);
   }
 
@@ -87,8 +85,8 @@ export class EventRouter {
       }
     }
     
-    // Otherwise, route to bridge handler (temporary)
-    const { handleCommandInteraction } = await import('../../index-handlers.js');
+    // Otherwise, route to command bridge
+    const { handleCommandInteraction } = await import('./command-bridge.js');
     await handleCommandInteraction(interaction);
   }
 
