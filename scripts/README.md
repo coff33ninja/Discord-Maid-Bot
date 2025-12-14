@@ -239,6 +239,12 @@ Cross-platform system maintenance scripts.
 - `system-maintenance/` - Automated system updates for Linux, Windows, and macOS
   - See [system-maintenance/README.md](system-maintenance/README.md) for details
 
+### Remote Shutdown
+Cross-platform remote shutdown server for Discord bot integration.
+- `remote-shutdown/` - HTTP API server for remote shutdown/restart
+  - See [remote-shutdown/README.md](remote-shutdown/README.md) for details
+  - Complements Wake-on-LAN functionality
+
 ### Development
 Scripts for development tasks.
 - (Add development scripts here)
