@@ -1,7 +1,7 @@
 /**
- * Home Assistant Commands
+ * Home Assistant Commands - Queued Loading System
  * 
- * Handles Home Assistant device control commands.
+ * Uses autocomplete to select entity type and entity, then performs action.
  */
 
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
@@ -13,36 +13,99 @@ const logger = createLogger('homeassistant-commands');
 export const parentCommand = null;
 export const handlesCommands = ['homeassistant'];
 
+// Entity types registry
+const ENTITY_TYPES = {
+  light: { name: 'Lights', emoji: '💡', domain: 'light' },
+  switch: { name: 'Switches', emoji: '🔌', domain: 'switch' },
+  sensor: { name: 'Sensors', emoji: '📊', domain: 'sensor' },
+  scene: { name: 'Scenes', emoji: '🎬', domain: 'scene' },
+  automation: { name: 'Automations', emoji: '⚙️', domain: 'automation' },
+  script: { name: 'Scripts', emoji: '📜', domain: 'script' },
+  climate: { name: 'Climate', emoji: '🌡️', domain: 'climate' },
+  cover: { name: 'Covers', emoji: '🪟', domain: 'cover' },
+  fan: { name: 'Fans', emoji: '🌀', domain: 'fan' },
+  media_player: { name: 'Media Players', emoji: '📺', domain: 'media_player' }
+};
+
 /**
- * Command definitions - /homeassistant
+ * Command definitions - Simplified with queued loading
  */
 export const commands = [
   new SlashCommandBuilder()
     .setName('homeassistant')
     .setDescription('🏠 Control Home Assistant devices')
-    .addSubcommand(sub => sub.setName('lights').setDescription('List all lights'))
-    .addSubcommand(sub => sub.setName('light').setDescription('Control a light')
-      .addStringOption(opt => opt.setName('entity').setDescription('Entity ID').setRequired(true).setAutocomplete(true))
-      .addBooleanOption(opt => opt.setName('state').setDescription('Turn on or off').setRequired(true))
-      .addIntegerOption(opt => opt.setName('brightness').setDescription('Brightness (0-255)').setMinValue(0).setMaxValue(255)))
-    .addSubcommand(sub => sub.setName('switches').setDescription('List all switches'))
-    .addSubcommand(sub => sub.setName('switch').setDescription('Control a switch')
-      .addStringOption(opt => opt.setName('entity').setDescription('Entity ID').setRequired(true).setAutocomplete(true))
-      .addBooleanOption(opt => opt.setName('state').setDescription('Turn on or off').setRequired(true)))
-    .addSubcommand(sub => sub.setName('sensors').setDescription('List all sensors'))
-    .addSubcommand(sub => sub.setName('sensor').setDescription('Read a sensor')
-      .addStringOption(opt => opt.setName('entity').setDescription('Entity ID').setRequired(true).setAutocomplete(true)))
-    .addSubcommand(sub => sub.setName('esp').setDescription('List ESP devices'))
-    .addSubcommand(sub => sub.setName('diagnose').setDescription('Run Home Assistant diagnostics'))
-    .addSubcommand(sub => sub.setName('scenes').setDescription('List all scenes'))
-    .addSubcommand(sub => sub.setName('scene').setDescription('Activate a scene')
-      .addStringOption(opt => opt.setName('entity').setDescription('Scene entity ID').setRequired(true).setAutocomplete(true)))
-    .addSubcommand(sub => sub.setName('automations').setDescription('List all automations'))
-    .addSubcommand(sub => sub.setName('automation').setDescription('Trigger an automation')
-      .addStringOption(opt => opt.setName('entity').setDescription('Automation entity ID').setRequired(true).setAutocomplete(true)))
-    .addSubcommand(sub => sub.setName('scripts').setDescription('List all scripts'))
-    .addSubcommand(sub => sub.setName('script').setDescription('Run a script')
-      .addStringOption(opt => opt.setName('entity').setDescription('Script entity ID').setRequired(true).setAutocomplete(true)))
+    // Control an entity
+    .addSubcommand(sub => sub
+      .setName('control')
+      .setDescription('Control a Home Assistant entity')
+      .addStringOption(opt => opt
+        .setName('type')
+        .setDescription('Entity type')
+        .setRequired(true)
+        .addChoices(
+          { name: '💡 Lights', value: 'light' },
+          { name: '🔌 Switches', value: 'switch' },
+          { name: '🎬 Scenes', value: 'scene' },
+          { name: '⚙️ Automations', value: 'automation' },
+          { name: '📜 Scripts', value: 'script' },
+          { name: '🌡️ Climate', value: 'climate' },
+          { name: '🪟 Covers', value: 'cover' },
+          { name: '🌀 Fans', value: 'fan' }
+        ))
+      .addStringOption(opt => opt
+        .setName('entity')
+        .setDescription('Entity to control')
+        .setRequired(true)
+        .setAutocomplete(true))
+      .addStringOption(opt => opt
+        .setName('action')
+        .setDescription('Action to perform')
+        .addChoices(
+          { name: '✅ Turn On', value: 'on' },
+          { name: '❌ Turn Off', value: 'off' },
+          { name: '🔄 Toggle', value: 'toggle' },
+          { name: '▶️ Trigger/Activate', value: 'trigger' }
+        ))
+      .addIntegerOption(opt => opt
+        .setName('brightness')
+        .setDescription('Brightness for lights (0-255)')
+        .setMinValue(0)
+        .setMaxValue(255)))
+    // List entities
+    .addSubcommand(sub => sub
+      .setName('list')
+      .setDescription('List Home Assistant entities')
+      .addStringOption(opt => opt
+        .setName('type')
+        .setDescription('Entity type to list')
+        .setRequired(true)
+        .addChoices(
+          { name: '💡 Lights', value: 'light' },
+          { name: '🔌 Switches', value: 'switch' },
+          { name: '📊 Sensors', value: 'sensor' },
+          { name: '🎬 Scenes', value: 'scene' },
+          { name: '⚙️ Automations', value: 'automation' },
+          { name: '📜 Scripts', value: 'script' },
+          { name: '🌡️ Climate', value: 'climate' },
+          { name: '📺 Media Players', value: 'media_player' }
+        )))
+    // Read a sensor
+    .addSubcommand(sub => sub
+      .setName('sensor')
+      .setDescription('Read a sensor value')
+      .addStringOption(opt => opt
+        .setName('entity')
+        .setDescription('Sensor to read')
+        .setRequired(true)
+        .setAutocomplete(true)))
+    // Diagnostics
+    .addSubcommand(sub => sub
+      .setName('diagnose')
+      .setDescription('Run Home Assistant diagnostics'))
+    // ESP devices
+    .addSubcommand(sub => sub
+      .setName('esp')
+      .setDescription('List ESP/ESPHome devices'))
 ];
 
 /**
@@ -75,204 +138,182 @@ export async function handleCommand(interaction, commandName, subcommand) {
 
   try {
     switch (subcommand) {
-      case 'lights':
-        return await handleLightsList(interaction, ha);
-      case 'light':
-        return await handleLightControl(interaction, ha);
-      case 'switches':
-        return await handleSwitchesList(interaction, ha);
-      case 'switch':
-        return await handleSwitchControl(interaction, ha);
-      case 'sensors':
-        return await handleSensorsList(interaction, ha);
+      case 'control':
+        return await handleControl(interaction, ha);
+      case 'list':
+        return await handleList(interaction, ha);
       case 'sensor':
         return await handleSensorRead(interaction, ha);
-      case 'esp':
-        return await handleESPDevices(interaction, ha);
       case 'diagnose':
         return await handleDiagnose(interaction, ha);
-      case 'scenes':
-        return await handleScenesList(interaction, ha);
-      case 'scene':
-        return await handleSceneActivate(interaction, ha);
-      case 'automations':
-        return await handleAutomationsList(interaction, ha);
-      case 'automation':
-        return await handleAutomationTrigger(interaction, ha);
-      case 'scripts':
-        return await handleScriptsList(interaction, ha);
-      case 'script':
-        return await handleScriptRun(interaction, ha);
+      case 'esp':
+        return await handleESPDevices(interaction, ha);
       default:
-        await interaction.reply({
-          content: `❌ Unknown subcommand: ${subcommand}`,
-          ephemeral: true
-        });
+        await interaction.reply({ content: `❌ Unknown subcommand: ${subcommand}`, ephemeral: true });
         return true;
     }
   } catch (error) {
     logger.error('Home Assistant command error:', error);
-    await interaction.reply({
-      content: `❌ Error: ${error.message}`,
-      ephemeral: true
-    });
+    const reply = { content: `❌ Error: ${error.message}`, ephemeral: true };
+    if (interaction.deferred) {
+      await interaction.editReply(reply);
+    } else {
+      await interaction.reply(reply);
+    }
     return true;
   }
 }
 
-// List all lights
-async function handleLightsList(interaction, ha) {
+/**
+ * Control an entity
+ */
+async function handleControl(interaction, ha) {
   await interaction.deferReply();
   
-  const lights = await ha.getAllLights();
-  
-  if (lights.length === 0) {
-    await interaction.editReply('💡 No lights found in Home Assistant.');
-    return true;
-  }
-  
-  const embed = new EmbedBuilder()
-    .setColor('#FFD700')
-    .setTitle('💡 Home Assistant Lights')
-    .setDescription(`Found ${lights.length} light(s)`)
-    .setTimestamp();
-  
-  const onLights = lights.filter(l => l.state === 'on');
-  const offLights = lights.filter(l => l.state === 'off');
-  
-  if (onLights.length > 0) {
-    embed.addFields({
-      name: `🟢 On (${onLights.length})`,
-      value: onLights.slice(0, 10).map(l => l.attributes?.friendly_name || l.entity_id).join('\n') || 'None',
-      inline: true
-    });
-  }
-  
-  if (offLights.length > 0) {
-    embed.addFields({
-      name: `⚫ Off (${offLights.length})`,
-      value: offLights.slice(0, 10).map(l => l.attributes?.friendly_name || l.entity_id).join('\n') || 'None',
-      inline: true
-    });
-  }
-  
-  await interaction.editReply({ embeds: [embed] });
-  return true;
-}
-
-// Control a light
-async function handleLightControl(interaction, ha) {
-  await interaction.deferReply();
-  
+  const type = interaction.options.getString('type');
   const entityId = interaction.options.getString('entity');
-  const state = interaction.options.getBoolean('state');
+  const action = interaction.options.getString('action') || 'toggle';
   const brightness = interaction.options.getInteger('brightness');
   
-  await ha.controlLight(entityId, state, brightness);
+  const typeInfo = ENTITY_TYPES[type];
+  let result = '';
   
-  const embed = new EmbedBuilder()
-    .setColor(state ? '#FFD700' : '#333333')
-    .setTitle(`💡 Light ${state ? 'On' : 'Off'}`)
-    .setDescription(`**${entityId}** turned ${state ? 'on' : 'off'}${brightness ? ` at ${Math.round(brightness/255*100)}% brightness` : ''}`)
-    .setTimestamp();
-  
-  await interaction.editReply({ embeds: [embed] });
-  return true;
-}
-
-// List all switches
-async function handleSwitchesList(interaction, ha) {
-  await interaction.deferReply();
-  
-  const switches = await ha.getAllSwitches();
-  
-  if (switches.length === 0) {
-    await interaction.editReply('🔌 No switches found in Home Assistant.');
-    return true;
+  switch (type) {
+    case 'light':
+      if (action === 'on' || action === 'toggle') {
+        await ha.controlLight(entityId, action !== 'off', brightness);
+        result = `turned ${action === 'toggle' ? 'toggled' : 'on'}${brightness ? ` at ${Math.round(brightness/255*100)}%` : ''}`;
+      } else {
+        await ha.controlLight(entityId, false);
+        result = 'turned off';
+      }
+      break;
+    case 'switch':
+    case 'fan':
+      if (action === 'on') {
+        await ha.controlSwitch(entityId, true);
+        result = 'turned on';
+      } else if (action === 'off') {
+        await ha.controlSwitch(entityId, false);
+        result = 'turned off';
+      } else {
+        await ha.callService(type, 'toggle', { entity_id: entityId });
+        result = 'toggled';
+      }
+      break;
+    case 'scene':
+      await ha.activateScene(entityId);
+      result = 'activated';
+      break;
+    case 'automation':
+      await ha.triggerAutomation(entityId);
+      result = 'triggered';
+      break;
+    case 'script':
+      await ha.runScript(entityId);
+      result = 'executed';
+      break;
+    case 'cover':
+      if (action === 'on') {
+        await ha.callService('cover', 'open_cover', { entity_id: entityId });
+        result = 'opened';
+      } else if (action === 'off') {
+        await ha.callService('cover', 'close_cover', { entity_id: entityId });
+        result = 'closed';
+      } else {
+        await ha.callService('cover', 'toggle', { entity_id: entityId });
+        result = 'toggled';
+      }
+      break;
+    case 'climate':
+      await ha.callService('climate', action === 'off' ? 'turn_off' : 'turn_on', { entity_id: entityId });
+      result = action === 'off' ? 'turned off' : 'turned on';
+      break;
+    default:
+      result = 'action performed';
   }
   
   const embed = new EmbedBuilder()
     .setColor('#4CAF50')
-    .setTitle('🔌 Home Assistant Switches')
-    .setDescription(`Found ${switches.length} switch(es)`)
-    .setTimestamp();
-  
-  const onSwitches = switches.filter(s => s.state === 'on');
-  const offSwitches = switches.filter(s => s.state === 'off');
-  
-  if (onSwitches.length > 0) {
-    embed.addFields({
-      name: `🟢 On (${onSwitches.length})`,
-      value: onSwitches.slice(0, 10).map(s => s.attributes?.friendly_name || s.entity_id).join('\n') || 'None',
-      inline: true
-    });
-  }
-  
-  if (offSwitches.length > 0) {
-    embed.addFields({
-      name: `⚫ Off (${offSwitches.length})`,
-      value: offSwitches.slice(0, 10).map(s => s.attributes?.friendly_name || s.entity_id).join('\n') || 'None',
-      inline: true
-    });
-  }
-  
-  await interaction.editReply({ embeds: [embed] });
-  return true;
-}
-
-// Control a switch
-async function handleSwitchControl(interaction, ha) {
-  await interaction.deferReply();
-  
-  const entityId = interaction.options.getString('entity');
-  const state = interaction.options.getBoolean('state');
-  
-  await ha.controlSwitch(entityId, state);
-  
-  const embed = new EmbedBuilder()
-    .setColor(state ? '#4CAF50' : '#333333')
-    .setTitle(`🔌 Switch ${state ? 'On' : 'Off'}`)
-    .setDescription(`**${entityId}** turned ${state ? 'on' : 'off'}`)
+    .setTitle(`${typeInfo.emoji} ${typeInfo.name}`)
+    .setDescription(`**${entityId}** ${result}`)
     .setTimestamp();
   
   await interaction.editReply({ embeds: [embed] });
   return true;
 }
 
-// List all sensors
-async function handleSensorsList(interaction, ha) {
+/**
+ * List entities of a type
+ */
+async function handleList(interaction, ha) {
   await interaction.deferReply();
   
-  const sensors = await ha.getAllSensors();
+  const type = interaction.options.getString('type');
+  const typeInfo = ENTITY_TYPES[type];
   
-  if (sensors.length === 0) {
-    await interaction.editReply('📊 No sensors found in Home Assistant.');
+  let entities = [];
+  switch (type) {
+    case 'light': entities = await ha.getAllLights(); break;
+    case 'switch': entities = await ha.getAllSwitches(); break;
+    case 'sensor': entities = await ha.getAllSensors(); break;
+    case 'scene': entities = await ha.getAllScenes(); break;
+    case 'automation': entities = await ha.getAllAutomations(); break;
+    case 'script': entities = await ha.getAllScripts(); break;
+    default:
+      // Generic fetch for other types
+      const allStates = await ha.getStates();
+      entities = allStates.filter(e => e.entity_id.startsWith(`${type}.`));
+  }
+  
+  if (entities.length === 0) {
+    await interaction.editReply(`${typeInfo.emoji} No ${typeInfo.name.toLowerCase()} found.`);
     return true;
   }
   
   const embed = new EmbedBuilder()
     .setColor('#2196F3')
-    .setTitle('📊 Home Assistant Sensors')
-    .setDescription(`Found ${sensors.length} sensor(s)\n\nShowing first 15:`)
+    .setTitle(`${typeInfo.emoji} ${typeInfo.name}`)
+    .setDescription(`Found ${entities.length} ${typeInfo.name.toLowerCase()}`)
     .setTimestamp();
   
-  for (const sensor of sensors.slice(0, 15)) {
-    const name = sensor.attributes?.friendly_name || sensor.entity_id;
-    const value = sensor.state;
-    const unit = sensor.attributes?.unit_of_measurement || '';
-    embed.addFields({
-      name: name.substring(0, 256),
-      value: `${value} ${unit}`.substring(0, 1024),
-      inline: true
-    });
+  // Group by state for toggleable entities
+  if (['light', 'switch', 'automation', 'fan'].includes(type)) {
+    const on = entities.filter(e => e.state === 'on');
+    const off = entities.filter(e => e.state === 'off');
+    
+    if (on.length > 0) {
+      embed.addFields({
+        name: `🟢 On (${on.length})`,
+        value: on.slice(0, 10).map(e => e.attributes?.friendly_name || e.entity_id).join('\n') || 'None',
+        inline: true
+      });
+    }
+    if (off.length > 0) {
+      embed.addFields({
+        name: `⚫ Off (${off.length})`,
+        value: off.slice(0, 10).map(e => e.attributes?.friendly_name || e.entity_id).join('\n') || 'None',
+        inline: true
+      });
+    }
+  } else {
+    // Just list them
+    const list = entities.slice(0, 15).map(e => {
+      const name = e.attributes?.friendly_name || e.entity_id;
+      const state = e.state !== 'unknown' ? ` (${e.state}${e.attributes?.unit_of_measurement || ''})` : '';
+      return `• ${name}${state}`;
+    }).join('\n');
+    
+    embed.addFields({ name: 'Entities', value: list || 'None', inline: false });
   }
   
   await interaction.editReply({ embeds: [embed] });
   return true;
 }
 
-
-// Read a sensor
+/**
+ * Read a sensor
+ */
 async function handleSensorRead(interaction, ha) {
   await interaction.deferReply();
   
@@ -292,7 +333,47 @@ async function handleSensorRead(interaction, ha) {
   return true;
 }
 
-// List ESP devices
+/**
+ * Run diagnostics
+ */
+async function handleDiagnose(interaction, ha) {
+  await interaction.deferReply();
+  
+  const connected = await ha.checkConnection();
+  
+  const embed = new EmbedBuilder()
+    .setColor(connected ? '#4CAF50' : '#F44336')
+    .setTitle('🏠 Home Assistant Diagnostics')
+    .addFields({ name: 'Connection', value: connected ? '✅ Connected' : '❌ Disconnected', inline: true })
+    .setTimestamp();
+  
+  if (connected) {
+    try {
+      const lights = await ha.getAllLights();
+      const switches = await ha.getAllSwitches();
+      const sensors = await ha.getAllSensors();
+      const scenes = await ha.getAllScenes();
+      const automations = await ha.getAllAutomations();
+      
+      embed.addFields(
+        { name: '💡 Lights', value: `${lights.length}`, inline: true },
+        { name: '🔌 Switches', value: `${switches.length}`, inline: true },
+        { name: '📊 Sensors', value: `${sensors.length}`, inline: true },
+        { name: '🎬 Scenes', value: `${scenes.length}`, inline: true },
+        { name: '⚙️ Automations', value: `${automations.length}`, inline: true }
+      );
+    } catch (error) {
+      embed.addFields({ name: 'Error', value: error.message, inline: false });
+    }
+  }
+  
+  await interaction.editReply({ embeds: [embed] });
+  return true;
+}
+
+/**
+ * List ESP devices
+ */
 async function handleESPDevices(interaction, ha) {
   await interaction.deferReply();
   
@@ -306,11 +387,7 @@ async function handleESPDevices(interaction, ha) {
       .setTimestamp();
     
     if (result.instructions) {
-      embed.addFields({
-        name: 'Instructions',
-        value: result.instructions.join('\n'),
-        inline: false
-      });
+      embed.addFields({ name: 'Instructions', value: result.instructions.join('\n'), inline: false });
     }
     
     await interaction.editReply({ embeds: [embed] });
@@ -325,199 +402,8 @@ async function handleESPDevices(interaction, ha) {
   
   for (const device of result.devices.slice(0, 10)) {
     const status = device.online ? '🟢' : '🔴';
-    embed.addFields({
-      name: `${status} ${device.name}`,
-      value: `${device.entities.length} entities`,
-      inline: true
-    });
+    embed.addFields({ name: `${status} ${device.name}`, value: `${device.entities.length} entities`, inline: true });
   }
-  
-  await interaction.editReply({ embeds: [embed] });
-  return true;
-}
-
-// Run diagnostics
-async function handleDiagnose(interaction, ha) {
-  await interaction.deferReply();
-  
-  const connected = await ha.checkConnection();
-  
-  const embed = new EmbedBuilder()
-    .setColor(connected ? '#4CAF50' : '#F44336')
-    .setTitle('🏠 Home Assistant Diagnostics')
-    .addFields(
-      { name: 'Connection', value: connected ? '✅ Connected' : '❌ Disconnected', inline: true }
-    )
-    .setTimestamp();
-  
-  if (connected) {
-    try {
-      const lights = await ha.getAllLights();
-      const switches = await ha.getAllSwitches();
-      const sensors = await ha.getAllSensors();
-      
-      embed.addFields(
-        { name: 'Lights', value: `${lights.length}`, inline: true },
-        { name: 'Switches', value: `${switches.length}`, inline: true },
-        { name: 'Sensors', value: `${sensors.length}`, inline: true }
-      );
-    } catch (error) {
-      embed.addFields({
-        name: 'Error',
-        value: error.message,
-        inline: false
-      });
-    }
-  }
-  
-  await interaction.editReply({ embeds: [embed] });
-  return true;
-}
-
-// List scenes
-async function handleScenesList(interaction, ha) {
-  await interaction.deferReply();
-  
-  const scenes = await ha.getAllScenes();
-  
-  if (scenes.length === 0) {
-    await interaction.editReply('🎬 No scenes found in Home Assistant.');
-    return true;
-  }
-  
-  const embed = new EmbedBuilder()
-    .setColor('#9C27B0')
-    .setTitle('🎬 Home Assistant Scenes')
-    .setDescription(`Found ${scenes.length} scene(s)`)
-    .setTimestamp();
-  
-  for (const scene of scenes.slice(0, 15)) {
-    embed.addFields({
-      name: scene.attributes?.friendly_name || scene.entity_id,
-      value: scene.entity_id,
-      inline: true
-    });
-  }
-  
-  await interaction.editReply({ embeds: [embed] });
-  return true;
-}
-
-// Activate a scene
-async function handleSceneActivate(interaction, ha) {
-  await interaction.deferReply();
-  
-  const entityId = interaction.options.getString('entity');
-  await ha.activateScene(entityId);
-  
-  const embed = new EmbedBuilder()
-    .setColor('#9C27B0')
-    .setTitle('🎬 Scene Activated')
-    .setDescription(`**${entityId}** has been activated`)
-    .setTimestamp();
-  
-  await interaction.editReply({ embeds: [embed] });
-  return true;
-}
-
-// List automations
-async function handleAutomationsList(interaction, ha) {
-  await interaction.deferReply();
-  
-  const automations = await ha.getAllAutomations();
-  
-  if (automations.length === 0) {
-    await interaction.editReply('⚙️ No automations found in Home Assistant.');
-    return true;
-  }
-  
-  const embed = new EmbedBuilder()
-    .setColor('#FF5722')
-    .setTitle('⚙️ Home Assistant Automations')
-    .setDescription(`Found ${automations.length} automation(s)`)
-    .setTimestamp();
-  
-  const onAutomations = automations.filter(a => a.state === 'on');
-  const offAutomations = automations.filter(a => a.state === 'off');
-  
-  if (onAutomations.length > 0) {
-    embed.addFields({
-      name: `🟢 Enabled (${onAutomations.length})`,
-      value: onAutomations.slice(0, 10).map(a => a.attributes?.friendly_name || a.entity_id).join('\n'),
-      inline: true
-    });
-  }
-  
-  if (offAutomations.length > 0) {
-    embed.addFields({
-      name: `⚫ Disabled (${offAutomations.length})`,
-      value: offAutomations.slice(0, 10).map(a => a.attributes?.friendly_name || a.entity_id).join('\n'),
-      inline: true
-    });
-  }
-  
-  await interaction.editReply({ embeds: [embed] });
-  return true;
-}
-
-// Trigger an automation
-async function handleAutomationTrigger(interaction, ha) {
-  await interaction.deferReply();
-  
-  const entityId = interaction.options.getString('entity');
-  await ha.triggerAutomation(entityId);
-  
-  const embed = new EmbedBuilder()
-    .setColor('#FF5722')
-    .setTitle('⚙️ Automation Triggered')
-    .setDescription(`**${entityId}** has been triggered`)
-    .setTimestamp();
-  
-  await interaction.editReply({ embeds: [embed] });
-  return true;
-}
-
-// List scripts
-async function handleScriptsList(interaction, ha) {
-  await interaction.deferReply();
-  
-  const scripts = await ha.getAllScripts();
-  
-  if (scripts.length === 0) {
-    await interaction.editReply('📜 No scripts found in Home Assistant.');
-    return true;
-  }
-  
-  const embed = new EmbedBuilder()
-    .setColor('#607D8B')
-    .setTitle('📜 Home Assistant Scripts')
-    .setDescription(`Found ${scripts.length} script(s)`)
-    .setTimestamp();
-  
-  for (const script of scripts.slice(0, 15)) {
-    embed.addFields({
-      name: script.attributes?.friendly_name || script.entity_id,
-      value: script.entity_id,
-      inline: true
-    });
-  }
-  
-  await interaction.editReply({ embeds: [embed] });
-  return true;
-}
-
-// Run a script
-async function handleScriptRun(interaction, ha) {
-  await interaction.deferReply();
-  
-  const entityId = interaction.options.getString('entity');
-  await ha.runScript(entityId);
-  
-  const embed = new EmbedBuilder()
-    .setColor('#607D8B')
-    .setTitle('📜 Script Executed')
-    .setDescription(`**${entityId}** has been executed`)
-    .setTimestamp();
   
   await interaction.editReply({ embeds: [embed] });
   return true;
@@ -534,7 +420,7 @@ export async function handleAutocomplete(interaction) {
     const { getPlugin } = await import('../../../src/core/plugin-system.js');
     const integrationsPlugin = getPlugin('integrations');
     
-    if (!integrationsPlugin || !integrationsPlugin.homeassistant || !integrationsPlugin.homeassistant.isConnected()) {
+    if (!integrationsPlugin?.homeassistant?.isConnected()) {
       await interaction.respond([]);
       return;
     }
@@ -542,19 +428,22 @@ export async function handleAutocomplete(interaction) {
     const ha = integrationsPlugin.homeassistant;
     let entities = [];
     
-    // Get entities based on subcommand
-    if (subcommand === 'light') {
-      entities = await ha.getAllLights();
-    } else if (subcommand === 'switch') {
-      entities = await ha.getAllSwitches();
-    } else if (subcommand === 'sensor') {
-      entities = await ha.getAllSensors();
-    } else if (subcommand === 'scene') {
-      entities = await ha.getAllScenes();
-    } else if (subcommand === 'automation') {
-      entities = await ha.getAllAutomations();
-    } else if (subcommand === 'script') {
-      entities = await ha.getAllScripts();
+    // Get entity type from options
+    const type = interaction.options.getString('type');
+    
+    if (subcommand === 'sensor' || (subcommand === 'control' && focusedOption.name === 'entity')) {
+      // Get entities based on type
+      switch (type || 'sensor') {
+        case 'light': entities = await ha.getAllLights(); break;
+        case 'switch': entities = await ha.getAllSwitches(); break;
+        case 'sensor': entities = await ha.getAllSensors(); break;
+        case 'scene': entities = await ha.getAllScenes(); break;
+        case 'automation': entities = await ha.getAllAutomations(); break;
+        case 'script': entities = await ha.getAllScripts(); break;
+        default:
+          const allStates = await ha.getStates();
+          entities = allStates.filter(e => e.entity_id.startsWith(`${type}.`));
+      }
     }
     
     const focusedValue = focusedOption.value.toLowerCase();
