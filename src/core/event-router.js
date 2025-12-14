@@ -69,14 +69,15 @@ export class EventRouter {
    */
   async handleCommand(interaction) {
     const { commandName } = interaction;
+    const subcommand = interaction.options.getSubcommand(false);
     
     // Check if this is a standalone plugin command
     const pluginHandler = await this.getPluginCommandHandler(commandName);
     
     if (pluginHandler) {
-      // Route to plugin
+      // Route to plugin - pass commandName and subcommand for standalone commands
       try {
-        await pluginHandler.handleCommand(interaction, pluginHandler.plugin);
+        await pluginHandler.handleCommand(interaction, commandName, subcommand);
         return;
       } catch (error) {
         this.logger.error(`Plugin command error (${commandName}):`, error);

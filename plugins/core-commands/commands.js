@@ -100,14 +100,15 @@ export const commands = [
 /**
  * Handle command execution
  */
-export async function handleCommand(interaction, plugin) {
-  const { commandName } = interaction;
+export async function handleCommand(interaction, commandName, subcommand) {
+  // commandName is passed in, but we can also get it from interaction
+  const cmdName = commandName || interaction.commandName;
   const userId = interaction.user.id;
   const username = interaction.user.username;
 
   try {
     // HELP command
-    if (commandName === 'help') {
+    if (cmdName === 'help') {
       const embed = new EmbedBuilder()
         .setColor('#FFB6C1')
         .setTitle('🌸 Maid Bot Commands 🌸')
@@ -125,7 +126,7 @@ export async function handleCommand(interaction, plugin) {
     }
 
     // STATS command
-    if (commandName === 'stats') {
+    if (cmdName === 'stats') {
       const devices = deviceOps.getAll();
       const onlineDevices = devices.filter(d => d.online);
       const speedStats = speedTestOps.getStats();
@@ -154,7 +155,7 @@ export async function handleCommand(interaction, plugin) {
     }
 
     // PING command
-    if (commandName === 'ping') {
+    if (cmdName === 'ping') {
       const sent = await interaction.reply({ content: '🏓 Pinging...', fetchReply: true });
       const latency = sent.createdTimestamp - interaction.createdTimestamp;
       const apiLatency = Math.round(interaction.client.ws.ping);
@@ -174,7 +175,7 @@ export async function handleCommand(interaction, plugin) {
     }
 
     // DASHBOARD command
-    if (commandName === 'dashboard') {
+    if (cmdName === 'dashboard') {
       const dashboardPort = process.env.DASHBOARD_PORT || 3000;
       const dashboardUrl = `http://localhost:${dashboardPort}`;
       
@@ -194,7 +195,7 @@ export async function handleCommand(interaction, plugin) {
     }
 
     // PLUGIN command (admin only)
-    if (commandName === 'plugin') {
+    if (cmdName === 'plugin') {
       const subcommand = interaction.options.getSubcommand();
       
       // Check permission for enable/disable/reload (admin only)
@@ -326,7 +327,7 @@ export async function handleCommand(interaction, plugin) {
 /**
  * Handle autocomplete (if needed)
  */
-export async function handleAutocomplete(interaction, plugin) {
+export async function handleAutocomplete(interaction) {
   // No autocomplete needed for these commands yet
   await interaction.respond([]);
 }
