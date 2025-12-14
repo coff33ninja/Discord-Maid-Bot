@@ -22,6 +22,19 @@ export async function handleAutocompleteInteraction(interaction) {
   const subcommandGroup = interaction.options.getSubcommandGroup(false);
   
   try {
+    // First, check if a plugin handles this command's autocomplete
+    const { getPluginCommandHandler, getPluginsByParentCommand } = await import('./plugin-system.js');
+    
+    // Find plugins that handle this command
+    const plugins = getPluginsByParentCommand(commandName);
+    for (const pluginInfo of plugins) {
+      const handler = getPluginCommandHandler(pluginInfo.pluginName);
+      if (handler && handler.handleAutocomplete) {
+        await handler.handleAutocomplete(interaction);
+        return;
+      }
+    }
+    
     // Device autocomplete (used by multiple commands)
     if (focusedOption.name === 'device' || focusedOption.name.startsWith('device')) {
       const devices = deviceOps.getAll();
