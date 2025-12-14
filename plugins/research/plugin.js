@@ -1,7 +1,7 @@
-import { Plugin } from '../src/core/plugin-system.js';
-import { researchOps } from '../src/database/db.js';
-import { saveToSMB } from '../src/config/smb-config.js';
-import { generateWithRotation } from '../src/config/gemini-keys.js';
+import { Plugin } from '../../src/core/plugin-system.js';
+import { researchOps } from '../../src/database/db.js';
+import { saveToSMB } from '../../src/config/smb-config.js';
+import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
 /**
  * Research Plugin

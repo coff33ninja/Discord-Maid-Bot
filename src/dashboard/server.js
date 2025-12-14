@@ -33,7 +33,7 @@ import {
   getAllSensors,
   checkConnection as checkHAConnection,
   configureHomeAssistant
-} from '../../plugins/integrations/homeassistant.js';
+} from '../../plugins/integrations/homeassistant/plugin.js';
 import { logOps, LOG_LEVELS } from '../logging/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);

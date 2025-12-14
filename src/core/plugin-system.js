@@ -81,11 +81,24 @@ export async function initPluginSystem() {
 // Load all plugins
 export async function loadAllPlugins() {
   try {
-    const files = await fs.readdir(PLUGINS_DIR);
+    const entries = await fs.readdir(PLUGINS_DIR, { withFileTypes: true });
     
-    for (const file of files) {
-      if (file.endsWith('.js')) {
-        await loadPlugin(file);
+    for (const entry of entries) {
+      // Load from directories (new structure: plugins/name/plugin.js)
+      if (entry.isDirectory()) {
+        const pluginFile = path.join(entry.name, 'plugin.js');
+        const pluginPath = path.join(PLUGINS_DIR, pluginFile);
+        
+        try {
+          await fs.access(pluginPath);
+          await loadPlugin(pluginFile);
+        } catch {
+          // No plugin.js in this directory, skip
+        }
+      }
+      // Also support old structure (plugins/name.js) for backwards compatibility
+      else if (entry.name.endsWith('.js') && !entry.name.includes('.planned')) {
+        await loadPlugin(entry.name);
       }
     }
   } catch (error) {

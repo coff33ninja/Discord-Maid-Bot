@@ -1,6 +1,6 @@
-import { Plugin } from '../src/core/plugin-system.js';
+import { Plugin } from '../../src/core/plugin-system.js';
 import cron from 'node-cron';
-import { taskOps } from '../src/database/db.js';
+import { taskOps } from '../../src/database/db.js';
 
 /**
  * Automation Plugin

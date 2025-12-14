@@ -1,3 +1,5 @@
+import { Plugin } from '../../src/core/plugin-system.js';
+
 /**
  * Personality Plugin
  * 
@@ -9,25 +11,18 @@
  * - Per-user personality preferences
  * - Personality preview and switching
  * - Integration with conversational AI
- * 
- * @module plugins/personality
  */
-
-export default class PersonalityPlugin {
+export default class PersonalityPlugin extends Plugin {
   constructor() {
-    this.name = 'personality';
-    this.version = '1.0.0';
-    this.description = 'Bot personality management system with multiple personality types';
+    super('personality', '1.0.0', 'Bot personality management system');
   }
-
-  async onLoad(client, coreHandlers) {
-    console.log(`[${this.name}] Loading personality plugin...`);
-    this.client = client;
-    this.coreHandlers = coreHandlers;
-    console.log(`[${this.name}] ✅ Personality plugin loaded`);
+  
+  async onLoad() {
+    console.log('🎭 Personality plugin loaded');
+    console.log('   10 personalities available');
   }
-
+  
   async onUnload() {
-    console.log(`[${this.name}] Unloading personality plugin...`);
+    console.log('🎭 Personality plugin unloaded');
   }
 }

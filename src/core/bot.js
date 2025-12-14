@@ -183,7 +183,7 @@ export class MaidBot {
     configOps.syncFromEnv('SMB_SHARE', 'smb_share', process.env.SMB_SHARE);
 
     // Initialize Home Assistant (if configured)
-    const { initHomeAssistant } = await import('../../plugins/integrations/homeassistant.js');
+    const { initHomeAssistant } = await import('../../plugins/integrations/homeassistant/plugin.js');
     initHomeAssistant();
   }
 

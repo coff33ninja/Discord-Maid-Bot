@@ -1,7 +1,7 @@
-import { Plugin } from '../src/core/plugin-system.js';
+import { Plugin } from '../../src/core/plugin-system.js';
 import speedtest from 'speedtest-net';
-import { speedTestOps } from '../src/database/db.js';
-import { broadcastUpdate } from '../src/dashboard/server.js';
+import { speedTestOps } from '../../src/database/db.js';
+import { broadcastUpdate } from '../../src/dashboard/server.js';
 
 /**
  * Speed Test Integration Plugin
