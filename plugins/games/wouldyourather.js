@@ -1,10 +1,15 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
 // Generate a Would You Rather scenario
 async function generateScenario(theme = 'random') {
   const themePrompt = theme === 'random' ? 'any creative theme' : theme;
+
+// Note: This game uses generateWithRotation which should be accessed through
+// the games plugin's requestFromCore('gemini-generate', { prompt }) method.
+// TODO: Refactor to use plugin.requestFromCore() instead of direct import
   
   const prompt = `Generate a creative "Would You Rather" scenario about ${themePrompt}.
 
@@ -269,3 +274,4 @@ export function stopWouldYouRather(channelId) {
   }
   return false;
 }
+

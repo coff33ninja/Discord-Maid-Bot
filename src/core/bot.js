@@ -178,6 +178,25 @@ export class MaidBot {
       return { success: true };
     });
 
+    // Register Gemini AI service
+    registerCoreHandler('gemini-generate', async (data) => {
+      const { generateWithRotation } = await import('../config/gemini-keys.js');
+      const { prompt, options } = data;
+      return await generateWithRotation(prompt, options || {});
+    });
+
+    // Register SMB service
+    registerCoreHandler('smb-save', async (data) => {
+      const { saveToSMB } = await import('../config/smb-config.js');
+      const { filename, content } = data;
+      return await saveToSMB(filename, content);
+    });
+
+    registerCoreHandler('smb-config', async () => {
+      const { getSMBConfig } = await import('../config/smb-config.js');
+      return getSMBConfig();
+    });
+
     // Sync environment variables to database (for integrations)
     configOps.syncFromEnv('HA_URL', 'ha_url', process.env.HA_URL);
     configOps.syncFromEnv('HA_TOKEN', 'ha_token', process.env.HA_TOKEN);

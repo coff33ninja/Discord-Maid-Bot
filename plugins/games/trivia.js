@@ -1,7 +1,7 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
-import { generateWithRotation } from '../../src/config/gemini-keys.js';
 import { configOps } from '../../src/database/db.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
+import { generateWithRotation } from './plugin.js';
 
 // Active trivia sessions
 const activeSessions = new Map();
@@ -83,6 +83,10 @@ export function updateTriviaStats(userId, correct, points = 0) {
 async function generateAIQuestion(category, difficulty) {
   const categoryInfo = TRIVIA_CATEGORIES[category] || TRIVIA_CATEGORIES.general;
   const difficultyInfo = DIFFICULTY_LEVELS[difficulty] || DIFFICULTY_LEVELS.medium;
+
+// Note: This game uses generateWithRotation which should be accessed through
+// the games plugin's requestFromCore('gemini-generate', { prompt }) method.
+// TODO: Refactor to use plugin.requestFromCore() instead of direct import
   
   const prompt = `Generate a ${difficultyInfo.name.toLowerCase()} difficulty trivia question about ${categoryInfo.name}.
 

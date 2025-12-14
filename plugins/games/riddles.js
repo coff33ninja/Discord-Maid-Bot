@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
+import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
@@ -12,6 +13,10 @@ const DIFFICULTIES = {
 // Generate a riddle
 async function generateRiddle(difficulty) {
   const diff = DIFFICULTIES[difficulty] || DIFFICULTIES.medium;
+
+// Note: This game uses generateWithRotation which should be accessed through
+// the games plugin's requestFromCore('gemini-generate', { prompt }) method.
+// TODO: Refactor to use plugin.requestFromCore() instead of direct import
   
   const prompt = `Generate a ${diff.name.toLowerCase()} riddle.
 
@@ -280,3 +285,4 @@ export function stopRiddles(channelId) {
 }
 
 export { DIFFICULTIES as RIDDLE_DIFFICULTIES };
+

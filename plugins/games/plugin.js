@@ -60,4 +60,21 @@ export default class GamesPlugin extends Plugin {
       ...data
     }));
   }
+  
+  // Helper method for games to generate AI content
+  // Games should use this instead of importing gemini-keys directly
+  async generateWithAI(prompt, options = {}) {
+    return await this.requestFromCore('gemini-generate', { prompt, options });
+  }
+}
+
+// Export helper for game files to use
+// Game files can import this: import { generateWithRotation } from './plugin.js'
+export async function generateWithRotation(prompt, options = {}) {
+  const { getPlugin } = await import('../../src/core/plugin-system.js');
+  const gamesPlugin = getPlugin('games');
+  if (!gamesPlugin) {
+    throw new Error('Games plugin not loaded');
+  }
+  return await gamesPlugin.generateWithAI(prompt, options);
 }

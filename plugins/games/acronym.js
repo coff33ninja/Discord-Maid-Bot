@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
+import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
@@ -7,6 +8,10 @@ function generateLetters(length = 3) {
   const consonants = 'BCDFGHJKLMNPQRSTVWXYZ';
   const vowels = 'AEIOU';
   let letters = '';
+
+// Note: This game uses generateWithRotation which should be accessed through
+// the games plugin's requestFromCore('gemini-generate', { prompt }) method.
+// TODO: Refactor to use plugin.requestFromCore() instead of direct import
   
   for (let i = 0; i < length; i++) {
     // Mix consonants and vowels for pronounceable acronyms
@@ -271,3 +276,4 @@ export function stopAcronymGame(channelId) {
   }
   return false;
 }
+

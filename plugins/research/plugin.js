@@ -1,7 +1,5 @@
 import { Plugin } from '../../src/core/plugin-system.js';
 import { researchOps } from '../../src/database/db.js';
-import { saveToSMB } from '../../src/config/smb-config.js';
-import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
 /**
  * Research Plugin
@@ -46,7 +44,7 @@ export default class ResearchPlugin extends Plugin {
     let successful = false;
 
     try {
-      const { result, keyUsed } = await generateWithRotation(prompt);
+      const { result, keyUsed } = await this.requestFromCore('gemini-generate', { prompt });
       const response = result.response;
       
       if (response && typeof response.text === 'function' && response.candidates && response.candidates.length > 0) {
@@ -69,7 +67,7 @@ export default class ResearchPlugin extends Plugin {
     
     let smbSaveResult = { savedToSMB: false, error: null };
     try {
-      smbSaveResult = await saveToSMB(filename, content);
+      smbSaveResult = await this.requestFromCore('smb-save', { filename, content });
     } catch(smbError) {
       console.error('SMB save error during research logging:', smbError);
       smbSaveResult.error = smbError.message;

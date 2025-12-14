@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
+import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
@@ -18,6 +19,10 @@ const CATEGORIES = {
 async function generateEmojiPuzzle(category) {
   const cat = CATEGORIES[category] || CATEGORIES.random;
   const categoryText = cat.name === 'Random Mix' ? 'movie, song, anime, game, phrase, or TV show' : cat.name.toLowerCase();
+
+// Note: This game uses generateWithRotation which should be accessed through
+// the games plugin's requestFromCore('gemini-generate', { prompt }) method.
+// TODO: Refactor to use plugin.requestFromCore() instead of direct import
   
   const prompt = `Create an emoji puzzle for a ${categoryText}.
 
@@ -271,3 +276,4 @@ export function stopEmojiDecode(channelId) {
 }
 
 export { CATEGORIES as EMOJI_CATEGORIES };
+

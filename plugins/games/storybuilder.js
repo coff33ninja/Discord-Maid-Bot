@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
+import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
@@ -31,6 +32,10 @@ async function aiContinueStory(story, action = 'continue') {
 // Start Story Builder
 export async function startStoryBuilder(interaction, theme = 'adventure', maxTurns = 10) {
   const channelId = interaction.channelId;
+
+// Note: This game uses generateWithRotation which should be accessed through
+// the games plugin's requestFromCore('gemini-generate', { prompt }) method.
+// TODO: Refactor to use plugin.requestFromCore() instead of direct import
   
   if (hasActiveGame(channelId)) {
     await interaction.reply({ content: '⚠️ A game is already active in this channel!', ephemeral: true });
@@ -256,3 +261,4 @@ export function stopStoryBuilder(channelId) {
   }
   return false;
 }
+

@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
+import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
@@ -70,6 +71,10 @@ const HANGMAN_STAGES = [
 // Get a word for the category
 async function getWord(category) {
   const cat = CATEGORIES[category] || CATEGORIES.random;
+
+// Note: This game uses generateWithRotation which should be accessed through
+// the games plugin's requestFromCore('gemini-generate', { prompt }) method.
+// TODO: Refactor to use plugin.requestFromCore() instead of direct import
   
   // For random or to get fresh words, use AI
   if (category === 'random' || Math.random() > 0.5) {
@@ -349,3 +354,4 @@ export function getHangmanCategories() {
 }
 
 export { CATEGORIES };
+

@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
+import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
@@ -17,6 +18,10 @@ const CATEGORIES = {
 // Generate a secret thing for AI to think of
 async function generateSecret(category) {
   const cat = CATEGORIES[category] || CATEGORIES.anything;
+
+// Note: This game uses generateWithRotation which should be accessed through
+// the games plugin's requestFromCore('gemini-generate', { prompt }) method.
+// TODO: Refactor to use plugin.requestFromCore() instead of direct import
   
   const prompt = `You are playing 20 Questions. Think of a ${cat.name === 'Anything' ? 'person, place, thing, or concept' : cat.name.toLowerCase()}.
 
@@ -286,3 +291,4 @@ export function stop20Questions(channelId) {
 }
 
 export { CATEGORIES as TWENTY_Q_CATEGORIES };
+

@@ -1,4 +1,5 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
@@ -20,6 +21,10 @@ Reply with ONLY valid JSON:
   const { result } = await generateWithRotation(prompt);
   const text = result.response.text();
   const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+// Note: This game uses generateWithRotation which should be accessed through
+// the games plugin's requestFromCore('gemini-generate', { prompt }) method.
+// TODO: Refactor to use plugin.requestFromCore() instead of direct import
   
   if (!jsonMatch) throw new Error('Failed to generate scenario');
   return JSON.parse(jsonMatch[0]);
@@ -288,3 +293,4 @@ export function stopCaptionContest(channelId) {
   }
   return false;
 }
+

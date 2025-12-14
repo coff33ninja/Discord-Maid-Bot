@@ -1,6 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import { createRequire } from 'module';
 import axios from 'axios';
+import { generateWithRotation } from './plugin.js';
 import { getActiveGame, setActiveGame, clearActiveGame, hasActiveGame, updateGameStats } from './game-manager.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
@@ -32,6 +33,10 @@ const DIFFICULTY_SETTINGS = {
 // Initialize dictionary
 function initDictionary() {
   if (dictionaryReady) return true;
+
+// Note: This game uses generateWithRotation which should be accessed through
+// the games plugin's requestFromCore('gemini-generate', { prompt }) method.
+// TODO: Refactor to use plugin.requestFromCore() instead of direct import
   
   try {
     const words = require('an-array-of-english-words');
@@ -470,3 +475,4 @@ export function stopWordChain(channelId) {
 export function isDictionaryReady() {
   return dictionaryReady;
 }
+

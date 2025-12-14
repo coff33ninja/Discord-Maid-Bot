@@ -6,7 +6,6 @@
 
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { chatOps, configOps } from '../../src/database/db.js';
-import { generateWithRotation } from '../../src/config/gemini-keys.js';
 
 // Get personality functions from personality plugin
 // Note: This creates a soft dependency - chat works even if personality plugin is disabled
@@ -59,7 +58,10 @@ User message: "${userMessage}"${contextInfo}
 
 Respond in character. Be concise but maintain your personality!`;
 
-  const { result } = await generateWithRotation(prompt);
+  // Use core handler for Gemini API
+  const { getPlugin } = await import('../../src/core/plugin-system.js');
+  const conversationalPlugin = getPlugin('conversational-ai');
+  const { result } = await conversationalPlugin.requestFromCore('gemini-generate', { prompt });
   const response = result.response.text();
   
   // Save to chat history
