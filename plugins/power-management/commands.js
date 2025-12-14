@@ -98,22 +98,22 @@ export const commandGroup = new SlashCommandSubcommandGroupBuilder()
 export async function handleAutocomplete(interaction, plugin) {
   const focusedOption = interaction.options.getFocused(true);
   
-  if (focusedOption.name === 'device') {
-    const devices = deviceOps.getAll();
-    const filtered = devices
-      .filter(d => {
-        const search = focusedOption.value.toLowerCase();
-        return d.hostname?.toLowerCase().includes(search) ||
-               d.ip?.includes(search) ||
-               d.mac?.toLowerCase().includes(search);
-      })
-      .slice(0, 25)
-      .map(d => ({
-        name: `${d.emoji || '💻'} ${d.hostname || d.ip} (${d.online ? '🟢' : '🔴'})`,
-        value: d.mac
-      }));
+  try {
+    // Import autocomplete helpers
+    const { getDeviceAutocomplete } = await import('../../src/utils/autocomplete-helpers.js');
     
-    await interaction.respond(filtered);
+    if (focusedOption.name === 'device') {
+      const choices = getDeviceAutocomplete(focusedOption.value);
+      await interaction.respond(choices);
+      return;
+    }
+    
+    // Default: no suggestions
+    await interaction.respond([]);
+    
+  } catch (error) {
+    logger.error('Autocomplete error:', error);
+    await interaction.respond([]);
   }
 }
 

@@ -275,5 +275,40 @@ async function handleDeviceGroupCommand(interaction) {
   return true;
 }
 
+/**
+ * Handle autocomplete for network management commands
+ */
+export async function handleAutocomplete(interaction, plugin) {
+  const focusedOption = interaction.options.getFocused(true);
+  const { commandName } = interaction;
+  const subcommand = interaction.options.getSubcommand(false);
+  
+  try {
+    // Import autocomplete helpers
+    const { getDeviceAutocomplete, getGroupAutocomplete } = await import('../../src/utils/autocomplete-helpers.js');
+    
+    // Device autocomplete (for WOL and other commands)
+    if (focusedOption.name === 'device' || focusedOption.name.startsWith('device')) {
+      const choices = getDeviceAutocomplete(focusedOption.value);
+      await interaction.respond(choices);
+      return;
+    }
+    
+    // Group autocomplete
+    if (focusedOption.name === 'group') {
+      const choices = getGroupAutocomplete(focusedOption.value);
+      await interaction.respond(choices);
+      return;
+    }
+    
+    // Default: no suggestions
+    await interaction.respond([]);
+    
+  } catch (error) {
+    logger.error('Autocomplete error:', error);
+    await interaction.respond([]);
+  }
+}
+
 // Export helper functions for use by other plugins
 export { quickPing, scanNetwork, wakeDevice, networkDevices };
