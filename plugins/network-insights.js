@@ -1,4 +1,4 @@
-import { Plugin } from '../src/plugins/plugin-manager.js';
+import { Plugin } from '../src/core/plugin-system.js';
 
 /**
  * AI-Powered Network Insights Plugin

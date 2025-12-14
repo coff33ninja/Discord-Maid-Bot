@@ -20,7 +20,7 @@ import {
 import { getSMBConfig, setSMBConfig, testSMBConnection, toggleSMB, listSMBFiles } from '../config/smb-config.js';
 import { getPersonality, getPersonalityOptions, DEFAULT_PERSONALITY } from '../config/personalities.js';
 import { geminiKeys } from '../config/gemini-keys.js';
-import { getLoadedPlugins, enablePlugin, disablePlugin, reloadPlugin, getPluginStats } from '../plugins/plugin-manager.js';
+import { getLoadedPlugins, enablePlugin, disablePlugin, reloadPlugin, getPluginStats } from '../core/plugin-system.js';
 import { scanUnifiedNetwork, isTailscaleAvailable, getTailscaleStatus } from '../network/unified-scanner.js';
 import { 
   getEntities, 

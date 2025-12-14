@@ -328,7 +328,7 @@ export async function emitToPlugins(eventName, ...args) {
 
 // Create example plugin
 async function createExamplePlugin() {
-  const examplePlugin = `import { Plugin } from '../src/plugins/plugin-manager.js';
+  const examplePlugin = `import { Plugin } from '../src/core/plugin-system.js';
 
 export default class ExamplePlugin extends Plugin {
   constructor() {
