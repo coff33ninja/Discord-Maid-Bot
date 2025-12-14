@@ -14,6 +14,9 @@ const logger = createLogger('games');
 // Standalone plugin - defines its own commands
 export const parentCommand = null;
 
+// Handler-only mode (commands defined in commands array, not injected into parent)
+export const commandGroup = null;
+
 // Commands this plugin handles (for routing)
 export const handlesCommands = ['game'];
 
