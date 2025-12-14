@@ -17,7 +17,7 @@ import { broadcastUpdate } from '../src/dashboard/server.js';
  */
 export default class SpeedTestPlugin extends Plugin {
   constructor() {
-    super('integrations-speedtest', '1.0.0', 'Internet speed testing with history');
+    super('integrations/speedtest', '1.0.0', 'Internet speed testing with history');
   }
   
   async onLoad() {

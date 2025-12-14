@@ -37,8 +37,8 @@ async function handleSpeedTestCommand(interaction) {
   
   try {
     // Get plugin instance
-    const { getPlugin } = await import('../../src/core/plugin-system.js');
-    const speedTestPlugin = getPlugin('integrations-speedtest');
+    const { getPlugin } = await import('../../../src/core/plugin-system.js');
+    const speedTestPlugin = getPlugin('integrations/speedtest');
     
     if (!speedTestPlugin) {
       await interaction.editReply('❌ Speed test plugin not available!');
@@ -81,8 +81,8 @@ async function handleSpeedHistoryCommand(interaction) {
   
   try {
     // Get plugin instance
-    const { getPlugin } = await import('../../src/core/plugin-system.js');
-    const speedTestPlugin = getPlugin('integrations-speedtest');
+    const { getPlugin } = await import('../../../src/core/plugin-system.js');
+    const speedTestPlugin = getPlugin('integrations/speedtest');
     
     if (!speedTestPlugin) {
       await interaction.editReply('❌ Speed test plugin not available!');
@@ -129,8 +129,8 @@ async function handleSpeedHistoryCommand(interaction) {
 
 // Export speed test function for use by other plugins (e.g., automation)
 export async function runSpeedtest(userId = null) {
-  const { getPlugin } = await import('../../src/core/plugin-system.js');
-  const speedTestPlugin = getPlugin('integrations-speedtest');
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const speedTestPlugin = getPlugin('integrations/speedtest');
   
   if (!speedTestPlugin) {
     throw new Error('Speed test plugin not available');

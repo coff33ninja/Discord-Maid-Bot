@@ -670,7 +670,7 @@ export const commands = [
   // STANDALONE COMMANDS
   // ============================================
   
-  // weather command now provided by integrations-weather plugin
+  // weather command now provided by integrations/weather plugin
 
   new SlashCommandBuilder()
     .setName('homeassistant')

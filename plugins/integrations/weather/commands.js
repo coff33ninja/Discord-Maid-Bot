@@ -32,8 +32,8 @@ export async function handleCommand(interaction, commandName, subcommand) {
     const city = interaction.options.getString('city') || 'Cape Town';
     
     // Get plugin instance
-    const { getPlugin } = await import('../../src/core/plugin-system.js');
-    const weatherPlugin = getPlugin('integrations-weather');
+    const { getPlugin } = await import('../../../src/core/plugin-system.js');
+    const weatherPlugin = getPlugin('integrations/weather');
     
     if (!weatherPlugin) {
       await interaction.editReply('❌ Weather plugin not available!');
@@ -79,8 +79,8 @@ export async function handleCommand(interaction, commandName, subcommand) {
 
 // Export weather function for use by other plugins (e.g., automation)
 export async function getWeather(city = 'Cape Town') {
-  const { getPlugin } = await import('../../src/core/plugin-system.js');
-  const weatherPlugin = getPlugin('integrations-weather');
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const weatherPlugin = getPlugin('integrations/weather');
   
   if (!weatherPlugin) {
     throw new Error('Weather plugin not available');

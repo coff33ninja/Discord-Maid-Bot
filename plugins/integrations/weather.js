@@ -15,7 +15,7 @@ import axios from 'axios';
  */
 export default class WeatherPlugin extends Plugin {
   constructor() {
-    super('integrations-weather', '1.0.0', 'Weather information via OpenWeatherMap');
+    super('integrations/weather', '1.0.0', 'Weather information via OpenWeatherMap');
   }
   
   async onLoad() {

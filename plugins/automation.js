@@ -144,7 +144,7 @@ export default class AutomationPlugin extends Plugin {
   async executeSpeedtestTask(channel) {
     try {
       // Import speedtest function from integrations plugin
-      const { runSpeedtest } = await import('./integrations-speedtest/commands.js');
+      const { runSpeedtest } = await import('./integrations/speedtest/commands.js');
       const result = await runSpeedtest();
       
       if (channel) {
@@ -173,7 +173,7 @@ export default class AutomationPlugin extends Plugin {
   async executeWeatherTask(channel) {
     try {
       // Import weather function from integrations plugin
-      const { getWeather } = await import('./integrations-weather/commands.js');
+      const { getWeather } = await import('./integrations/weather/commands.js');
       const result = await getWeather();
       
       if (channel) {
