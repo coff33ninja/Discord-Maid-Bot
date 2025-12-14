@@ -1,225 +1,25 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 
-// Command definitions
-// NOTE: Many commands are now defined in plugins and loaded dynamically
-// See plugins/*/commands.js for command definitions
-export const commands = [
-  // ============================================
-  // COMMANDS DEFINED HERE (will be moved to plugins)
-  // ============================================
-  
-  // /automation - Automation & Triggers (parent for plugin subcommands)
-  new SlashCommandBuilder()
-    .setName('automation')
-    .setDescription('⚙️ Automation and triggers'),
-    // Plugin commands (speedalert, devicetrigger, health, schedule) are injected dynamically
+/**
+ * Slash Commands Registry
+ * 
+ * ALL commands are now defined in their respective plugins!
+ * This file only handles command registration and plugin command injection.
+ * 
+ * Commands are loaded from:
+ * - plugins/automation/commands.js -> /automation
+ * - plugins/core-commands/commands.js -> /help, /stats, /ping, /dashboard, /plugin, /bot, /admin
+ * - plugins/device-management/commands.js -> /device
+ * - plugins/games/commands.js -> /game
+ * - plugins/integrations/weather/commands.js -> /weather
+ * - plugins/integrations/homeassistant/commands.js -> /homeassistant
+ * - plugins/network-management/commands.js -> /network
+ * - plugins/research/commands.js -> /research
+ * - plugins/conversational-ai/commands.js -> /chat
+ */
 
-  // /network - NOW DEFINED IN plugins/network-management/commands.js
-  // /device - NOW DEFINED IN plugins/device-management/commands.js
-  // /research - NOW DEFINED IN plugins/research/commands.js
-  // /game - NOW DEFINED IN plugins/games/commands.js
-
-  // /bot - Bot Management
-  new SlashCommandBuilder()
-    .setName('bot')
-    .setDescription('🤖 Bot management and settings')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('chat')
-        .setDescription('Chat with AI assistant')
-        .addStringOption(option =>
-          option.setName('message')
-            .setDescription('Your message')
-            .setRequired(true)))
-    // personality subcommand now injected by personality plugin
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('stats')
-        .setDescription('View bot statistics'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('dashboard')
-        .setDescription('Get web dashboard URL'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('help')
-        .setDescription('Show help and available commands'))
-    .addSubcommandGroup(group =>
-      group
-        .setName('logs')
-        .setDescription('View system logs')
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('recent')
-            .setDescription('View recent logs')
-            .addStringOption(option =>
-              option.setName('level')
-                .setDescription('Filter by log level')
-                .addChoices(
-                  { name: 'All', value: 'all' },
-                  { name: 'Debug', value: 'debug' },
-                  { name: 'Info', value: 'info' },
-                  { name: 'Warning', value: 'warn' },
-                  { name: 'Error', value: 'error' },
-                  { name: 'Critical', value: 'critical' }
-                ))
-            .addIntegerOption(option =>
-              option.setName('limit')
-                .setDescription('Number of logs to show (default: 10)')
-                .setMinValue(1)
-                .setMaxValue(50)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('search')
-            .setDescription('Search logs')
-            .addStringOption(option =>
-              option.setName('query')
-                .setDescription('Search query')
-                .setRequired(true))
-            .addIntegerOption(option =>
-              option.setName('limit')
-                .setDescription('Number of results (default: 10)')
-                .setMinValue(1)
-                .setMaxValue(50)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('stats')
-            .setDescription('View log statistics'))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('errors')
-            .setDescription('View recent errors')
-            .addIntegerOption(option =>
-              option.setName('limit')
-                .setDescription('Number of errors to show (default: 10)')
-                .setMinValue(1)
-                .setMaxValue(50))))
-    .addSubcommandGroup(group =>
-      group
-        .setName('plugin')
-        .setDescription('Plugin management')
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('list')
-            .setDescription('List all plugins'))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('enable')
-            .setDescription('Enable a plugin')
-            .addStringOption(option =>
-              option.setName('name')
-                .setDescription('Plugin name')
-                .setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('disable')
-            .setDescription('Disable a plugin')
-            .addStringOption(option =>
-              option.setName('name')
-                .setDescription('Plugin name')
-                .setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('reload')
-            .setDescription('Reload a plugin')
-            .addStringOption(option =>
-              option.setName('name')
-                .setDescription('Plugin name')
-                .setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('stats')
-            .setDescription('View plugin statistics'))),
-
-  // /admin - Administration
-  new SlashCommandBuilder()
-    .setName('admin')
-    .setDescription('👑 Administration (Admin only)')
-    .addSubcommandGroup(group =>
-      group
-        .setName('permissions')
-        .setDescription('Permission management')
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('list')
-            .setDescription('List all users and permissions'))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('set')
-            .setDescription('Set user role')
-            .addUserOption(option =>
-              option.setName('user')
-                .setDescription('User to modify')
-                .setRequired(true))
-            .addStringOption(option =>
-              option.setName('role')
-                .setDescription('Role to assign')
-                .setRequired(true)
-                .addChoices(
-                  { name: 'Admin', value: 'admin' },
-                  { name: 'Operator', value: 'operator' },
-                  { name: 'User', value: 'user' }
-                )))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('grant')
-            .setDescription('Grant specific permission')
-            .addUserOption(option =>
-              option.setName('user')
-                .setDescription('User to grant permission')
-                .setRequired(true))
-            .addStringOption(option =>
-              option.setName('permission')
-                .setDescription('Permission to grant')
-                .setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('revoke')
-            .setDescription('Revoke specific permission')
-            .addUserOption(option =>
-              option.setName('user')
-                .setDescription('User to revoke permission')
-                .setRequired(true))
-            .addStringOption(option =>
-              option.setName('permission')
-                .setDescription('Permission to revoke')
-                .setRequired(true))))
-    .addSubcommandGroup(group =>
-      group
-        .setName('config')
-        .setDescription('Bot configuration')
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('view')
-            .setDescription('View configuration')
-            .addStringOption(option =>
-              option.setName('section')
-                .setDescription('Config section')
-                .addChoices(
-                  { name: 'SMB Storage', value: 'smb' },
-                  { name: 'Home Assistant', value: 'homeassistant' },
-                  { name: 'Gemini API', value: 'gemini' }
-                )))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('set')
-            .setDescription('Set configuration value')
-            .addStringOption(option =>
-              option.setName('key')
-                .setDescription('Configuration key')
-                .setRequired(true))
-            .addStringOption(option =>
-              option.setName('value')
-                .setDescription('Configuration value')
-                .setRequired(true)))),
-
-  // ============================================
-  // STANDALONE COMMANDS - NOW IN PLUGINS
-  // ============================================
-  
-  // /weather - NOW DEFINED IN plugins/integrations/weather/commands.js
-  // /homeassistant - NOW DEFINED IN plugins/integrations/homeassistant/commands.js
-];
+// Start with empty array - all commands loaded from plugins
+export const commands = [];
 
 // Register commands with Discord
 export async function registerCommands(client) {

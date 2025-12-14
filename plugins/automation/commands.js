@@ -2,60 +2,58 @@
  * Automation Commands
  * 
  * Handles task scheduling and automation management.
+ * Defines the /automation parent command - other plugins inject subcommands.
  */
 
-import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createLogger } from '../../src/logging/logger.js';
 import { taskOps } from '../../src/database/db.js';
 import { checkUserPermission } from '../../src/core/permission-manager.js';
 import { PERMISSIONS } from '../../src/auth/auth.js';
 
-// This plugin provides subcommands for /automation command
-// Note: /automation already has subcommands from other plugins (health, devicetrigger, speedalert)
-// We're adding the 'schedule' subcommand
-export const parentCommand = 'automation';
+const logger = createLogger('automation');
 
-// Single subcommand for schedule management
-export const commandGroup = new SlashCommandSubcommandBuilder()
-  .setName('schedule')
-  .setDescription('Manage scheduled tasks')
-  .addStringOption(option =>
-    option.setName('action')
-      .setDescription('Action to perform')
-      .setRequired(true)
-      .addChoices(
-        { name: 'List tasks', value: 'list' },
-        { name: 'Add task', value: 'add' },
-        { name: 'Toggle task', value: 'toggle' },
-        { name: 'Delete task', value: 'delete' }
-      ))
-  .addStringOption(option =>
-    option.setName('name')
-      .setDescription('Task name (for add/toggle/delete)')
-      .setRequired(false))
-  .addStringOption(option =>
-    option.setName('command')
-      .setDescription('Command to run (for add)')
-      .setRequired(false)
-      .addChoices(
-        { name: 'Network Scan', value: 'scan' },
-        { name: 'Speed Test', value: 'speedtest' },
-        { name: 'Weather Update', value: 'weather' }
-      ))
-  .addStringOption(option =>
-    option.setName('cron')
-      .setDescription('Cron expression (for add, e.g., "0 */6 * * *" for every 6 hours)')
-      .setRequired(false))
-  .addChannelOption(option =>
-    option.setName('channel')
-      .setDescription('Channel for notifications (for add)')
-      .setRequired(false));
+// Standalone plugin - defines the /automation parent command
+export const parentCommand = null;
+export const handlesCommands = ['automation'];
 
 /**
- * Handle automation schedule command
+ * Command definitions - /automation
+ * Other plugins (speed-alerts, device-triggers, device-health) inject their subcommands
+ */
+export const commands = [
+  new SlashCommandBuilder()
+    .setName('automation')
+    .setDescription('⚙️ Automation and triggers')
+    .addSubcommand(sub => sub
+      .setName('schedule')
+      .setDescription('Manage scheduled tasks')
+      .addStringOption(opt => opt.setName('action').setDescription('Action').setRequired(true)
+        .addChoices(
+          { name: 'List tasks', value: 'list' },
+          { name: 'Add task', value: 'add' },
+          { name: 'Toggle task', value: 'toggle' },
+          { name: 'Delete task', value: 'delete' }
+        ))
+      .addStringOption(opt => opt.setName('name').setDescription('Task name'))
+      .addStringOption(opt => opt.setName('command').setDescription('Command to run')
+        .addChoices(
+          { name: 'Network Scan', value: 'scan' },
+          { name: 'Speed Test', value: 'speedtest' },
+          { name: 'Weather Update', value: 'weather' }
+        ))
+      .addStringOption(opt => opt.setName('cron').setDescription('Cron expression'))
+      .addChannelOption(opt => opt.setName('channel').setDescription('Notification channel')))
+];
+
+/**
+ * Handle automation commands
  */
 export async function handleCommand(interaction, commandName, subcommand) {
-  if (commandName !== 'automation' || subcommand !== 'schedule') return false;
+  if (commandName !== 'automation') return false;
+  
+  // Only handle 'schedule' subcommand - others are handled by their respective plugins
+  if (subcommand !== 'schedule') return false;
 
   try {
     const action = interaction.options.getString('action');
@@ -300,8 +298,6 @@ async function handleDeleteTask(interaction) {
   // Stop task if running
   try {
     const { getPlugin } = await import('../../src/core/plugin-system.js');
-
-const logger = createLogger('automation');
     const automationPlugin = getPlugin('automation');
     
     if (automationPlugin) {

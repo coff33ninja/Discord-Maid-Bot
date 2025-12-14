@@ -1,5 +1,6 @@
 import { Plugin } from '../../src/core/plugin-system.js';
 import { createLogger } from '../../src/logging/logger.js';
+import { getActiveGame, clearActiveGame, getAllActiveGames } from './games/game-manager.js';
 
 /**
  * Games Plugin
@@ -26,7 +27,6 @@ export default class GamesPlugin extends Plugin {
   constructor() {
     super('games', '1.0.0', 'Interactive games collection with 18+ games');
     this.logger = createLogger('games');
-    this.activeGames = new Map(); // Track active game sessions
   }
   
   async onLoad() {
@@ -35,48 +35,21 @@ export default class GamesPlugin extends Plugin {
   }
   
   async onUnload() {
-    this.logger.info('🎮 Stopping all active games...');
-    this.activeGames.clear();
     this.logger.info('🎮 Games plugin unloaded');
   }
   
-  // Register an active game
-  registerGame(channelId, gameType, gameData) {
-    this.activeGames.set(channelId, { gameType, gameData, startedAt: new Date() });
-  }
-  
-  // Get active game for a channel
+  // Get active game for a channel (delegates to game-manager)
   getActiveGame(channelId) {
-    return this.activeGames.get(channelId);
+    return getActiveGame(channelId);
   }
   
-  // Stop a game
+  // Stop a game (delegates to game-manager)
   stopGame(channelId) {
-    return this.activeGames.delete(channelId);
+    return clearActiveGame(channelId);
   }
   
-  // Get all active games
+  // Get all active games (delegates to game-manager)
   getActiveGames() {
-    return Array.from(this.activeGames.entries()).map(([channelId, data]) => ({
-      channelId,
-      ...data
-    }));
+    return getAllActiveGames();
   }
-  
-  // Helper method for games to generate AI content
-  // Games should use this instead of importing gemini-keys directly
-  async generateWithAI(prompt, options = {}) {
-    return await this.requestFromCore('gemini-generate', { prompt, options });
-  }
-}
-
-// Export helper for game files to use
-// Game files can import this: import { generateWithRotation } from './plugin.js'
-export async function generateWithRotation(prompt, options = {}) {
-  const { getPlugin } = await import('../../src/core/plugin-system.js');
-  const gamesPlugin = getPlugin('games');
-  if (!gamesPlugin) {
-    throw new Error('Games plugin not loaded');
-  }
-  return await gamesPlugin.generateWithAI(prompt, options);
 }

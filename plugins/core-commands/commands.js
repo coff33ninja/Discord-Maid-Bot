@@ -33,8 +33,8 @@ export const commandGroup = {
 export const parentCommand = null; // null means standalone commands
 
 // Commands this plugin handles (for routing)
-// Handles both standalone commands and /bot subcommands
-export const handlesCommands = ['help', 'stats', 'ping', 'dashboard', 'plugin', 'bot'];
+// Handles standalone commands, /bot subcommands, and /admin
+export const handlesCommands = ['help', 'stats', 'ping', 'dashboard', 'plugin', 'bot', 'admin'];
 
 /**
  * Define slash commands
@@ -98,7 +98,65 @@ export const commands = [
     .addSubcommand(subcommand =>
       subcommand
         .setName('stats')
-        .setDescription('Show plugin statistics'))
+        .setDescription('Show plugin statistics')),
+
+  // BOT command - Bot management
+  new SlashCommandBuilder()
+    .setName('bot')
+    .setDescription('🤖 Bot management and settings')
+    .addSubcommand(sub => sub.setName('chat').setDescription('Chat with AI assistant')
+      .addStringOption(opt => opt.setName('message').setDescription('Your message').setRequired(true)))
+    .addSubcommand(sub => sub.setName('stats').setDescription('View bot statistics'))
+    .addSubcommand(sub => sub.setName('dashboard').setDescription('Get web dashboard URL'))
+    .addSubcommand(sub => sub.setName('help').setDescription('Show help and available commands'))
+    .addSubcommandGroup(grp => grp.setName('logs').setDescription('View system logs')
+      .addSubcommand(sub => sub.setName('recent').setDescription('View recent logs')
+        .addStringOption(opt => opt.setName('level').setDescription('Filter by level')
+          .addChoices(
+            { name: 'All', value: 'all' }, { name: 'Debug', value: 'debug' },
+            { name: 'Info', value: 'info' }, { name: 'Warning', value: 'warn' },
+            { name: 'Error', value: 'error' }, { name: 'Critical', value: 'critical' }
+          ))
+        .addIntegerOption(opt => opt.setName('limit').setDescription('Number of logs').setMinValue(1).setMaxValue(50)))
+      .addSubcommand(sub => sub.setName('search').setDescription('Search logs')
+        .addStringOption(opt => opt.setName('query').setDescription('Search query').setRequired(true))
+        .addIntegerOption(opt => opt.setName('limit').setDescription('Number of results').setMinValue(1).setMaxValue(50)))
+      .addSubcommand(sub => sub.setName('stats').setDescription('View log statistics'))
+      .addSubcommand(sub => sub.setName('errors').setDescription('View recent errors')
+        .addIntegerOption(opt => opt.setName('limit').setDescription('Number of errors').setMinValue(1).setMaxValue(50))))
+    .addSubcommandGroup(grp => grp.setName('plugin').setDescription('Plugin management')
+      .addSubcommand(sub => sub.setName('list').setDescription('List all plugins'))
+      .addSubcommand(sub => sub.setName('enable').setDescription('Enable a plugin')
+        .addStringOption(opt => opt.setName('name').setDescription('Plugin name').setRequired(true)))
+      .addSubcommand(sub => sub.setName('disable').setDescription('Disable a plugin')
+        .addStringOption(opt => opt.setName('name').setDescription('Plugin name').setRequired(true)))
+      .addSubcommand(sub => sub.setName('reload').setDescription('Reload a plugin')
+        .addStringOption(opt => opt.setName('name').setDescription('Plugin name').setRequired(true)))
+      .addSubcommand(sub => sub.setName('stats').setDescription('View plugin statistics'))),
+
+  // ADMIN command - Administration
+  new SlashCommandBuilder()
+    .setName('admin')
+    .setDescription('👑 Administration (Admin only)')
+    .addSubcommandGroup(grp => grp.setName('permissions').setDescription('Permission management')
+      .addSubcommand(sub => sub.setName('list').setDescription('List all users and permissions'))
+      .addSubcommand(sub => sub.setName('set').setDescription('Set user role')
+        .addUserOption(opt => opt.setName('user').setDescription('User to modify').setRequired(true))
+        .addStringOption(opt => opt.setName('role').setDescription('Role to assign').setRequired(true)
+          .addChoices({ name: 'Admin', value: 'admin' }, { name: 'Operator', value: 'operator' }, { name: 'User', value: 'user' })))
+      .addSubcommand(sub => sub.setName('grant').setDescription('Grant specific permission')
+        .addUserOption(opt => opt.setName('user').setDescription('User').setRequired(true))
+        .addStringOption(opt => opt.setName('permission').setDescription('Permission').setRequired(true)))
+      .addSubcommand(sub => sub.setName('revoke').setDescription('Revoke specific permission')
+        .addUserOption(opt => opt.setName('user').setDescription('User').setRequired(true))
+        .addStringOption(opt => opt.setName('permission').setDescription('Permission').setRequired(true))))
+    .addSubcommandGroup(grp => grp.setName('config').setDescription('Bot configuration')
+      .addSubcommand(sub => sub.setName('view').setDescription('View configuration')
+        .addStringOption(opt => opt.setName('section').setDescription('Config section')
+          .addChoices({ name: 'SMB Storage', value: 'smb' }, { name: 'Home Assistant', value: 'homeassistant' }, { name: 'Gemini API', value: 'gemini' })))
+      .addSubcommand(sub => sub.setName('set').setDescription('Set configuration value')
+        .addStringOption(opt => opt.setName('key').setDescription('Configuration key').setRequired(true))
+        .addStringOption(opt => opt.setName('value').setDescription('Configuration value').setRequired(true))))
 ];
 
 /**
@@ -190,6 +248,11 @@ export async function handleCommand(interaction, commandName, subcommand) {
     if (cmdName === 'plugin') {
       const sub = interaction.options.getSubcommand();
       return await handlePluginCommand(interaction, sub, userId);
+    }
+
+    // ADMIN command
+    if (cmdName === 'admin') {
+      return await handleAdminCommand(interaction, subcommand, subcommandGroup, userId);
     }
 
   } catch (error) {
@@ -454,6 +517,59 @@ async function handlePluginCommand(interaction, subcommand, userId) {
     return true;
   }
   
+  return false;
+}
+
+/**
+ * Handle /admin command
+ */
+async function handleAdminCommand(interaction, subcommand, subcommandGroup, userId) {
+  // Check admin permission
+  const hasPermission = await checkUserPermission(userId, PERMISSIONS.ADMIN);
+  if (!hasPermission) {
+    await interaction.reply({ content: '❌ Admin permission required!', ephemeral: true });
+    return true;
+  }
+
+  if (subcommandGroup === 'permissions') {
+    if (subcommand === 'list') {
+      await interaction.reply({ content: '📋 Permission listing coming soon!\n\nUse the dashboard for now.', ephemeral: true });
+      return true;
+    }
+    if (subcommand === 'set') {
+      const user = interaction.options.getUser('user');
+      const role = interaction.options.getString('role');
+      await interaction.reply({ content: `✅ Set **${user.username}** role to **${role}**\n\n(Feature in development)`, ephemeral: true });
+      return true;
+    }
+    if (subcommand === 'grant' || subcommand === 'revoke') {
+      await interaction.reply({ content: `🚧 Permission ${subcommand} coming soon!`, ephemeral: true });
+      return true;
+    }
+  }
+
+  if (subcommandGroup === 'config') {
+    const { configOps } = await import('../../src/database/db.js');
+    
+    if (subcommand === 'view') {
+      const section = interaction.options.getString('section');
+      const embed = new EmbedBuilder()
+        .setColor('#667eea')
+        .setTitle(`⚙️ Configuration: ${section || 'All'}`)
+        .setDescription('Configuration viewing available on dashboard.')
+        .setTimestamp();
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return true;
+    }
+    if (subcommand === 'set') {
+      const key = interaction.options.getString('key');
+      const value = interaction.options.getString('value');
+      configOps.set(key, value);
+      await interaction.reply({ content: `✅ Set **${key}** = \`${value}\``, ephemeral: true });
+      return true;
+    }
+  }
+
   return false;
 }
 
