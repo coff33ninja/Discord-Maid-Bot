@@ -177,6 +177,8 @@ export async function handleCommandInteraction(interaction) {
       // Get the command handler
       const commandHandler = getPluginCommandHandler(targetPlugin);
       
+      logger.info(`Routing /${commandName} ${subcommand || ''} to plugin: ${targetPlugin} (commandGroup: ${commandHandler?.commandGroup})`);
+      
       if (commandHandler && commandHandler.handleCommand) {
         // Handler-only plugins (like network-management) need commandName and subcommand
         if (commandHandler.commandGroup === null) {
