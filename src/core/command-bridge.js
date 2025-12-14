@@ -106,13 +106,19 @@ export async function handleCommandInteraction(interaction) {
   
   try {
     // Import plugin system
-    const { handlePluginCommand, getLoadedPlugins } = await import('./plugin-system.js');
+    const { getPluginCommandHandler, getPlugin } = await import('./plugin-system.js');
     
     // Handle plugin: prefixed commands
     if (commandName.startsWith('plugin:')) {
       const pluginName = commandName.replace('plugin:', '');
-      await handlePluginCommand(pluginName, interaction);
-      return;
+      const commandHandler = getPluginCommandHandler(pluginName);
+      
+      if (commandHandler && commandHandler.handleCommand) {
+        await commandHandler.handleCommand(interaction);
+        return;
+      }
+      
+      throw new Error(`Plugin ${pluginName} has no command handler`);
     }
     
     // Route commands to appropriate plugins
@@ -138,27 +144,36 @@ export async function handleCommandInteraction(interaction) {
       // Admin commands -> core-commands
       'admin': 'core-commands',
       
-      // Weather -> integrations/weather
-      'weather': 'integrations/weather',
+      // Weather -> integrations (weather subplugin)
+      'weather': 'integrations',
       
-      // Home Assistant -> integrations/homeassistant
-      'homeassistant': 'integrations/homeassistant'
+      // Home Assistant -> integrations (homeassistant subplugin)
+      'homeassistant': 'integrations'
     };
     
     const targetPlugin = routeMap[commandName];
     
     if (targetPlugin) {
-      // Try to get the plugin and call its command handler
-      const plugins = getLoadedPlugins();
-      const plugin = plugins.find(p => p.name === targetPlugin);
+      // Get the plugin
+      const plugin = getPlugin(targetPlugin);
       
-      if (plugin && plugin.commands) {
-        const commandsModule = plugin.commands;
-        if (commandsModule.handleCommand) {
-          await commandsModule.handleCommand(interaction, commandName, subcommand);
-          return;
-        }
+      if (!plugin) {
+        throw new Error(`Plugin ${targetPlugin} not found or not loaded`);
       }
+      
+      if (!plugin.enabled) {
+        throw new Error(`Plugin ${targetPlugin} is disabled`);
+      }
+      
+      // Get the command handler
+      const commandHandler = getPluginCommandHandler(targetPlugin);
+      
+      if (commandHandler && commandHandler.handleCommand) {
+        await commandHandler.handleCommand(interaction);
+        return;
+      }
+      
+      throw new Error(`Plugin ${targetPlugin} has no command handler`);
     }
     
     // If no handler found, log and show error
