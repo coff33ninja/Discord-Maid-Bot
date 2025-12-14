@@ -98,6 +98,8 @@ export async function handleAutocompleteInteraction(interaction) {
 /**
  * Handle command interactions
  * Routes commands to appropriate handlers (plugins or legacy)
+ * 
+ * Note: This is a fallback handler. Most commands should be handled by plugins.
  */
 export async function handleCommandInteraction(interaction) {
   const { commandName } = interaction;
@@ -113,17 +115,12 @@ export async function handleCommandInteraction(interaction) {
       return;
     }
     
-    // Import the main command handlers
-    const handlers = await import('../../index-command-handlers.js');
+    // All commands should be handled by plugins now
+    // If we reach here, the command wasn't handled by any plugin
+    logger.warn(`Unhandled command: ${commandName}`);
     
-    if (handlers[commandName]) {
-      await handlers[commandName](interaction);
-      return;
-    }
-    
-    // If no handler found, show error
     await interaction.reply({
-      content: `❌ Command handler not found for: ${commandName}\n\nThis command may not be implemented yet.`,
+      content: `❌ Command handler not found for: \`/${commandName}\`\n\nThis command may not be implemented yet or the plugin may be disabled.`,
       ephemeral: true
     });
     
