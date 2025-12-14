@@ -1,383 +1,403 @@
-import axios from 'axios';
+import { Plugin } from '../../../src/core/plugin-system.js';
+import { createLogger } from '../../../src/logging/logger.js';
 import { configOps } from '../../../src/database/db.js';
+import axios from 'axios';
 
-let haClient = null;
+/**
+ * Home Assistant Integration Plugin
+ * 
+ * Provides integration with Home Assistant for smart home control.
+ * 
+ * Features:
+ * - Light control
+ * - Switch control
+ * - Sensor monitoring
+ * - Scene activation
+ * - Automation control
+ * - Climate control
+ * - ESPHome device support
+ * 
+ * Configuration:
+ * - Set HA_URL and HA_TOKEN in .env file
+ * - Or use /homeassistant configure command
+ */
+export default class HomeAssistantPlugin extends Plugin {
+  constructor() {
+    super('integrations/homeassistant', '1.0.0', 'Home Assistant smart home integration');
+    this.logger = createLogger('homeassistant');
+    this.client = null;
+    this.connected = false;
+  }
 
-// Initialize Home Assistant connection
-export function initHomeAssistant() {
-  const haUrl = configOps.get('ha_url');
-  const haToken = configOps.get('ha_token');
-  
-  if (haUrl && haToken) {
-    haClient = axios.create({
-      baseURL: haUrl,
-      headers: {
-        'Authorization': `Bearer ${haToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    console.log('✅ Home Assistant connected');
-    return true;
-  }
-  
-  console.log('⚠️  Home Assistant not configured');
-  return false;
-}
-
-// Configure Home Assistant
-export function configureHomeAssistant(url, token) {
-  configOps.set('ha_url', url);
-  configOps.set('ha_token', token);
-  return initHomeAssistant();
-}
-
-// Get all entities
-export async function getEntities() {
-  if (!haClient) {
-    throw new Error('Home Assistant not configured');
-  }
-  
-  try {
-    const response = await haClient.get('/api/states');
-    return response.data;
-  } catch (error) {
-    console.error('Failed to get HA entities:', error.message);
-    throw error;
-  }
-}
-
-// Get specific entity state
-export async function getEntityState(entityId) {
-  if (!haClient) {
-    throw new Error('Home Assistant not configured');
-  }
-  
-  try {
-    const response = await haClient.get(`/api/states/${entityId}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Failed to get entity ${entityId}:`, error.message);
-    throw error;
-  }
-}
-
-// Call service
-export async function callService(domain, service, data = {}) {
-  if (!haClient) {
-    throw new Error('Home Assistant not configured');
-  }
-  
-  try {
-    const response = await haClient.post(`/api/services/${domain}/${service}`, data);
-    return response.data;
-  } catch (error) {
-    console.error(`Failed to call service ${domain}.${service}:`, error.message);
-    throw error;
-  }
-}
-
-// Get ESP devices (devices with esphome integration)
-export async function getESPDevices() {
-  if (!haClient) {
-    throw new Error('Home Assistant not configured');
-  }
-  
-  try {
-    // First check if ESPHome integration is installed
-    const config = await haClient.get('/api/config');
-    const hasESPHome = config.data.components.includes('esphome');
+  async onLoad() {
+    this.logger.info('🏠 Home Assistant plugin loading...');
     
-    // Check if ESPHome dashboard is accessible (even if integration not in component list)
-    let esphomeDashboardAccessible = false;
+    // Try to initialize from env variables first, then from database
+    const haUrl = process.env.HA_URL || configOps.get('ha_url');
+    const haToken = process.env.HA_TOKEN || configOps.get('ha_token');
+    
+    if (haUrl && haToken) {
+      this.connect(haUrl, haToken);
+    } else {
+      this.logger.warn('   Home Assistant not configured');
+      this.logger.warn('   Set HA_URL and HA_TOKEN in .env or use /homeassistant configure');
+    }
+  }
+
+  async onUnload() {
+    this.logger.info('🏠 Home Assistant plugin unloaded');
+    this.client = null;
+    this.connected = false;
+  }
+
+  // Connect to Home Assistant
+  connect(url, token) {
     try {
-      const esphomeUrl = haClient.defaults.baseURL.replace(':8123', ':6052');
-      await axios.get(esphomeUrl, { timeout: 3000 });
-      esphomeDashboardAccessible = true;
-      console.log('✅ ESPHome dashboard detected at port 6052');
+      this.client = axios.create({
+        baseURL: url,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      });
+      
+      // Save to database for persistence
+      configOps.set('ha_url', url);
+      configOps.set('ha_token', token);
+      
+      this.connected = true;
+      this.logger.info('   ✅ Connected to Home Assistant');
+      this.logger.info(`   URL: ${url}`);
+      return true;
     } catch (error) {
-      console.log('⚠️  ESPHome dashboard not accessible');
+      this.logger.error('   ❌ Failed to connect:', error.message);
+      this.connected = false;
+      return false;
     }
+  }
+
+  // Configure Home Assistant (called from commands)
+  configure(url, token) {
+    return this.connect(url, token);
+  }
+
+  // Check if connected
+  isConnected() {
+    return this.connected && this.client !== null;
+  }
+
+  // Check connection health
+  async checkConnection() {
+    if (!this.client) return false;
     
-    if (!hasESPHome && !esphomeDashboardAccessible) {
-      console.warn('⚠️  ESPHome integration not installed in Home Assistant');
-      return {
-        devices: [],
-        warning: 'ESPHome integration not installed',
-        instructions: [
-          'Go to Settings > Devices & Services in Home Assistant',
-          'Click "+ ADD INTEGRATION"',
-          'Search for "ESPHome"',
-          'Follow the setup wizard',
-          'Or check ESPHome dashboard at http://YOUR_HA_IP:6052'
-        ]
-      };
+    try {
+      await this.client.get('/api/');
+      return true;
+    } catch (error) {
+      return false;
     }
-    
-    const entities = await getEntities();
-    
-    // Method 1: Look for ESPHome platform
-    let espDevices = entities.filter(entity => 
-      entity.attributes?.platform === 'esphome'
-    );
-    
-    // Method 2: Look for 'esp' in entity_id or friendly_name
-    if (espDevices.length === 0) {
-      espDevices = entities.filter(entity => 
-        entity.entity_id.toLowerCase().includes('esp') || 
-        entity.attributes?.friendly_name?.toLowerCase().includes('esp')
-      );
+  }
+
+  // Get all entities
+  async getEntities() {
+    this._requireConnection();
+    const response = await this.client.get('/api/states');
+    return response.data;
+  }
+
+  // Get specific entity state
+  async getEntityState(entityId) {
+    this._requireConnection();
+    const response = await this.client.get(`/api/states/${entityId}`);
+    return response.data;
+  }
+
+  // Call a service
+  async callService(domain, service, data = {}) {
+    this._requireConnection();
+    const response = await this.client.post(`/api/services/${domain}/${service}`, data);
+    return response.data;
+  }
+
+
+
+  // ============================================
+  // LIGHT CONTROL
+  // ============================================
+
+  async getAllLights() {
+    const entities = await this.getEntities();
+    return entities.filter(e => e.entity_id.startsWith('light.'));
+  }
+
+  async controlLight(entityId, state, brightness = null) {
+    const service = state ? 'turn_on' : 'turn_off';
+    const data = { entity_id: entityId };
+    if (brightness !== null && state) {
+      data.brightness = brightness;
     }
+    return await this.callService('light', service, data);
+  }
+
+  // ============================================
+  // SWITCH CONTROL
+  // ============================================
+
+  async getAllSwitches() {
+    const entities = await this.getEntities();
+    return entities.filter(e => e.entity_id.startsWith('switch.'));
+  }
+
+  async controlSwitch(entityId, state) {
+    const service = state ? 'turn_on' : 'turn_off';
+    return await this.callService('switch', service, { entity_id: entityId });
+  }
+
+  // ============================================
+  // SENSOR MONITORING
+  // ============================================
+
+  async getAllSensors() {
+    const entities = await this.getEntities();
+    return entities.filter(e => e.entity_id.startsWith('sensor.'));
+  }
+
+  async getSensorData(entityId) {
+    const state = await this.getEntityState(entityId);
+    return {
+      value: state.state,
+      unit: state.attributes?.unit_of_measurement,
+      friendly_name: state.attributes?.friendly_name,
+      last_updated: state.last_updated
+    };
+  }
+
+  // ============================================
+  // SCENES
+  // ============================================
+
+  async getAllScenes() {
+    const entities = await this.getEntities();
+    return entities.filter(e => e.entity_id.startsWith('scene.'));
+  }
+
+  async activateScene(sceneId) {
+    return await this.callService('scene', 'turn_on', { entity_id: sceneId });
+  }
+
+  // ============================================
+  // AUTOMATIONS
+  // ============================================
+
+  async getAllAutomations() {
+    const entities = await this.getEntities();
+    return entities.filter(e => e.entity_id.startsWith('automation.'));
+  }
+
+  async triggerAutomation(automationId) {
+    return await this.callService('automation', 'trigger', { entity_id: automationId });
+  }
+
+  async toggleAutomation(automationId, state) {
+    const service = state ? 'turn_on' : 'turn_off';
+    return await this.callService('automation', service, { entity_id: automationId });
+  }
+
+  // ============================================
+  // SCRIPTS
+  // ============================================
+
+  async getAllScripts() {
+    const entities = await this.getEntities();
+    return entities.filter(e => e.entity_id.startsWith('script.'));
+  }
+
+  async runScript(scriptId) {
+    return await this.callService('script', 'turn_on', { entity_id: scriptId });
+  }
+
+  // ============================================
+  // CLIMATE CONTROL
+  // ============================================
+
+  async getAllClimate() {
+    const entities = await this.getEntities();
+    return entities.filter(e => e.entity_id.startsWith('climate.'));
+  }
+
+  async getClimate(entityId) {
+    const state = await this.getEntityState(entityId);
+    return {
+      current_temperature: state.attributes?.current_temperature,
+      target_temperature: state.attributes?.temperature,
+      mode: state.state,
+      hvac_modes: state.attributes?.hvac_modes,
+      friendly_name: state.attributes?.friendly_name
+    };
+  }
+
+  async setClimateTemperature(entityId, temperature) {
+    return await this.callService('climate', 'set_temperature', {
+      entity_id: entityId,
+      temperature
+    });
+  }
+
+  async setClimateMode(entityId, hvacMode) {
+    return await this.callService('climate', 'set_hvac_mode', {
+      entity_id: entityId,
+      hvac_mode: hvacMode
+    });
+  }
+
+  // ============================================
+  // ESPHOME DEVICES
+  // ============================================
+
+  async getESPDevices() {
+    this._requireConnection();
     
-    // Method 3: Look for common ESP device patterns (controller, pc_controller, etc.)
-    if (espDevices.length === 0) {
-      espDevices = entities.filter(entity => 
-        entity.entity_id.includes('controller') ||
-        entity.entity_id.includes('pc_') ||
-        entity.attributes?.friendly_name?.toLowerCase().includes('controller')
-      );
+    try {
+      const config = await this.client.get('/api/config');
+      const hasESPHome = config.data.components.includes('esphome');
       
-      if (espDevices.length > 0) {
-        console.log(`ℹ️  Found ${espDevices.length} potential ESP devices by pattern matching`);
-      }
-    }
-    
-    // Method 4: Check MQTT devices (ESP might be using MQTT)
-    const hasMQTT = config.data.components.includes('mqtt');
-    if (espDevices.length === 0 && hasMQTT) {
-      const mqttDevices = entities.filter(entity => 
-        entity.attributes?.platform === 'mqtt'
-      );
-      
-      if (mqttDevices.length > 0) {
-        console.log(`ℹ️  Found ${mqttDevices.length} MQTT devices (ESP devices might be using MQTT)`);
-      }
-    }
-    
-    if (espDevices.length === 0) {
-      const instructions = [
-        'Make sure your ESP devices are powered on and connected',
-        'Check if devices appear in Settings > Devices & Services',
-        'Verify ESPHome dashboard at http://YOUR_HA_IP:6052'
-      ];
-      
-      if (esphomeDashboardAccessible) {
-        instructions.push('ESPHome dashboard is accessible - check device status there');
-      }
-      
-      return {
-        devices: [],
-        warning: 'No ESP devices found',
-        instructions
-      };
-    }
-    
-    // Group by device name (extract from entity_id or friendly_name)
-    const devices = {};
-    for (const entity of espDevices) {
-      // Try to extract device name from entity_id (e.g., "pc_controller_kusanagi" -> "KUSANAGI")
-      let deviceName = 'Unknown';
-      
-      if (entity.attributes?.friendly_name) {
-        // Use first word of friendly name (e.g., "KUSANAGI Wake on LAN" -> "KUSANAGI")
-        deviceName = entity.attributes.friendly_name.split(' ')[0];
-      } else {
-        // Extract from entity_id
-        const parts = entity.entity_id.split('_');
-        if (parts.length > 2) {
-          deviceName = parts[parts.length - 1].toUpperCase();
-        }
-      }
-      
-      if (!devices[deviceName]) {
-        devices[deviceName] = {
-          name: deviceName,
-          entities: [],
-          online: entity.state !== 'unavailable' && entity.state !== 'unknown'
+      if (!hasESPHome) {
+        return {
+          devices: [],
+          warning: 'ESPHome integration not installed',
+          instructions: [
+            'Go to Settings > Devices & Services in Home Assistant',
+            'Click "+ ADD INTEGRATION"',
+            'Search for "ESPHome"',
+            'Follow the setup wizard'
+          ]
         };
       }
       
-      devices[deviceName].entities.push({
-        id: entity.entity_id,
-        name: entity.attributes?.friendly_name || entity.entity_id,
-        state: entity.state,
-        type: entity.entity_id.split('.')[0],
-        platform: entity.attributes?.platform || 'unknown',
-        available: entity.state !== 'unavailable'
-      });
+      const entities = await this.getEntities();
       
-      // Update device online status
-      if (entity.state !== 'unavailable' && entity.state !== 'unknown') {
-        devices[deviceName].online = true;
+      // Find ESPHome entities
+      let espDevices = entities.filter(entity => 
+        entity.attributes?.platform === 'esphome' ||
+        entity.entity_id.toLowerCase().includes('esp')
+      );
+      
+      if (espDevices.length === 0) {
+        return {
+          devices: [],
+          warning: 'No ESP devices found',
+          instructions: ['Make sure your ESP devices are powered on and connected']
+        };
       }
-    }
-    
-    const deviceList = Object.values(devices);
-    
-    // Add warning if all devices are unavailable
-    const allUnavailable = deviceList.every(d => !d.online);
-    if (allUnavailable && deviceList.length > 0) {
+      
+      // Group by device name
+      const devices = {};
+      for (const entity of espDevices) {
+        let deviceName = entity.attributes?.friendly_name?.split(' ')[0] || 'Unknown';
+        
+        if (!devices[deviceName]) {
+          devices[deviceName] = {
+            name: deviceName,
+            entities: [],
+            online: entity.state !== 'unavailable'
+          };
+        }
+        
+        devices[deviceName].entities.push({
+          id: entity.entity_id,
+          name: entity.attributes?.friendly_name || entity.entity_id,
+          state: entity.state,
+          type: entity.entity_id.split('.')[0]
+        });
+      }
+      
       return {
-        devices: deviceList,
-        count: deviceList.length,
-        warning: 'All ESP devices are currently unavailable/offline',
-        instructions: [
-          'Check if ESP devices are powered on',
-          'Verify network connectivity',
-          'Check ESPHome dashboard at http://YOUR_HA_IP:6052',
-          'Restart Home Assistant if devices were recently added'
-        ]
+        devices: Object.values(devices),
+        count: Object.keys(devices).length
       };
+    } catch (error) {
+      this.logger.error('Failed to get ESP devices:', error.message);
+      throw error;
     }
-    
-    return {
-      devices: deviceList,
-      count: deviceList.length
-    };
-  } catch (error) {
-    console.error('Failed to get ESP devices:', error.message);
-    throw error;
+  }
+
+  // ============================================
+  // HELPER METHODS
+  // ============================================
+
+  _requireConnection() {
+    if (!this.client) {
+      throw new Error('Home Assistant not configured. Set HA_URL and HA_TOKEN in .env or use /homeassistant configure');
+    }
   }
 }
 
-// Control light
-export async function controlLight(entityId, state, brightness = null) {
-  const service = state ? 'turn_on' : 'turn_off';
-  const data = { entity_id: entityId };
-  
-  if (brightness !== null && state) {
-    data.brightness = brightness;
-  }
-  
-  return await callService('light', service, data);
+// Export legacy functions for backward compatibility with dashboard
+export async function initHomeAssistant() {
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const plugin = getPlugin('integrations/homeassistant');
+  return plugin?.isConnected() || false;
 }
 
-// Control switch
-export async function controlSwitch(entityId, state) {
-  const service = state ? 'turn_on' : 'turn_off';
-  return await callService('switch', service, { entity_id: entityId });
-}
-
-// Get sensor data
-export async function getSensorData(entityId) {
-  const state = await getEntityState(entityId);
-  return {
-    value: state.state,
-    unit: state.attributes?.unit_of_measurement,
-    friendly_name: state.attributes?.friendly_name,
-    last_updated: state.last_updated
-  };
-}
-
-// Get all lights
-export async function getAllLights() {
-  const entities = await getEntities();
-  return entities.filter(e => e.entity_id.startsWith('light.'));
-}
-
-// Get all switches
-export async function getAllSwitches() {
-  const entities = await getEntities();
-  return entities.filter(e => e.entity_id.startsWith('switch.'));
-}
-
-// Get all sensors
-export async function getAllSensors() {
-  const entities = await getEntities();
-  return entities.filter(e => e.entity_id.startsWith('sensor.'));
-}
-
-// Execute automation
-// Check Home Assistant connection
 export async function checkConnection() {
-  if (!haClient) {
-    return false;
-  }
-  
-  try {
-    await haClient.get('/api/');
-    return true;
-  } catch (error) {
-    return false;
-  }
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const plugin = getPlugin('integrations/homeassistant');
+  return plugin?.checkConnection() || false;
 }
 
-// Get all scenes
+export async function getEntities() {
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const plugin = getPlugin('integrations/homeassistant');
+  if (!plugin) throw new Error('Home Assistant plugin not loaded');
+  return plugin.getEntities();
+}
+
+export async function callService(domain, service, data) {
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const plugin = getPlugin('integrations/homeassistant');
+  if (!plugin) throw new Error('Home Assistant plugin not loaded');
+  return plugin.callService(domain, service, data);
+}
+
+export async function getAllLights() {
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const plugin = getPlugin('integrations/homeassistant');
+  if (!plugin) throw new Error('Home Assistant plugin not loaded');
+  return plugin.getAllLights();
+}
+
+export async function getAllSwitches() {
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const plugin = getPlugin('integrations/homeassistant');
+  if (!plugin) throw new Error('Home Assistant plugin not loaded');
+  return plugin.getAllSwitches();
+}
+
+export async function getAllSensors() {
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const plugin = getPlugin('integrations/homeassistant');
+  if (!plugin) throw new Error('Home Assistant plugin not loaded');
+  return plugin.getAllSensors();
+}
+
 export async function getAllScenes() {
-  const entities = await getEntities();
-  return entities.filter(e => e.entity_id.startsWith('scene.'));
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const plugin = getPlugin('integrations/homeassistant');
+  if (!plugin) throw new Error('Home Assistant plugin not loaded');
+  return plugin.getAllScenes();
 }
 
-// Get all automations
 export async function getAllAutomations() {
-  const entities = await getEntities();
-  return entities.filter(e => e.entity_id.startsWith('automation.'));
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const plugin = getPlugin('integrations/homeassistant');
+  if (!plugin) throw new Error('Home Assistant plugin not loaded');
+  return plugin.getAllAutomations();
 }
 
-// Get all scripts
 export async function getAllScripts() {
-  const entities = await getEntities();
-  return entities.filter(e => e.entity_id.startsWith('script.'));
-}
-
-// Activate a scene
-export async function activateScene(sceneId) {
-  return await callService('scene', 'turn_on', {
-    entity_id: sceneId
-  });
-}
-
-// Trigger an automation
-export async function triggerAutomation(automationId) {
-  return await callService('automation', 'trigger', {
-    entity_id: automationId
-  });
-}
-
-// Toggle automation on/off
-export async function toggleAutomation(automationId, state) {
-  const service = state ? 'turn_on' : 'turn_off';
-  return await callService('automation', service, {
-    entity_id: automationId
-  });
-}
-
-// Run a script
-export async function runScript(scriptId) {
-  return await callService('script', 'turn_on', {
-    entity_id: scriptId
-  });
-}
-
-// Get climate devices
-export async function getAllClimate() {
-  const entities = await getEntities();
-  return entities.filter(e => e.entity_id.startsWith('climate.'));
-}
-
-// Set climate temperature
-export async function setClimateTemperature(entityId, temperature) {
-  return await callService('climate', 'set_temperature', {
-    entity_id: entityId,
-    temperature
-  });
-}
-
-// Set climate mode
-export async function setClimateMode(entityId, hvacMode) {
-  return await callService('climate', 'set_hvac_mode', {
-    entity_id: entityId,
-    hvac_mode: hvacMode
-  });
-}
-
-// Get climate control details
-export async function getClimate(entityId) {
-  const state = await getEntityState(entityId);
-  return {
-    current_temperature: state.attributes?.current_temperature,
-    target_temperature: state.attributes?.temperature,
-    mode: state.state,
-    hvac_modes: state.attributes?.hvac_modes,
-    friendly_name: state.attributes?.friendly_name
-  };
+  const { getPlugin } = await import('../../../src/core/plugin-system.js');
+  const plugin = getPlugin('integrations/homeassistant');
+  if (!plugin) throw new Error('Home Assistant plugin not loaded');
+  return plugin.getAllScripts();
 }
