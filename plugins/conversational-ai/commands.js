@@ -5,14 +5,24 @@
  */
 
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { chatOps, configOps } from '../../src/database/db.js';
+import { chatOps } from '../../src/database/db.js';
 import { generateWithRotation } from '../../src/config/gemini-keys.js';
-import { getPersonality, DEFAULT_PERSONALITY } from '../../src/config/personalities.js';
+import { getPersonality } from '../../src/config/personalities.js';
 
-// Helper function to get user's personality preference
-function getUserPersonality(userId) {
-  const saved = configOps.get(`personality_${userId}`);
-  return saved || DEFAULT_PERSONALITY;
+// Import personality helper from personality plugin
+// Note: This creates a soft dependency - chat works even if personality plugin is disabled
+let getUserPersonality;
+try {
+  const personalityPlugin = await import('../personality/commands.js');
+  getUserPersonality = personalityPlugin.getUserPersonality;
+} catch (error) {
+  // Fallback if personality plugin not available
+  const { configOps } = await import('../../src/database/db.js');
+  const { DEFAULT_PERSONALITY } = await import('../../src/config/personalities.js');
+  getUserPersonality = (userId) => {
+    const saved = configOps.get(`personality_${userId}`);
+    return saved || DEFAULT_PERSONALITY;
+  };
 }
 
 // Main chat function
@@ -106,4 +116,4 @@ export async function handleCommand(interaction, commandName, subcommand) {
 }
 
 // Export chat function for use by other plugins
-export { chatWithMaid, getUserPersonality };
+export { chatWithMaid };

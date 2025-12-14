@@ -539,25 +539,7 @@ export const commands = [
           option.setName('message')
             .setDescription('Your message')
             .setRequired(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('personality')
-        .setDescription('Change bot personality')
-        .addStringOption(option =>
-          option.setName('style')
-            .setDescription('Personality style')
-            .addChoices(
-              { name: '🌸 Maid', value: 'maid' },
-              { name: '💢 Tsundere', value: 'tsundere' },
-              { name: '❄️ Kuudere', value: 'kuudere' },
-              { name: '🥺 Dandere', value: 'dandere' },
-              { name: '🖤 Yandere', value: 'yandere' },
-              { name: '⭐ Genki', value: 'genki' },
-              { name: '💋 Onee-san', value: 'oneesan' },
-              { name: '🔮 Chuunibyou', value: 'chuunibyou' },
-              { name: '🎩 Butler', value: 'butler' },
-              { name: '🐱 Catgirl', value: 'catgirl' }
-            )))
+    // personality subcommand now injected by personality plugin
     .addSubcommand(subcommand =>
       subcommand
         .setName('stats')
@@ -904,9 +886,66 @@ async function injectPluginCommands() {
           continue;
         }
         
-        // Add the command group to the parent command
-        parentCmd.addSubcommandGroup(commandGroup);
-        console.log(`   ✅ Injected '${commandGroup.name}' into /${parentCommand} (${pluginName})`);
+        // Check if it's a subcommand group or single subcommand
+        // SubcommandGroupBuilder has nested subcommands (options with type 1)
+        // SubcommandBuilder has options but they're not subcommands
+        const hasNestedSubcommands = commandGroup.options && 
+          commandGroup.options.some(opt => opt.type === 1); // Type 1 = SUB_COMMAND
+        
+        if (hasNestedSubcommands) {
+          // It's a subcommand group (has nested subcommands)
+          parentCmd.addSubcommandGroup(group => {
+            // Copy properties from the commandGroup
+            group.setName(commandGroup.name);
+            group.setDescription(commandGroup.description);
+            // Add all nested subcommands
+            for (const subCmd of commandGroup.options) {
+              group.addSubcommand(sub => {
+                sub.setName(subCmd.name);
+                sub.setDescription(subCmd.description);
+                // Add options if any
+                if (subCmd.options) {
+                  for (const opt of subCmd.options) {
+                    if (opt.type === 3) { // STRING
+                      sub.addStringOption(option => {
+                        option.setName(opt.name).setDescription(opt.description);
+                        if (opt.required) option.setRequired(true);
+                        if (opt.choices) option.addChoices(...opt.choices);
+                        return option;
+                      });
+                    }
+                    // Add other option types as needed
+                  }
+                }
+                return sub;
+              });
+            }
+            return group;
+          });
+          console.log(`   ✅ Injected '${commandGroup.name}' group into /${parentCommand} (${pluginName})`);
+        } else {
+          // It's a single subcommand
+          parentCmd.addSubcommand(sub => {
+            sub.setName(commandGroup.name);
+            sub.setDescription(commandGroup.description);
+            // Add options if any
+            if (commandGroup.options) {
+              for (const opt of commandGroup.options) {
+                if (opt.type === 3) { // STRING
+                  sub.addStringOption(option => {
+                    option.setName(opt.name).setDescription(opt.description);
+                    if (opt.required) option.setRequired(true);
+                    if (opt.choices) option.addChoices(...opt.choices);
+                    return option;
+                  });
+                }
+                // Add other option types as needed
+              }
+            }
+            return sub;
+          });
+          console.log(`   ✅ Injected '${commandGroup.name}' into /${parentCommand} (${pluginName})`);
+        }
       }
     }
     
