@@ -670,13 +670,7 @@ export const commands = [
   // STANDALONE COMMANDS
   // ============================================
   
-  new SlashCommandBuilder()
-    .setName('weather')
-    .setDescription('🌤️ Get weather information')
-    .addStringOption(option =>
-      option.setName('city')
-        .setDescription('City name')
-        .setRequired(false)),
+  // weather command now provided by integrations-weather plugin
 
   new SlashCommandBuilder()
     .setName('homeassistant')

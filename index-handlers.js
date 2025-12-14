@@ -229,15 +229,24 @@ export async function handleCommandInteraction(interaction) {
     const userId = interaction.user.id;
     const username = interaction.user.username;
 
-    // Route network and device commands to network-management plugin
+    // Route network and device commands to plugins
     if (commandName === 'network' || commandName === 'device') {
       try {
-        const { handleCommand } = await import('./plugins/network-management/commands.js');
         const subcommand = interaction.options.getSubcommand();
+        
+        // Try speedtest plugin first for speedtest/speedhistory
+        if (subcommand === 'speedtest' || subcommand === 'speedhistory') {
+          const { handleCommand: handleSpeedTest } = await import('./plugins/integrations-speedtest/commands.js');
+          const handled = await handleSpeedTest(interaction, commandName, subcommand);
+          if (handled) return;
+        }
+        
+        // Try network-management plugin for other network/device commands
+        const { handleCommand } = await import('./plugins/network-management/commands.js');
         const handled = await handleCommand(interaction, commandName, subcommand);
         if (handled) return;
       } catch (error) {
-        console.error('Network management plugin error:', error);
+        console.error('Plugin routing error:', error);
         // Fall through to show refactor message
       }
     }

@@ -143,8 +143,8 @@ export default class AutomationPlugin extends Plugin {
   // Execute speedtest task
   async executeSpeedtestTask(channel) {
     try {
-      // Import speedtest function (will be in integrations plugin later)
-      const { runSpeedtest } = await import('../index-handlers.js');
+      // Import speedtest function from integrations plugin
+      const { runSpeedtest } = await import('./integrations-speedtest/commands.js');
       const result = await runSpeedtest();
       
       if (channel) {
@@ -172,8 +172,8 @@ export default class AutomationPlugin extends Plugin {
   // Execute weather task
   async executeWeatherTask(channel) {
     try {
-      // Import weather function (will be in integrations plugin later)
-      const { getWeather } = await import('../index-handlers.js');
+      // Import weather function from integrations plugin
+      const { getWeather } = await import('./integrations-weather/commands.js');
       const result = await getWeather();
       
       if (channel) {
