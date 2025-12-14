@@ -14,7 +14,7 @@ import { createLogger } from '../../src/logging/logger.js';
 export default class CoreCommandsPlugin extends Plugin {
   constructor() {
     super(
-      '1.0.0.0-beta',
+      'core-commands',
       '1.0.0',
       'Essential bot commands (help, stats, ping, dashboard, plugin management)'
     );

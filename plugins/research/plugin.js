@@ -16,7 +16,7 @@ import { researchOps } from '../../src/database/db.js';
  */
 export default class ResearchPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'AI-powered research and web search');
+    super('research', '1.0.0', 'AI-powered research and web search');
     this.logger = createLogger('research');
   }
   

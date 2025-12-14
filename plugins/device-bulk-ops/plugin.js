@@ -9,7 +9,7 @@ import { createLogger } from '../../src/logging/logger.js';
  */
 export default class DeviceBulkOpsPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'Bulk operations for device management');
+    super('device-bulk-ops', '1.0.0', 'Bulk operations for device management');
     this.logger = createLogger('device-bulk-ops');
   }
   

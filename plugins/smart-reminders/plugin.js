@@ -14,7 +14,7 @@ import { createLogger } from '../../src/logging/logger.js';
  */
 export default class SmartRemindersPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'Context-aware reminder system');
+    super('smart-reminders', '1.0.0', 'Context-aware reminder system');
     this.logger = createLogger('smart-reminders');
     this.reminders = [];
     this.client = null;

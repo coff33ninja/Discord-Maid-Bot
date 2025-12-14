@@ -15,7 +15,7 @@ import { createLogger } from '../../src/logging/logger.js';
  */
 export default class DeviceHealthPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'Track device uptime and health metrics');
+    super('device-health', '1.0.0', 'Track device uptime and health metrics');
     this.logger = createLogger('device-health');
     this.healthData = new Map(); // deviceMac -> health stats
     this.checkInterval = null;

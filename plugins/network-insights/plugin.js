@@ -14,7 +14,7 @@ import { createLogger } from '../../src/logging/logger.js';
  */
 export default class NetworkInsightsPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'AI-powered network analysis and insights');
+    super('network-insights', '1.0.0', 'AI-powered network analysis and insights');
     this.logger = createLogger('network-insights');
     this.insights = [];
     this.lastAnalysis = null;

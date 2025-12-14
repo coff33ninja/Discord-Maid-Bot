@@ -24,7 +24,7 @@ import { createLogger } from '../../src/logging/logger.js';
  */
 export default class GamesPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'Interactive games collection with 18+ games');
+    super('games', '1.0.0', 'Interactive games collection with 18+ games');
     this.logger = createLogger('games');
     this.activeGames = new Map(); // Track active game sessions
   }

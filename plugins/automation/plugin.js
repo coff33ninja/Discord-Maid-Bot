@@ -18,7 +18,7 @@ import { taskOps } from '../../src/database/db.js';
  */
 export default class AutomationPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'Task scheduling and automation system', {
+    super('automation', '1.0.0', 'Task scheduling and automation system', {
       optionalDependencies: ['integrations/speedtest', 'integrations/weather'],
       category: 'automation',
       author: 'Discord Maid Bot',

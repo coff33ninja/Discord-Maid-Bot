@@ -16,7 +16,7 @@ import { createLogger } from '../../src/logging/logger.js';
  */
 export default class NetworkManagementPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'Network scanning, device management, and WOL');
+    super('network-management', '1.0.0', 'Network scanning, device management, and WOL');
     this.logger = createLogger('network-management');
     this.networkDevices = [];
     this.lastScanTime = null;

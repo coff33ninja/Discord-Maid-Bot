@@ -7,7 +7,7 @@ import { createLogger } from '../../src/logging/logger.js';
  */
 export default class SpeedAlertsPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'Alert when internet speed drops below threshold');
+    super('speed-alerts', '1.0.0', 'Alert when internet speed drops below threshold');
     this.logger = createLogger('speed-alerts');
     this.threshold = 50; // Default 50 Mbps
     this.alertChannel = null;

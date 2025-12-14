@@ -18,7 +18,7 @@ import { createLogger } from '../../src/logging/logger.js';
 
 export default class ConversationalAIPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'AI-powered conversational chat with personality support', {
+    super('conversational-ai', '1.0.0', 'AI-powered conversational chat with personality support', {
       optionalDependencies: ['personality'],
       category: 'ai',
       author: 'Discord Maid Bot',

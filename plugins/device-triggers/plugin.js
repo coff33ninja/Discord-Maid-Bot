@@ -11,7 +11,7 @@ import { createLogger } from '../../src/logging/logger.js';
  */
 export default class DeviceTriggersPlugin extends Plugin {
   constructor() {
-    super('1.0.0.0-beta', '1.0.0', 'Automation rules based on device network status');
+    super('device-triggers', '1.0.0', 'Automation rules based on device network status');
     this.logger = createLogger('device-triggers');
     this.triggers = [];
     this.client = null;
