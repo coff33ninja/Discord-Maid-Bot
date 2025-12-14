@@ -20,18 +20,6 @@ import {
 import { getSMBConfig, setSMBConfig, testSMBConnection, toggleSMB, listSMBFiles } from '../config/smb-config.js';
 import { geminiKeys } from '../config/gemini-keys.js';
 import { getLoadedPlugins, enablePlugin, disablePlugin, reloadPlugin, getPluginStats, getPlugin } from '../core/plugin-system.js';
-import { 
-  getEntities, 
-  getESPDevices, 
-  controlLight, 
-  controlSwitch, 
-  getSensorData,
-  getAllLights,
-  getAllSwitches,
-  getAllSensors,
-  checkConnection as checkHAConnection,
-  configureHomeAssistant
-} from '../../plugins/integrations/homeassistant/plugin.js';
 import { logOps, LOG_LEVELS } from '../logging/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -257,8 +245,9 @@ export function startDashboard(port = 3000) {
   });
   
   // Home Assistant Configuration
-  app.post('/api/config/homeassistant', requireAuth, requirePermission(PERMISSIONS.MODIFY_CONFIG), (req, res) => {
+  app.post('/api/config/homeassistant', requireAuth, requirePermission(PERMISSIONS.MODIFY_CONFIG), async (req, res) => {
     try {
+      const { configureHomeAssistant } = await import('../../plugins/integrations/homeassistant/plugin.js');
       const { url, token } = req.body;
       const result = configureHomeAssistant(url, token);
       res.json({ success: result });
@@ -268,7 +257,8 @@ export function startDashboard(port = 3000) {
   });
   
   app.get('/api/config/homeassistant/status', requireAuth, async (req, res) => {
-    const connected = await checkHAConnection();
+    const { checkConnection } = await import('../../plugins/integrations/homeassistant/plugin.js');
+    const connected = await checkConnection();
     res.json({ connected });
   });
   
@@ -321,6 +311,7 @@ export function startDashboard(port = 3000) {
   // Home Assistant / ESP Devices
   app.get('/api/homeassistant/entities', requireAuth, async (req, res) => {
     try {
+      const { getEntities } = await import('../../plugins/integrations/homeassistant/plugin.js');
       const entities = await getEntities();
       res.json(entities);
     } catch (error) {
@@ -330,6 +321,7 @@ export function startDashboard(port = 3000) {
   
   app.get('/api/homeassistant/esp-devices', requireAuth, async (req, res) => {
     try {
+      const { getESPDevices } = await import('../../plugins/integrations/homeassistant/plugin.js');
       const devices = await getESPDevices();
       res.json(devices);
     } catch (error) {
@@ -339,6 +331,7 @@ export function startDashboard(port = 3000) {
   
   app.get('/api/homeassistant/lights', requireAuth, async (req, res) => {
     try {
+      const { getAllLights } = await import('../../plugins/integrations/homeassistant/plugin.js');
       const lights = await getAllLights();
       res.json(lights);
     } catch (error) {
@@ -348,6 +341,7 @@ export function startDashboard(port = 3000) {
   
   app.get('/api/homeassistant/switches', requireAuth, async (req, res) => {
     try {
+      const { getAllSwitches } = await import('../../plugins/integrations/homeassistant/plugin.js');
       const switches = await getAllSwitches();
       res.json(switches);
     } catch (error) {
@@ -357,6 +351,7 @@ export function startDashboard(port = 3000) {
   
   app.get('/api/homeassistant/sensors', requireAuth, async (req, res) => {
     try {
+      const { getAllSensors } = await import('../../plugins/integrations/homeassistant/plugin.js');
       const sensors = await getAllSensors();
       res.json(sensors);
     } catch (error) {
@@ -366,6 +361,7 @@ export function startDashboard(port = 3000) {
   
   app.post('/api/homeassistant/light/:entityId', requireAuth, requirePermission(PERMISSIONS.WAKE_DEVICE), async (req, res) => {
     try {
+      const { controlLight } = await import('../../plugins/integrations/homeassistant/plugin.js');
       const { state, brightness } = req.body;
       await controlLight(req.params.entityId, state, brightness);
       res.json({ success: true });
@@ -376,6 +372,7 @@ export function startDashboard(port = 3000) {
   
   app.post('/api/homeassistant/switch/:entityId', requireAuth, requirePermission(PERMISSIONS.WAKE_DEVICE), async (req, res) => {
     try {
+      const { controlSwitch } = await import('../../plugins/integrations/homeassistant/plugin.js');
       const { state } = req.body;
       await controlSwitch(req.params.entityId, state);
       res.json({ success: true });
@@ -386,6 +383,7 @@ export function startDashboard(port = 3000) {
   
   app.get('/api/homeassistant/sensor/:entityId', requireAuth, async (req, res) => {
     try {
+      const { getSensorData } = await import('../../plugins/integrations/homeassistant/plugin.js');
       const data = await getSensorData(req.params.entityId);
       res.json(data);
     } catch (error) {
