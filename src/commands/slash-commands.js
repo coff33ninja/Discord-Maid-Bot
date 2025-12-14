@@ -878,32 +878,100 @@ export async function registerCommands(client) {
   }
 }
 
-// Inject plugin commands into parent commands
+// Inject plugin commands into parent commands or as standalone commands
 async function injectPluginCommands() {
   try {
     const { getPluginCommands } = await import('../core/plugin-system.js');
     const pluginCommands = getPluginCommands();
     
-    if (pluginCommands.length === 0) {
+    // Also load standalone commands from plugins
+    const standaloneCommands = await loadStandalonePluginCommands();
+    
+    if (pluginCommands.length === 0 && standaloneCommands.length === 0) {
       return;
     }
     
-    console.log(`📦 Injecting ${pluginCommands.length} plugin command(s)...`);
-    
-    for (const { pluginName, parentCommand, commandGroup } of pluginCommands) {
-      // Find the parent command
-      const parentCmd = commands.find(cmd => cmd.name === parentCommand);
+    // Inject subcommand groups into parent commands
+    if (pluginCommands.length > 0) {
+      console.log(`📦 Injecting ${pluginCommands.length} plugin subcommand(s)...`);
       
-      if (!parentCmd) {
-        console.warn(`   ⚠️  Parent command '${parentCommand}' not found for plugin '${pluginName}'`);
-        continue;
+      for (const { pluginName, parentCommand, commandGroup } of pluginCommands) {
+        // Find the parent command
+        const parentCmd = commands.find(cmd => cmd.name === parentCommand);
+        
+        if (!parentCmd) {
+          console.warn(`   ⚠️  Parent command '${parentCommand}' not found for plugin '${pluginName}'`);
+          continue;
+        }
+        
+        // Add the command group to the parent command
+        parentCmd.addSubcommandGroup(commandGroup);
+        console.log(`   ✅ Injected '${commandGroup.name}' into /${parentCommand} (${pluginName})`);
       }
+    }
+    
+    // Add standalone commands from plugins
+    if (standaloneCommands.length > 0) {
+      console.log(`📦 Adding ${standaloneCommands.length} standalone plugin command(s)...`);
       
-      // Add the command group to the parent command
-      parentCmd.addSubcommandGroup(commandGroup);
-      console.log(`   ✅ Injected '${commandGroup.name}' into /${parentCommand} (${pluginName})`);
+      for (const { pluginName, commands: pluginCmds } of standaloneCommands) {
+        for (const cmd of pluginCmds) {
+          commands.push(cmd);
+          console.log(`   ✅ Added /${cmd.name} (${pluginName})`);
+        }
+      }
     }
   } catch (error) {
     console.error('Failed to inject plugin commands:', error);
   }
+}
+
+// Load standalone commands from plugins (commands with parentCommand = null)
+async function loadStandalonePluginCommands() {
+  const standaloneCommands = [];
+  
+  try {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+    const { pathToFileURL } = await import('url');
+    
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const pluginsDir = path.join(__dirname, '../../plugins');
+    
+    const files = await fs.readdir(pluginsDir);
+    
+    for (const file of files) {
+      // Check if it's a directory
+      const filePath = path.join(pluginsDir, file);
+      const stats = await fs.stat(filePath);
+      
+      if (stats.isDirectory()) {
+        // Check if commands.js exists
+        const commandsPath = path.join(filePath, 'commands.js');
+        try {
+          await fs.access(commandsPath);
+          
+          // Load the commands module
+          const commandsUrl = pathToFileURL(commandsPath).href;
+          const commandsModule = await import(`${commandsUrl}?t=${Date.now()}`);
+          
+          // Check if it's a standalone command (parentCommand = null)
+          if (commandsModule.parentCommand === null && commandsModule.commands) {
+            standaloneCommands.push({
+              pluginName: file,
+              commands: commandsModule.commands
+            });
+          }
+        } catch (err) {
+          // No commands.js or error loading - skip
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error loading standalone plugin commands:', error);
+  }
+  
+  return standaloneCommands;
 }

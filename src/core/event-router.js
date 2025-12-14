@@ -67,13 +67,86 @@ export class EventRouter {
 
   /**
    * Handle command interactions
-   * Routes to the old command handler temporarily
+   * Routes to plugins or bridge handler
    */
   async handleCommand(interaction) {
-    // Import the old handler temporarily
-    // This will be moved to plugins in later phases
+    const { commandName } = interaction;
+    
+    // Check if this is a standalone plugin command
+    const pluginHandler = await this.getPluginCommandHandler(commandName);
+    
+    if (pluginHandler) {
+      // Route to plugin
+      try {
+        await pluginHandler.handleCommand(interaction, pluginHandler.plugin);
+        return;
+      } catch (error) {
+        this.logger.error(`Plugin command error (${commandName}):`, error);
+        await this.handleInteractionError(interaction, error);
+        return;
+      }
+    }
+    
+    // Otherwise, route to bridge handler (temporary)
     const { handleCommandInteraction } = await import('../../index-handlers.js');
     await handleCommandInteraction(interaction);
+  }
+
+  /**
+   * Get plugin command handler for a command name
+   */
+  async getPluginCommandHandler(commandName) {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const { fileURLToPath } = await import('url');
+      const { pathToFileURL } = await import('url');
+      
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const pluginsDir = path.join(__dirname, '../../plugins');
+      
+      const files = await fs.readdir(pluginsDir);
+      
+      for (const file of files) {
+        const filePath = path.join(pluginsDir, file);
+        const stats = await fs.stat(filePath);
+        
+        if (stats.isDirectory()) {
+          const commandsPath = path.join(filePath, 'commands.js');
+          try {
+            await fs.access(commandsPath);
+            
+            const commandsUrl = pathToFileURL(commandsPath).href;
+            const commandsModule = await import(`${commandsUrl}?t=${Date.now()}`);
+            
+            // Check if this plugin has standalone commands
+            if (commandsModule.parentCommand === null && commandsModule.commands) {
+              // Check if any of the commands match
+              const hasCommand = commandsModule.commands.some(cmd => cmd.name === commandName);
+              
+              if (hasCommand) {
+                // Get the plugin instance
+                const { getPlugin } = await import('./plugin-system.js');
+                const plugin = getPlugin(file);
+                
+                return {
+                  plugin,
+                  handleCommand: commandsModule.handleCommand,
+                  handleAutocomplete: commandsModule.handleAutocomplete
+                };
+              }
+            }
+          } catch (err) {
+            // Skip
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error('Error getting plugin command handler:', error);
+    }
+    
+    return null;
   }
 
   /**
