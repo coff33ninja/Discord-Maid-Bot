@@ -5,6 +5,33 @@ An AI-powered Discord bot with network management, home automation, interactive 
 > **🧪 Experimental AI Project**
 > This project is my playground for exploring unconventional ways to use AI. I believe the best way to demystify AI and prove it's not the world-ending threat some fear is to build silly, helpful, and creative things with it. If an AI apocalypse ever happens, it definitely won't start with a maid bot that plays trivia games and turns on your lights. 😄
 
+---
+
+## 🚧 Active Development: Plugin-First Refactor
+
+> **Branch:** `dev-plugin-first-refactor`
+> 
+> We're currently refactoring the entire codebase from a monolithic architecture to a modular, plugin-first design. This will make the bot more maintainable, testable, and extensible.
+>
+> **Key Changes:**
+> - Core reduced from 3,553 to ~700 lines (80% reduction)
+> - All features moved to independent plugins
+> - Hot-reloadable plugin system
+> - Better error isolation
+> - Easier to contribute and extend
+>
+> **Documentation:**
+> - 📋 [Refactor Status](./REFACTOR_STATUS.md) - Current progress and next steps
+> - 🗺️ [Code Split Mapping](./docs/CODE_SPLIT_MAPPING.md) - Exact line-by-line implementation plan
+> - 📐 [Core Refactor Plan](./docs/CORE_REFACTOR_PLAN.md) - Architecture and philosophy
+> - 🎨 [Visual Guide](./docs/REFACTOR_VISUAL.md) - Diagrams and comparisons
+>
+> **Timeline:** 10-week phased implementation (currently in planning phase)
+>
+> The `main` branch remains stable. All refactor work happens on `dev-plugin-first-refactor`.
+
+---
+
 ## Features
 
 - 🤖 **AI Chat** - Powered by Google Gemini with 10 unique personalities
@@ -89,13 +116,25 @@ Default login: `admin` / `admin123`
 
 ## Documentation
 
+### User Documentation
+- [Configuration](./docs/CONFIGURATION.md) - Setup guide
+- [Commands](./docs/COMMANDS.md) - Command reference
+- [Games](./docs/GAMES.md) - Game documentation
+- [API Reference](./docs/API.md) - REST API docs
+
+### Developer Documentation
 - [Architecture](./docs/ARCHITECTURE.md) - System overview
 - [Dependencies](./docs/DEPENDENCIES.md) - Package documentation
 - [Source Modules](./docs/SOURCE_MODULES.md) - Code documentation
-- [Games](./docs/GAMES.md) - Game documentation
-- [API Reference](./docs/API.md) - REST API docs
-- [Configuration](./docs/CONFIGURATION.md) - Setup guide
 - [Future Plans](./docs/FUTURE_PLANS.md) - Roadmap
+
+### Refactor Documentation (Active Development)
+- [Refactor Status](./REFACTOR_STATUS.md) - Current progress ⭐
+- [Code Split Mapping](./docs/CODE_SPLIT_MAPPING.md) - Line-by-line plan ⭐
+- [Core Refactor Plan](./docs/CORE_REFACTOR_PLAN.md) - Architecture design ⭐
+- [Visual Guide](./docs/REFACTOR_VISUAL.md) - Diagrams and comparisons ⭐
+- [Conversational AI Architecture](./docs/CONVERSATIONAL_AI_ARCHITECTURE.md) - AI design
+- [AI Sysadmin Design](./docs/AI_SYSADMIN_DESIGN.md) - Sysadmin plugin design
 
 ## Project Structure
 
