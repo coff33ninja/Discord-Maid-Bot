@@ -92,11 +92,26 @@ export const commandGroup = new SlashCommandBuilder()
 // This is a standalone command (not a subcommand)
 export const parentCommand = null;
 
+// Commands this plugin handles (for routing)
+export const handlesCommands = ['chat'];
+
 /**
  * Handle chat command execution
+ * Handles both /chat (standalone) and can be called by other plugins for /bot chat
  */
 export async function handleCommand(interaction, commandName, subcommand) {
-  if (commandName !== 'chat') return false;
+  // Handle /chat (standalone)
+  if (commandName === 'chat') {
+    return await handleChatMessage(interaction);
+  }
+  
+  return false;
+}
+
+/**
+ * Process chat message - exported for use by other plugins
+ */
+export async function handleChatMessage(interaction) {
 
   await interaction.deferReply();
 

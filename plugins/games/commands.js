@@ -7,8 +7,13 @@
 import { EmbedBuilder } from 'discord.js';
 import { createLogger } from '../../src/logging/logger.js';
 
+const logger = createLogger('games');
+
 // These are subcommands under /game
 export const parentCommand = 'game';
+
+// Commands this plugin handles (for routing)
+export const handlesCommands = ['game'];
 
 // We'll handle multiple game subcommands via bridge routing
 export const commandGroup = null; // Special case - handled in bridge
@@ -42,8 +47,8 @@ export async function handleCommand(interaction, commandName, subcommand) {
       return await handleTicTacToe(interaction);
     case '20questions':
       return await handle20Questions(interaction);
-    case 'riddles':
-      return await handleRiddles(interaction);
+    case 'riddle':
+      return await handleRiddle(interaction);
     case 'wordchain':
       return await handleWordChain(interaction);
     case 'emojidecode':
@@ -56,8 +61,8 @@ export async function handleCommand(interaction, commandName, subcommand) {
       return await handleAcronym(interaction);
     case 'story':
       return await handleStory(interaction);
-    case 'connectfour':
-      return await handleConnectFour(interaction);
+    case 'connect4':
+      return await handleConnect4(interaction);
     case 'mathblitz':
       return await handleMathBlitz(interaction);
     case 'reaction':
@@ -110,8 +115,6 @@ async function handleStopGame(interaction) {
 async function handleGameStats(interaction) {
   try {
     const { getPlugin } = await import('../../src/core/plugin-system.js');
-
-const logger = createLogger('games');
     const gamesPlugin = getPlugin('games');
     
     if (!gamesPlugin) {
@@ -209,9 +212,9 @@ async function handle20Questions(interaction) {
   return true;
 }
 
-async function handleRiddles(interaction) {
+async function handleRiddle(interaction) {
   await interaction.reply({
-    content: '🎯 **Riddles**\n\n🚧 Starting riddles...\n\nSolve the riddle!',
+    content: '🎯 **Riddle**\n\n🚧 Starting riddle...\n\nSolve the riddle!',
     ephemeral: false
   });
   return true;
@@ -265,7 +268,7 @@ async function handleStory(interaction) {
   return true;
 }
 
-async function handleConnectFour(interaction) {
+async function handleConnect4(interaction) {
   await interaction.reply({
     content: '🎯 **Connect Four**\n\n🚧 Starting connect four...\n\nConnect 4 in a row!',
     ephemeral: false

@@ -4,11 +4,16 @@
  * Handles AI-powered research and web search functionality.
  */
 
-import { SlashCommandSubcommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { createLogger } from '../../src/logging/logger.js';
+
+const logger = createLogger('research');
 
 // These are subcommands under /research
 export const parentCommand = 'research';
+
+// Commands this plugin handles (for routing)
+export const handlesCommands = ['research'];
 
 // We'll handle multiple subcommands via bridge routing
 export const commandGroup = null; // Special case - handled in bridge
@@ -147,7 +152,7 @@ async function handleResearchSearch(interaction) {
   await interaction.deferReply();
   
   try {
-    const searchTerm = interaction.options.getString('term');
+    const searchTerm = interaction.options.getString('query');
     
     // Get plugin instance
     const { getPlugin } = await import('../../src/core/plugin-system.js');
@@ -211,8 +216,6 @@ async function handleWebSearch(interaction) {
 // Export research function for use by other plugins
 export async function webResearch(query, userId = null) {
   const { getPlugin } = await import('../../src/core/plugin-system.js');
-
-const logger = createLogger('research');
   const researchPlugin = getPlugin('research');
   
   if (!researchPlugin) {

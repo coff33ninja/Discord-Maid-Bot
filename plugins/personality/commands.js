@@ -21,7 +21,7 @@ function setUserPersonality(userId, personalityKey) {
   configOps.set(`personality_${userId}`, personalityKey);
 }
 
-// This is a subcommand under /bot
+// This is a subcommand under /bot (routed via core-commands)
 export const parentCommand = 'bot';
 
 // Command group info - single subcommand, not a group
