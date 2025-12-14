@@ -10,8 +10,8 @@ The plugin system supports **fully dynamic command loading** without touching co
 
 ```
 plugins/
-├── my-plugin.js              # Plugin logic
 └── my-plugin/
+    ├── plugin.js             # Plugin logic (required)
     └── commands.js           # Slash command definitions (optional)
 ```
 
@@ -66,8 +66,8 @@ When your plugin loads:
 
 ```
 plugins/
-├── device-health.js           # Plugin with health tracking logic
 └── device-health/
+    ├── plugin.js              # Plugin with health tracking logic
     └── commands.js            # Defines /automation health commands
 ```
 

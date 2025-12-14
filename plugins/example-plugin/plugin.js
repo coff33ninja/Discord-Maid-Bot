@@ -1,4 +1,4 @@
-import { Plugin } from '../src/core/plugin-system.js';
+import { Plugin } from '../../src/core/plugin-system.js';
 
 export default class ExamplePlugin extends Plugin {
   constructor() {
