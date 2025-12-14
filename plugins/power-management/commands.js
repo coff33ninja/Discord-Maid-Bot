@@ -10,11 +10,11 @@ import { deviceOps } from '../../src/database/db.js';
 import { broadcastUpdate } from '../../src/dashboard/server.js';
 
 // Parent command for subcommands
-export const parentCommand = 'power';
+export const parentCommand = 'device';
 
 // Command group
 export const commandGroup = new SlashCommandSubcommandGroupBuilder()
-  .setName('control')
+  .setName('power')
   .setDescription('Device power management')
   .addSubcommand(subcommand =>
     subcommand
