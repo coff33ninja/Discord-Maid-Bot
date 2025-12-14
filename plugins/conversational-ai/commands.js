@@ -53,18 +53,16 @@ Respond in character. Be concise but maintain your personality!`;
   return response;
 }
 
-// Command definitions
-export const commands = [
-  new SlashCommandBuilder()
-    .setName('chat')
-    .setDescription('💬 Chat with the AI bot')
-    .addStringOption(option =>
-      option
-        .setName('message')
-        .setDescription('Your message to the bot')
-        .setRequired(true)
-    )
-];
+// Command definition - standalone command
+export const commandGroup = new SlashCommandBuilder()
+  .setName('chat')
+  .setDescription('💬 Chat with the AI bot')
+  .addStringOption(option =>
+    option
+      .setName('message')
+      .setDescription('Your message to the bot')
+      .setRequired(true)
+  );
 
 // This is a standalone command (not a subcommand)
 export const parentCommand = null;
@@ -82,12 +80,13 @@ export async function handleCommand(interaction, commandName, subcommand) {
     const userId = interaction.user.id;
     const username = interaction.user.username;
 
-    // Request network context from core (if available)
+    // Request network context from network-management plugin (if available)
     let networkContext = null;
     try {
-      const { networkDevices } = await import('../../index-handlers.js');
+      const { deviceOps } = await import('../../src/database/db.js');
+      const devices = deviceOps.getAll();
       networkContext = {
-        deviceCount: networkDevices.length
+        deviceCount: devices.filter(d => d.online).length
       };
     } catch (error) {
       // Network context not available, continue without it

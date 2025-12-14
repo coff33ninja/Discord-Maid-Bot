@@ -216,6 +216,23 @@ export const deviceOps = {
     return db.prepare(`
       INSERT INTO device_history (device_id, status) VALUES (?, ?)
     `).run(deviceId, status);
+  },
+
+  // Cleanup devices with unknown MAC addresses (ghost devices)
+  cleanupUnknownDevices: () => {
+    return db.prepare(`
+      DELETE FROM devices WHERE mac = 'unknown'
+    `).run();
+  },
+
+  // Delete a specific device by MAC
+  deleteByMac: (mac) => {
+    return db.prepare('DELETE FROM devices WHERE mac = ?').run(mac);
+  },
+
+  // Delete a specific device by ID
+  deleteById: (id) => {
+    return db.prepare('DELETE FROM devices WHERE id = ?').run(id);
   }
 };
 

@@ -67,12 +67,9 @@ async function wakeDevice(mac) {
 }
 
 // This plugin provides subcommands for /network and /device commands
-// We'll inject multiple subcommands
+// Commands are already defined in slash-commands.js, this plugin only provides handlers
 export const parentCommand = null; // Special: multiple parents
-
-// For now, we'll handle this as a special case
-// The commands will be registered in the unified commands in slash-commands.js
-// and routed here by the event router
+export const commandGroup = null; // Handler-only plugin (commands defined in slash-commands.js)
 
 /**
  * Handle network management commands

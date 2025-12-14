@@ -1098,7 +1098,7 @@ async function loadTasks() {
 // Load research history
 async function loadResearch() {
   try {
-    const response = await fetch('/api/research?limit=10');
+    const response = await authFetch('/api/research?limit=10');
     const research = await response.json();
     
     const researchList = document.getElementById('researchList');

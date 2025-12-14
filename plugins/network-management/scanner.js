@@ -102,10 +102,14 @@ async function scanLocalNetwork(subnet) {
                 device_type: existingDevice?.device_type || null
               };
               
-              devices.push(device);
-              
-              // Update database
-              deviceOps.upsert(device);
+              // Only add devices with valid MAC addresses OR devices that were previously registered
+              // This prevents filling the database with temporary/ghost devices
+              if (isValidMac || existingDevice) {
+                devices.push(device);
+                
+                // Update database only for valid devices
+                deviceOps.upsert(device);
+              }
               
               resolve();
             });

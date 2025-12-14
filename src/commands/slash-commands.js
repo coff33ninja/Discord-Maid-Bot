@@ -817,6 +817,11 @@ async function injectPluginCommands() {
       console.log(`📦 Injecting ${pluginCommands.length} plugin subcommand(s)...`);
       
       for (const { pluginName, parentCommand, commandGroup } of pluginCommands) {
+        // Skip if this is a standalone command (handled separately)
+        if (parentCommand === null) {
+          continue;
+        }
+        
         // Find the parent command
         const parentCmd = commands.find(cmd => cmd.name === parentCommand);
         
@@ -936,10 +941,10 @@ async function loadStandalonePluginCommands() {
           const commandsModule = await import(`${commandsUrl}?t=${Date.now()}`);
           
           // Check if it's a standalone command (parentCommand = null)
-          if (commandsModule.parentCommand === null && commandsModule.commands) {
+          if (commandsModule.parentCommand === null && commandsModule.commandGroup) {
             standaloneCommands.push({
               pluginName: file,
-              commands: commandsModule.commands
+              commands: [commandsModule.commandGroup] // Wrap in array for consistency
             });
           }
         } catch (err) {

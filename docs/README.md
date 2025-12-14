@@ -8,205 +8,168 @@ Welcome to the Discord Maid Bot documentation! This directory contains all techn
 
 ### For Users
 - [Main README](../README.md) - Getting started, features, commands
+- [Commands Reference](COMMANDS.md) - Complete command list
+- [Configuration Guide](CONFIGURATION.md) - Setup and configuration
 - [Security Policy](../SECURITY.md) - Security guidelines and reporting
 - [Changelog](../CHANGELOG.md) - Version history and updates
 
 ### For Developers
+- [Architecture Overview](ARCHITECTURE.md) - System architecture
+- [Plugin Development](../plugins/README.md) - Creating plugins
+- [API Reference](API.md) - Core API documentation
 - [Contributing Guide](guides/CONTRIBUTING.md) - How to contribute
 - [Testing Guide](guides/TESTING_GUIDE.md) - Testing procedures
-- [Plugin Development](../plugins/README.md) - Creating plugins
 
-### For Maintainers
-- [Refactor Documentation](refactor/) - Architecture refactor details
-- [Phase Completion](phases/) - Development phase tracking
+### For System Administrators
+- [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions
+- [Cross-Platform Guide](CROSS_PLATFORM.md) - Platform-specific notes
+- [Dependencies](DEPENDENCIES.md) - Required dependencies
 
 ---
 
-## 📖 Documentation Structure
+## 📖 Core Documentation
+
+### Architecture & Design
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design patterns
+- **[PLUGINS.md](PLUGINS.md)** - Plugin system and catalog
+- **[PLUGIN_DEPENDENCIES.md](PLUGIN_DEPENDENCIES.md)** - Plugin dependency system
+- **[API.md](API.md)** - Core API reference
+
+### Features & Functionality
+- **[COMMANDS.md](COMMANDS.md)** - Complete command reference
+- **[GAMES.md](GAMES.md)** - Games system documentation
+- **[NETWORK_SCANNING.md](NETWORK_SCANNING.md)** - Network scanning features
+- **[CONVERSATIONAL_AI_ARCHITECTURE.md](CONVERSATIONAL_AI_ARCHITECTURE.md)** - AI chat system
+
+### Configuration & Setup
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configuration guide
+- **[SMB_SETUP.md](SMB_SETUP.md)** - SMB storage setup
+- **[CROSS_PLATFORM.md](CROSS_PLATFORM.md)** - Platform-specific setup
+
+### Development & Maintenance
+- **[guides/CONTRIBUTING.md](guides/CONTRIBUTING.md)** - Contribution guidelines
+- **[guides/TESTING_GUIDE.md](guides/TESTING_GUIDE.md)** - Testing procedures
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues
+
+### Future Planning
+- **[FUTURE_PLANS.md](FUTURE_PLANS.md)** - Roadmap and future features
+- **[AI_SYSADMIN_DESIGN.md](AI_SYSADMIN_DESIGN.md)** - AI sysadmin concepts
+- **[NETWORK_OPTIMIZATION.md](NETWORK_OPTIMIZATION.md)** - Network optimization ideas
+
+---
+
+## 📁 Directory Structure
 
 ```
 docs/
 ├── README.md                    # This file
+├── archive/                     # Historical documentation
+│   ├── phases/                  # Phase completion documents
+│   ├── refactor/                # Refactor tracking
+│   ├── REFACTOR_SUMMARY.md     # Complete refactor summary
+│   └── *.md                     # Archived planning documents
 ├── guides/                      # Development guides
 │   ├── CONTRIBUTING.md         # Contribution guidelines
 │   └── TESTING_GUIDE.md        # Testing procedures
-├── phases/                      # Phase completion documents
-│   ├── PHASE1_COMPLETE.md      # Foundation
-│   ├── PHASE2_COMPLETE.md      # Core Commands
-│   ├── PHASE3_COMPLETE.md      # Conversational AI
-│   ├── PHASE4_COMPLETE.md      # Personality
-│   ├── PHASE5_COMPLETE.md      # Network Management
-│   ├── PHASE6_COMPLETE.md      # Automation
-│   ├── PHASE7_COMPLETE.md      # Integrations
-│   ├── PHASE8_COMPLETE.md      # Research
-│   ├── PHASE9_COMPLETE.md      # Games
-│   └── PHASE10_PLAN.md         # Cleanup & Optimization
-└── refactor/                    # Refactor documentation
-    ├── REFACTOR_COMPLETE.md    # Complete refactor summary
-    ├── REFACTOR_STATUS.md      # Current status
-    ├── REFACTOR_READY.md       # Pre-refactor analysis
-    ├── SRC_REORGANIZATION_COMPLETE.md
-    ├── PLUGIN_STRUCTURE_REORGANIZATION.md
-    └── REMAINING_TASKS.md      # Outstanding items
+├── ARCHITECTURE.md              # System architecture
+├── API.md                       # API reference
+├── COMMANDS.md                  # Command reference
+├── CONFIGURATION.md             # Setup guide
+├── PLUGINS.md                   # Plugin catalog
+└── ... (other documentation)
 ```
 
 ---
 
-## 🎯 Development Phases
+## 🎯 Getting Started
 
-The bot was refactored in 10 phases, transforming from a monolithic application to a plugin-first architecture:
-
-| Phase | Focus | Status | Document |
-|-------|-------|--------|----------|
-| 1 | Foundation (Core Framework) | ✅ Complete | [PHASE1_COMPLETE.md](phases/PHASE1_COMPLETE.md) |
-| 2 | Core Commands Plugin | ✅ Complete | [PHASE2_COMPLETE.md](phases/PHASE2_COMPLETE.md) |
-| 3 | Conversational AI Plugin | ✅ Complete | [PHASE3_COMPLETE.md](phases/PHASE3_COMPLETE.md) |
-| 4 | Personality Plugin | ✅ Complete | [PHASE4_COMPLETE.md](phases/PHASE4_COMPLETE.md) |
-| 5 | Network Management Plugin | ✅ Complete | [PHASE5_COMPLETE.md](phases/PHASE5_COMPLETE.md) |
-| 6 | Automation Plugin | ✅ Complete | [PHASE6_COMPLETE.md](phases/PHASE6_COMPLETE.md) |
-| 7 | Integrations Plugins | ✅ Complete | [PHASE7_COMPLETE.md](phases/PHASE7_COMPLETE.md) |
-| 8 | Research Plugin | ✅ Complete | [PHASE8_COMPLETE.md](phases/PHASE8_COMPLETE.md) |
-| 9 | Games Plugin | ✅ Complete | [PHASE9_COMPLETE.md](phases/PHASE9_COMPLETE.md) |
-| 10 | Cleanup & Optimization | ✅ Complete | [PHASE10_PLAN.md](phases/PHASE10_PLAN.md) |
-
-**Result:** 14 plugins, clean architecture, zero breaking changes!
-
----
-
-## 🏗️ Architecture
-
-### Before Refactor
-- **3,553 lines** in monolithic `index.js`
-- Tightly coupled code
-- Difficult to maintain and extend
-
-### After Refactor
-- **35 lines** in `index.js` (entry point)
-- **1,056 lines** in `src/core/` (framework)
-- **14 independent plugins** (all features)
-- Modular, maintainable, extensible
-
-See [REFACTOR_COMPLETE.md](refactor/REFACTOR_COMPLETE.md) for full details.
-
----
-
-## 🔌 Plugin System
-
-The bot uses a powerful plugin system that allows features to be:
-- ✅ Independently developed
-- ✅ Hot-reloaded without restart
-- ✅ Enabled/disabled dynamically
-- ✅ Isolated from each other
-
-**Active Plugins:**
-1. automation
-2. conversational-ai
-3. core-commands
-4. device-bulk-ops
-5. device-health
-6. device-triggers
-7. games (18 games!)
-8. integrations/homeassistant
-9. integrations/speedtest
-10. integrations/weather
-11. network-insights
-12. network-management
-13. personality (10 personalities)
-14. research
-15. smart-reminders
-16. speed-alerts
-
-See [plugins/README.md](../plugins/README.md) for plugin development guide.
-
----
-
-## 📝 Key Documents
-
-### Refactor Documentation
-- **[REFACTOR_COMPLETE.md](refactor/REFACTOR_COMPLETE.md)** - Complete refactor overview
-- **[REFACTOR_STATUS.md](refactor/REFACTOR_STATUS.md)** - Current architecture status
-- **[SRC_REORGANIZATION_COMPLETE.md](refactor/SRC_REORGANIZATION_COMPLETE.md)** - src/ cleanup
-- **[PLUGIN_STRUCTURE_REORGANIZATION.md](refactor/PLUGIN_STRUCTURE_REORGANIZATION.md)** - Plugin structure
-
-### Development Guides
-- **[CONTRIBUTING.md](guides/CONTRIBUTING.md)** - How to contribute code
-- **[TESTING_GUIDE.md](guides/TESTING_GUIDE.md)** - Testing procedures
-- **[plugins/README.md](../plugins/README.md)** - Plugin development
-
-### Project Files
-- **[README.md](../README.md)** - Main project documentation
-- **[CHANGELOG.md](../CHANGELOG.md)** - Version history
-- **[SECURITY.md](../SECURITY.md)** - Security policy
-- **[PERSONAL_NOTES.md](../PERSONAL_NOTES.md)** - Development notes
-
----
-
-## 🚀 Getting Started
-
-### For Users
+### New Users
 1. Read the [Main README](../README.md)
-2. Follow installation instructions
-3. Configure your bot token
-4. Start the bot!
+2. Follow the [Configuration Guide](CONFIGURATION.md)
+3. Check the [Commands Reference](COMMANDS.md)
 
-### For Developers
-1. Read [CONTRIBUTING.md](guides/CONTRIBUTING.md)
-2. Review [Plugin Development Guide](../plugins/README.md)
-3. Check [REFACTOR_COMPLETE.md](refactor/REFACTOR_COMPLETE.md) for architecture
-4. Start coding!
+### New Developers
+1. Read the [Architecture Overview](ARCHITECTURE.md)
+2. Follow the [Plugin Development Guide](../plugins/README.md)
+3. Review the [Contributing Guide](guides/CONTRIBUTING.md)
 
-### For Maintainers
-1. Review [Phase Documents](phases/) for development history
-2. Check [REFACTOR_STATUS.md](refactor/REFACTOR_STATUS.md) for current state
-3. See [REMAINING_TASKS.md](refactor/REMAINING_TASKS.md) for future work
+### System Administrators
+1. Review [Configuration Guide](CONFIGURATION.md)
+2. Check [Cross-Platform Guide](CROSS_PLATFORM.md)
+3. Bookmark [Troubleshooting](TROUBLESHOOTING.md)
 
 ---
 
-## 🎓 Learning Path
+## 📝 Documentation Standards
 
-**New to the project?** Follow this path:
+### Writing Guidelines
+- Use clear, concise language
+- Include code examples
+- Add diagrams where helpful
+- Keep documentation up-to-date
+- Follow markdown best practices
 
-1. **Understand the Bot** - Read [Main README](../README.md)
-2. **Learn the Architecture** - Read [REFACTOR_COMPLETE.md](refactor/REFACTOR_COMPLETE.md)
-3. **Explore Plugins** - Browse [plugins/](../plugins/)
-4. **Try Development** - Follow [CONTRIBUTING.md](guides/CONTRIBUTING.md)
-5. **Create a Plugin** - Use [Plugin Guide](../plugins/README.md)
-
----
-
-## 📊 Project Stats
-
-- **Lines of Code:** ~9,100 (down from 14,275)
-- **Core Size:** 1,056 lines (down from 3,553)
-- **Plugins:** 14 active plugins
-- **Commands:** 50+ slash commands
-- **Features:** Network management, AI chat, games, automation, integrations
-- **Uptime:** 99.9%+
+### File Organization
+- Core docs in `docs/`
+- Guides in `docs/guides/`
+- Historical docs in `docs/archive/`
+- Plugin docs in `plugins/*/README.md`
 
 ---
 
-## 🤝 Contributing
+## 🔍 Finding Information
 
-We welcome contributions! Please read:
-1. [CONTRIBUTING.md](guides/CONTRIBUTING.md) - Contribution guidelines
-2. [Plugin Development Guide](../plugins/README.md) - Creating plugins
-3. [TESTING_GUIDE.md](guides/TESTING_GUIDE.md) - Testing your changes
+### By Topic
+- **Commands:** See [COMMANDS.md](COMMANDS.md)
+- **Plugins:** See [PLUGINS.md](PLUGINS.md)
+- **Setup:** See [CONFIGURATION.md](CONFIGURATION.md)
+- **Development:** See [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Issues:** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+### By Role
+- **End Users:** Commands, Configuration
+- **Developers:** Architecture, API, Plugins
+- **Contributors:** Contributing, Testing
+- **Admins:** Configuration, Troubleshooting
+
+---
+
+## 📚 Additional Resources
+
+### External Links
+- [Discord.js Documentation](https://discord.js.org/)
+- [Node.js Documentation](https://nodejs.org/docs/)
+- [SQLite Documentation](https://www.sqlite.org/docs.html)
+
+### Community
+- [GitHub Issues](https://github.com/yourusername/discord-maid-bot/issues)
+- [GitHub Discussions](https://github.com/yourusername/discord-maid-bot/discussions)
 
 ---
 
-## 📞 Support
+## 🔄 Documentation Updates
 
-- **Issues:** [GitHub Issues](https://github.com/coff33ninja/Discord-Maid-Bot/issues)
-- **Security:** See [SECURITY.md](../SECURITY.md)
-- **Questions:** Open a discussion on GitHub
+This documentation is actively maintained. If you find any issues or have suggestions:
 
----
-
-## 📜 License
-
-See [LICENSE](../LICENSE) file for details.
-
----
+1. Open an issue on GitHub
+2. Submit a pull request
+3. Contact the maintainers
 
 **Last Updated:** December 14, 2025  
-**Status:** Production Ready ✅
+**Version:** 2.0.0 (Plugin-First Architecture)
+
+---
+
+## 📜 Historical Documentation
+
+All refactor-related documentation has been archived in `docs/archive/` for historical reference. This includes:
+- Phase completion documents
+- Refactor status tracking
+- Architecture decisions
+- Migration guides
+
+See [archive/REFACTOR_SUMMARY.md](archive/REFACTOR_SUMMARY.md) for the complete refactor story.
+
+---
+
+**Need help?** Check the [Troubleshooting Guide](TROUBLESHOOTING.md) or open an issue on GitHub!

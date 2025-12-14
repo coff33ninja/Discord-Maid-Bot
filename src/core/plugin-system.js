@@ -499,14 +499,35 @@ async function loadPluginCommands(pluginName) {
     // Load commands module
     const commandsModule = await import(`${commandsUrl}?t=${Date.now()}`);
     
-    if (!commandsModule.commandGroup || !commandsModule.handleCommand) {
-      console.warn(`Plugin ${pluginName} commands.js missing required exports`);
+    // Check for required exports
+    // commandGroup can be null for plugins that only provide handlers (commands defined elsewhere)
+    if (!commandsModule.handleCommand) {
+      console.warn(`Plugin ${pluginName} commands.js missing required exports (handleCommand)`);
+      return;
+    }
+    
+    // If commandGroup is null, this plugin only provides handlers (commands defined in slash-commands.js)
+    if (commandsModule.commandGroup === null) {
+      // Store handler only - no command injection needed
+      pluginCommands.set(pluginName, {
+        commandGroup: null,
+        parentCommand: commandsModule.parentCommand,
+        handleCommand: commandsModule.handleCommand,
+        handleAutocomplete: commandsModule.handleAutocomplete || null
+      });
+      console.log(`   📋 Loaded command handlers for plugin: ${pluginName}`);
+      return;
+    }
+    
+    // Normal plugin with command definition
+    if (!commandsModule.commandGroup) {
+      console.warn(`Plugin ${pluginName} commands.js missing commandGroup export`);
       return;
     }
     
     pluginCommands.set(pluginName, {
       commandGroup: commandsModule.commandGroup,
-      parentCommand: commandsModule.parentCommand || 'automation',
+      parentCommand: commandsModule.parentCommand !== undefined ? commandsModule.parentCommand : 'automation',
       handleCommand: commandsModule.handleCommand,
       handleAutocomplete: commandsModule.handleAutocomplete || null
     });
@@ -520,13 +541,15 @@ async function loadPluginCommands(pluginName) {
   }
 }
 
-// Get all plugin commands
+// Get all plugin commands (only those that inject commands, not handler-only plugins)
 export function getPluginCommands() {
-  return Array.from(pluginCommands.entries()).map(([pluginName, commands]) => ({
-    pluginName,
-    parentCommand: commands.parentCommand,
-    commandGroup: commands.commandGroup
-  }));
+  return Array.from(pluginCommands.entries())
+    .filter(([, commands]) => commands.commandGroup !== null) // Skip handler-only plugins
+    .map(([pluginName, commands]) => ({
+      pluginName,
+      parentCommand: commands.parentCommand,
+      commandGroup: commands.commandGroup
+    }));
 }
 
 // Get plugin command handler

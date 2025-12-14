@@ -13,17 +13,20 @@
  * @module plugins/conversational-ai
  */
 
-export default class ConversationalAIPlugin {
+import { Plugin } from '../../src/core/plugin-system.js';
+
+export default class ConversationalAIPlugin extends Plugin {
   constructor() {
-    this.name = 'conversational-ai';
-    this.version = '1.0.0';
-    this.description = 'AI-powered conversational chat with personality support';
+    super('conversational-ai', '1.0.0', 'AI-powered conversational chat with personality support', {
+      optionalDependencies: ['personality'],
+      category: 'ai',
+      author: 'Discord Maid Bot',
+      keywords: ['chat', 'ai', 'conversation', 'gemini']
+    });
   }
 
-  async onLoad(client, coreHandlers) {
+  async onLoad() {
     console.log(`[${this.name}] Loading conversational AI plugin...`);
-    this.client = client;
-    this.coreHandlers = coreHandlers;
     console.log(`[${this.name}] ✅ Conversational AI plugin loaded`);
   }
 
