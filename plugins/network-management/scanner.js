@@ -3,6 +3,7 @@ import arp from 'node-arp';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { deviceOps } from '../../src/database/db.js';
+import { detectDeviceType, getDeviceEmoji, DeviceType } from './device-detector.js';
 
 const execAsync = promisify(exec);
 
@@ -82,7 +83,7 @@ async function scanLocalNetwork(subnet) {
       pingDevice(ip).then(async (result) => {
         if (result.alive) {
           return new Promise((resolve) => {
-            arp.getMAC(ip, (err, mac) => {
+            arp.getMAC(ip, async (err, mac) => {
               // Check if mac is a valid MAC address
               const isValidMac = mac && /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(mac);
               
@@ -101,6 +102,23 @@ async function scanLocalNetwork(subnet) {
                 network: 'local',
                 device_type: existingDevice?.device_type || null
               };
+              
+              // Auto-detect device type if not already set
+              if (!device.device_type && isValidMac) {
+                try {
+                  // Quick MAC-based detection (no nmap for speed)
+                  const detection = await detectDeviceType({ ip, mac, hostname: device.hostname }, false);
+                  if (detection.type !== DeviceType.UNKNOWN) {
+                    device.device_type = detection.type;
+                    // Auto-assign emoji if not set
+                    if (!device.emoji) {
+                      device.emoji = getDeviceEmoji(detection.type);
+                    }
+                  }
+                } catch (e) {
+                  // Detection failed, continue without type
+                }
+              }
               
               // Only add devices with valid MAC addresses OR devices that were previously registered
               // This prevents filling the database with temporary/ghost devices

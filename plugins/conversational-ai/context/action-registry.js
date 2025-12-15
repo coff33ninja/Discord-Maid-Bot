@@ -25,6 +25,12 @@ const actionRegistry = new Map();
 const capabilityRegistry = new Map();
 
 /**
+ * Track which actions belong to which plugin
+ * @type {Map<string, Set<string>>}
+ */
+const pluginActions = new Map();
+
+/**
  * Register an action that the AI can execute
  * 
  * @param {string} actionId - Unique action identifier
@@ -50,22 +56,63 @@ const capabilityRegistry = new Map();
  */
 export function registerAction(actionId, action) {
   if (!actionId || !action) {
-    logger.warn('Invalid action registration:', actionId);
-    return false;
+    logger.warn('Invalid action registration: missing actionId or action');
+    return { success: false, error: 'Missing actionId or action' };
   }
 
-  if (!action.keywords || !action.execute || !action.formatResult) {
-    logger.warn(`Action ${actionId} missing required fields`);
-    return false;
+  // Validate required fields
+  const requiredFields = ['keywords', 'execute', 'formatResult'];
+  const missingFields = requiredFields.filter(f => !action[f]);
+  
+  if (missingFields.length > 0) {
+    logger.warn(`Action ${actionId} missing required fields: ${missingFields.join(', ')}`);
+    return { success: false, error: `Missing required fields: ${missingFields.join(', ')}` };
   }
+
+  // Validate keywords is an array
+  if (!Array.isArray(action.keywords) || action.keywords.length === 0) {
+    logger.warn(`Action ${actionId} keywords must be a non-empty array`);
+    return { success: false, error: 'Keywords must be a non-empty array' };
+  }
+
+  // Validate execute and formatResult are functions
+  if (typeof action.execute !== 'function') {
+    logger.warn(`Action ${actionId} execute must be a function`);
+    return { success: false, error: 'Execute must be a function' };
+  }
+
+  if (typeof action.formatResult !== 'function') {
+    logger.warn(`Action ${actionId} formatResult must be a function`);
+    return { success: false, error: 'FormatResult must be a function' };
+  }
+
+  // Check for keyword conflicts
+  for (const [existingId, existingAction] of actionRegistry) {
+    if (existingId === actionId) continue;
+    
+    const conflictingKeywords = action.keywords.filter(kw => 
+      existingAction.keywords.some(ek => ek.toLowerCase() === kw.toLowerCase())
+    );
+    
+    if (conflictingKeywords.length > 0) {
+      logger.warn(`Action ${actionId} has conflicting keywords with ${existingId}: ${conflictingKeywords.join(', ')}`);
+    }
+  }
+
+  // Track action by plugin
+  const pluginName = action.plugin || 'unknown';
+  if (!pluginActions.has(pluginName)) {
+    pluginActions.set(pluginName, new Set());
+  }
+  pluginActions.get(pluginName).add(actionId);
 
   actionRegistry.set(actionId, {
     ...action,
     registeredAt: Date.now()
   });
 
-  logger.debug(`Registered action: ${actionId} (${action.keywords.length} keywords)`);
-  return true;
+  logger.debug(`Registered action: ${actionId} (${action.keywords.length} keywords) for plugin ${pluginName}`);
+  return { success: true, actionId };
 }
 
 /**
@@ -73,11 +120,54 @@ export function registerAction(actionId, action) {
  * @param {string} actionId - Action to remove
  */
 export function unregisterAction(actionId) {
+  const action = actionRegistry.get(actionId);
   const removed = actionRegistry.delete(actionId);
-  if (removed) {
+  
+  if (removed && action?.plugin) {
+    // Remove from plugin tracking
+    const pluginSet = pluginActions.get(action.plugin);
+    if (pluginSet) {
+      pluginSet.delete(actionId);
+      if (pluginSet.size === 0) {
+        pluginActions.delete(action.plugin);
+      }
+    }
     logger.debug(`Unregistered action: ${actionId}`);
   }
   return removed;
+}
+
+/**
+ * Unregister all actions for a plugin
+ * @param {string} pluginName - Plugin name
+ * @returns {number} Number of actions removed
+ */
+export function unregisterPluginActions(pluginName) {
+  const actionIds = pluginActions.get(pluginName);
+  if (!actionIds || actionIds.size === 0) {
+    return 0;
+  }
+  
+  let removed = 0;
+  for (const actionId of actionIds) {
+    if (actionRegistry.delete(actionId)) {
+      removed++;
+    }
+  }
+  
+  pluginActions.delete(pluginName);
+  logger.info(`Unregistered ${removed} actions for plugin: ${pluginName}`);
+  return removed;
+}
+
+/**
+ * Get actions registered by a specific plugin
+ * @param {string} pluginName - Plugin name
+ * @returns {string[]} Array of action IDs
+ */
+export function getPluginActions(pluginName) {
+  const actionIds = pluginActions.get(pluginName);
+  return actionIds ? Array.from(actionIds) : [];
 }
 
 /**
@@ -264,6 +354,8 @@ export async function checkActionPermission(action, context) {
 export default {
   registerAction,
   unregisterAction,
+  unregisterPluginActions,
+  getPluginActions,
   getActions,
   getAction,
   registerCapabilities,

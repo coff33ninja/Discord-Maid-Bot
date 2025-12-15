@@ -197,11 +197,12 @@ async function handleDevicesCommand(interaction) {
     const onlineDevices = devices.filter(d => d.online);
     const offlineDevices = devices.filter(d => !d.online);
     
-    // Helper to format device: "Name (IP)" if named, otherwise just IP
+    // Helper to format device: "Name (IP) [type]" if named, otherwise just IP
     const formatDevice = (d) => {
       const emoji = d.emoji || '📱';
       const label = d.name ? `${d.name} (${d.ip})` : d.ip;
-      return `${emoji} ${label}`;
+      const type = d.device_type ? ` [${d.device_type}]` : '';
+      return `${emoji} ${label}${type}`;
     };
     
     const embed = new EmbedBuilder()

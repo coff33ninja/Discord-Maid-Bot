@@ -8,7 +8,49 @@ import { Plugin } from '../../src/core/plugin-system.js';
  * - Event handlers (network scan, speed test)
  * - Custom methods
  * - AI Action Registration (for conversational AI integration)
+ * 
+ * ## AI Actions Export Pattern
+ * 
+ * Plugins can export an `aiActions` array to automatically register
+ * actions with the conversational AI. This is the recommended pattern
+ * for new plugins.
  */
+
+/**
+ * AI Actions Export
+ * 
+ * Export this array to automatically register actions with the AI.
+ * Each action must have:
+ * - keywords: string[] - Trigger phrases
+ * - plugin: string - Plugin name (for tracking)
+ * - description: string - What the action does
+ * - execute: async function(context) - Action logic
+ * - formatResult: function(result) - Format response
+ * 
+ * Optional:
+ * - permission: 'everyone' | 'moderator' | 'admin'
+ * - needsTarget: boolean - Whether action needs a target
+ */
+export const aiActions = [
+  {
+    id: 'example-greet',
+    keywords: ['greet me', 'say hello', 'example greeting'],
+    plugin: 'example-plugin',
+    description: 'Send a greeting from the example plugin',
+    permission: 'everyone',
+    async execute(context) {
+      const name = context.username || 'friend';
+      return { 
+        greeting: `Hello, ${name}! This is the example plugin speaking.`,
+        timestamp: new Date().toISOString()
+      };
+    },
+    formatResult(result) {
+      return `👋 ${result.greeting}`;
+    }
+  }
+];
+
 export default class ExamplePlugin extends Plugin {
   constructor() {
     super('example-plugin', '1.0.0', 'An example plugin demonstrating the plugin system');
@@ -90,13 +132,15 @@ export default class ExamplePlugin extends Plugin {
   
   /**
    * Unregister AI actions when plugin unloads
+   * Uses unregisterPluginActions to remove all actions at once
    */
   async unregisterAIActions() {
     try {
-      const { unregisterAction, unregisterCapabilities } = await import('../conversational-ai/context/action-registry.js');
-      unregisterAction('example-greet');
+      const { unregisterPluginActions, unregisterCapabilities } = await import('../conversational-ai/context/action-registry.js');
+      // Remove all actions registered by this plugin
+      const removed = unregisterPluginActions('example-plugin');
       unregisterCapabilities('example-plugin');
-      console.log('Example plugin: Unregistered AI actions');
+      console.log(`Example plugin: Unregistered ${removed} AI actions`);
     } catch (e) {
       // Conversational AI plugin not available
     }

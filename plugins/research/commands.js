@@ -247,14 +247,69 @@ async function handleResearchSearch(interaction) {
 }
 
 /**
- * /research web - Web search (placeholder for future DuckDuckGo integration)
+ * /research web - Web search using DuckDuckGo
  */
 async function handleWebSearch(interaction) {
-  await interaction.reply({
-    content: '🚧 Web search coming soon!\n\nThis will integrate with DuckDuckGo for real-time web searches.',
-    ephemeral: true
-  });
-  return true;
+  await interaction.deferReply();
+  
+  try {
+    const query = interaction.options.getString('query');
+    const maxResults = interaction.options.getInteger('results') || 5;
+    
+    const { searchWeb, formatSearchResults } = await import('./web-search.js');
+    
+    const response = await searchWeb(query, maxResults);
+    
+    if (response.error || response.results.length === 0) {
+      const embed = new EmbedBuilder()
+        .setColor('#FFA500')
+        .setTitle(`🔎 Search: ${query}`)
+        .setDescription(response.error 
+          ? `Search failed: ${response.error}` 
+          : 'No instant results found')
+        .addFields({
+          name: 'Try searching directly',
+          value: `[DuckDuckGo](${response.searchUrl})`
+        })
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      return true;
+    }
+    
+    const embed = new EmbedBuilder()
+      .setColor('#667eea')
+      .setTitle(`🔎 Search: ${query}`)
+      .setDescription(`Found ${response.totalResults} result(s)`)
+      .setTimestamp();
+    
+    for (const result of response.results.slice(0, 5)) {
+      const snippet = result.snippet.length > 200 
+        ? result.snippet.substring(0, 200) + '...' 
+        : result.snippet;
+      
+      embed.addFields({
+        name: result.title,
+        value: `${snippet}\n[Link](${result.url})`,
+        inline: false
+      });
+    }
+    
+    embed.addFields({
+      name: 'More Results',
+      value: `[Search on DuckDuckGo](${response.searchUrl})`
+    });
+    
+    await interaction.editReply({ embeds: [embed] });
+    return true;
+  } catch (error) {
+    logger.error('Web search error:', error);
+    await interaction.editReply({
+      content: `❌ Web search failed: ${error.message}`,
+      ephemeral: true
+    });
+    return true;
+  }
 }
 
 // Export research function for use by other plugins
