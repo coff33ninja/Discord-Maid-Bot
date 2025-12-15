@@ -1007,9 +1007,25 @@ const ACTIONS = {
         targetType = 'dm';
       }
       
+      // Rewrite the message with AI to sound more natural and include personality
+      let rewrittenMessage = parsed.message || 'Reminder';
+      try {
+        const { rewriteReminderMessage } = await import('../utils/message-rewriter.js');
+        rewrittenMessage = await rewriteReminderMessage(parsed.message, {
+          senderName: context.username || 'Someone',
+          targetName: hasTargetUser ? `<@${targetUserId}>` : null,
+          isForOther: hasTargetUser,
+          includePersonality: true,
+          messageType: 'reminder'
+        });
+      } catch (e) {
+        // If rewriting fails, use original message
+      }
+      
       const reminderData = {
         name: parsed.message?.substring(0, 30) || 'Reminder',
-        message: parsed.message || 'Reminder',
+        message: rewrittenMessage,
+        originalMessage: parsed.message, // Keep original for reference
         userId: context.userId,
         targetUserId: targetUserId,
         channelId: context.channelId,
@@ -1031,12 +1047,14 @@ const ACTIONS = {
           success: true,
           reminder,
           time: parsed.time,
-          message: parsed.message,
+          message: rewrittenMessage,
+          originalMessage: parsed.message,
           targetUserId,
           hasTargetUser,
           actions: formattedActions,
           confidence: parsed.confidence,
-          isAutomation: hasActions && !hasTargetUser
+          isAutomation: hasActions && !hasTargetUser,
+          senderName: context.username
         };
       } catch (error) {
         return { error: error.message };
@@ -1089,12 +1107,23 @@ const ACTIONS = {
         title = '✅ **Reminder Set!**';
       }
       
-      let response = `${title}\n\n` +
-        `📝 **${result.isAutomation ? 'Task' : 'Message'}:** ${result.message}\n` +
-        `⏰ **When:** ${timeStr}\n`;
+      let response = `${title}\n\n`;
+      
+      // Show the AI-rewritten message (what will be delivered)
+      response += `💬 **Will say:** ${result.message}\n`;
+      
+      // Show original if different (for transparency)
+      if (result.originalMessage && result.originalMessage !== result.message) {
+        response += `📝 *Original: "${result.originalMessage}"*\n`;
+      }
+      
+      response += `⏰ **When:** ${timeStr}\n`;
       
       if (result.hasTargetUser || (result.targetUserId && result.targetUserId !== result.reminder?.userId)) {
         response += `👤 **For:** <@${result.targetUserId}>\n`;
+        if (result.senderName) {
+          response += `✉️ **From:** ${result.senderName}\n`;
+        }
       }
       
       if (result.actions && result.actions.length > 0) {
