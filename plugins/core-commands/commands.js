@@ -269,21 +269,152 @@ export async function handleCommand(interaction, commandName, subcommand) {
 
 /**
  * Handle /help or /bot help
+ * Dynamically generates help from loaded plugins
  */
 async function handleHelp(interaction) {
+  const plugins = getLoadedPlugins();
+  
+  // Core commands (always shown first)
+  const coreCommands = [
+    { name: '📊 Core Commands', value: '`/help` - Show this help\n`/stats` - Bot statistics\n`/ping` - Check latency\n`/dashboard` - Web dashboard URL', inline: false },
+    { name: '🤖 Bot Management', value: '`/bot stats` - Statistics\n`/bot dashboard` - Dashboard\n`/bot help` - Help\n`/bot plugin list` - List plugins', inline: false },
+    { name: '👑 Admin', value: '`/admin permissions` - Manage permissions\n`/admin config` - Bot configuration\n`/plugin` - Plugin management', inline: false }
+  ];
+  
+  // Plugin command categories with their icons
+  const pluginCategories = {
+    'conversational-ai': { icon: '💬', name: 'AI Chat', commands: [] },
+    'personality': { icon: '🎭', name: 'Personality', commands: [] },
+    'network-management': { icon: '🌐', name: 'Network', commands: [] },
+    'device-management': { icon: '📱', name: 'Devices', commands: [] },
+    'power-management': { icon: '⚡', name: 'Power', commands: [] },
+    'games': { icon: '🎮', name: 'Games', commands: [] },
+    'research': { icon: '🔎', name: 'Research', commands: [] },
+    'integrations': { icon: '🏠', name: 'Integrations', commands: [] },
+    'automation': { icon: '⚙️', name: 'Automation', commands: [] },
+    'smart-reminders': { icon: '⏰', name: 'Reminders', commands: [] }
+  };
+  
+  // Collect commands from each plugin
+  for (const plugin of plugins) {
+    if (!plugin.enabled) continue;
+    
+    const category = pluginCategories[plugin.name];
+    if (category) {
+      // Try to get commands from the plugin
+      try {
+        const pluginModule = await import(`../${plugin.name}/commands.js`).catch(() => null);
+        if (pluginModule?.commands) {
+          for (const cmd of pluginModule.commands) {
+            if (cmd.name) {
+              category.commands.push(`\`/${cmd.name}\``);
+            }
+          }
+        } else if (pluginModule?.commandGroup?.name) {
+          category.commands.push(`\`/${pluginModule.commandGroup.name}\``);
+        }
+      } catch (e) {
+        // Plugin might not have commands.js or different structure
+      }
+    }
+  }
+  
+  // Build plugin fields
+  const pluginFields = [];
+  for (const [pluginName, category] of Object.entries(pluginCategories)) {
+    const plugin = plugins.find(p => p.name === pluginName);
+    if (plugin?.enabled && category.commands.length > 0) {
+      // Get unique commands and limit display
+      const uniqueCommands = [...new Set(category.commands)];
+      let commandList = uniqueCommands.slice(0, 5).join(' ');
+      if (uniqueCommands.length > 5) {
+        commandList += ` +${uniqueCommands.length - 5} more`;
+      }
+      pluginFields.push({
+        name: `${category.icon} ${category.name}`,
+        value: commandList || 'No commands',
+        inline: true
+      });
+    }
+  }
+  
+  // Add special handling for known plugins with subcommands
+  const specialPlugins = [];
+  
+  // Games plugin - show game count
+  const gamesPlugin = plugins.find(p => p.name === 'games' && p.enabled);
+  if (gamesPlugin) {
+    specialPlugins.push({
+      name: '🎮 Games',
+      value: '`/game play` - Play a game\n`/game list` - 18 games available!\n`/game stats` - Your stats',
+      inline: true
+    });
+  }
+  
+  // Integrations
+  const integrationsPlugin = plugins.find(p => p.name === 'integrations' && p.enabled);
+  if (integrationsPlugin) {
+    specialPlugins.push({
+      name: '🏠 Smart Home',
+      value: '`/homeassistant` - Home Assistant\n`/weather` - Weather info\n`/speedtest` - Internet speed',
+      inline: true
+    });
+  }
+  
+  // Network
+  const networkPlugin = plugins.find(p => p.name === 'network-management' && p.enabled);
+  if (networkPlugin) {
+    specialPlugins.push({
+      name: '🌐 Network',
+      value: '`/network scan` - Scan network\n`/network devices` - List devices\n`/network wol` - Wake on LAN',
+      inline: true
+    });
+  }
+  
+  // AI Chat
+  const aiPlugin = plugins.find(p => p.name === 'conversational-ai' && p.enabled);
+  if (aiPlugin) {
+    specialPlugins.push({
+      name: '💬 AI Chat',
+      value: '`/chat` - Chat with AI\n`/memory` - View/manage memory\n`/ai` - AI settings',
+      inline: true
+    });
+  }
+  
+  // Research
+  const researchPlugin = plugins.find(p => p.name === 'research' && p.enabled);
+  if (researchPlugin) {
+    specialPlugins.push({
+      name: '🔎 Research',
+      value: '`/research query` - AI research\n`/research web` - Web search\n`/research history` - Past research',
+      inline: true
+    });
+  }
+  
+  // Build the embed
   const embed = new EmbedBuilder()
     .setColor('#FFB6C1')
     .setTitle('🌸 Maid Bot Commands 🌸')
-    .setDescription('At your service, Master! Here\'s what I can do:')
-    .addFields(
-      { name: '💬 Chat', value: '`/chat` or `/bot chat` - Chat with AI\n`/bot personality` - Change personality', inline: false },
-      { name: '🌐 Network', value: '`/network scan` - Scan network\n`/network devices` - List devices\n`/network wol` - Wake on LAN', inline: false },
-      { name: '🏠 Smart Home', value: '`/homeassistant` - Control Home Assistant\n`/weather` - Weather info', inline: false },
-      { name: '🎮 Games', value: '`/game trivia` - Trivia\n`/game hangman` - Hangman\n... and 16 more games!', inline: false },
-      { name: '🔎 Research', value: '`/research query` - AI research\n`/research web` - Web search', inline: false },
-      { name: '📊 Bot Management', value: '`/bot stats` - Statistics\n`/bot dashboard` - Web dashboard\n`/bot plugin list` - List plugins', inline: false }
-    )
-    .setFooter({ text: 'Plugin-First Architecture ✨' })
+    .setDescription(`At your service, Master! Here\'s what I can do:\n\n**${plugins.filter(p => p.enabled).length} plugins loaded**`)
+    .addFields(...coreCommands);
+  
+  // Add special plugin fields (curated)
+  if (specialPlugins.length > 0) {
+    embed.addFields({ name: '\u200B', value: '**📦 Plugin Commands**', inline: false });
+    embed.addFields(...specialPlugins);
+  }
+  
+  // Show disabled plugins hint
+  const disabledCount = plugins.filter(p => !p.enabled).length;
+  if (disabledCount > 0) {
+    embed.addFields({
+      name: '💤 Disabled Plugins',
+      value: `${disabledCount} plugin(s) disabled. Use \`/plugin list\` to see all.`,
+      inline: false
+    });
+  }
+  
+  embed.setFooter({ text: 'Use /plugin list for detailed plugin info • Plugin-First Architecture ✨' })
     .setTimestamp();
   
   await interaction.reply({ embeds: [embed] });
