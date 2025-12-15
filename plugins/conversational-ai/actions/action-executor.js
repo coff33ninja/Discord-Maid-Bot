@@ -1352,8 +1352,33 @@ export class ActionExecutor {
     
     const lowerQuery = query.toLowerCase();
     
-    // First check built-in actions
+    // Priority actions that should be checked first (more specific patterns)
+    // These take precedence when their keywords appear, even if other keywords also match
+    const priorityActions = ['reminder-create', 'reminder-set'];
+    
+    // Check priority actions first
+    for (const actionId of priorityActions) {
+      const action = ACTIONS[actionId];
+      if (!action) continue;
+      
+      for (const keyword of action.keywords) {
+        if (lowerQuery.includes(keyword)) {
+          return {
+            id: actionId,
+            action,
+            keyword,
+            confidence: this.calculateConfidence(lowerQuery, keyword),
+            source: 'builtin'
+          };
+        }
+      }
+    }
+    
+    // Then check all other built-in actions
     for (const [actionId, action] of Object.entries(ACTIONS)) {
+      // Skip priority actions (already checked)
+      if (priorityActions.includes(actionId)) continue;
+      
       for (const keyword of action.keywords) {
         if (lowerQuery.includes(keyword)) {
           return {
