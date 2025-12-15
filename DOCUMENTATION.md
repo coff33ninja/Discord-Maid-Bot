@@ -232,7 +232,28 @@ Regular tasks:
 
 ---
 
-**Last Updated:** December 14, 2025  
+**Last Updated:** December 15, 2025  
 **Version:** 1.0.0.0-beta
+
+---
+
+## 🆕 New: AI Natural Language Actions
+
+The bot now supports **56 natural language actions** - just chat naturally to control the bot!
+
+**Categories:**
+- Network & Devices (10) - scan, wake, shutdown, rename, groups
+- Device Health (5) - health reports, alerts, reliability
+- Speed & Internet (3) - speedtest, history, alerts
+- Server Admin (6) - status, logs, restart, deploy
+- Discord Moderation (7) - kick, ban, timeout, roles, channels
+- Games (3) - play, list, leaderboard
+- Reminders (5) - create, list, delete, scheduled tasks
+- Smart Home (3) - weather, Home Assistant
+- Research (3) - AI research, web search
+- User & Bot (8) - stats, profiles, personalities, plugins
+- Utilities (3) - dashboard, insights history
+
+**Example:** Just say "scan the network" instead of `/network scan`
 
 For the complete refactor story, see [docs/archive/REFACTOR_SUMMARY.md](docs/archive/REFACTOR_SUMMARY.md)

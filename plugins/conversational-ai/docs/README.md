@@ -1,10 +1,31 @@
 # Conversational AI Plugin
 
-**Version:** 2.0.0  
+**Version:** 2.1.0  
 **Category:** AI  
-**Author:** Discord Maid Bot Team
+**Author:** Discord Maid Bot Team  
+**Last Updated:** December 15, 2025
 
-Transform your Discord bot from a command-driven tool into an intelligent conversational participant with contextual memory, natural language understanding, and modular extensibility.
+Transform your Discord bot from a command-driven tool into an intelligent conversational participant with contextual memory, natural language understanding, **56 AI-powered action commands**, and modular extensibility.
+
+## 🆕 What's New in 2.1.0
+
+### 56 Natural Language Actions
+Users can now control the bot by simply chatting! No need to memorize slash commands.
+
+**Examples:**
+```
+"Scan the network"           → Runs /network scan
+"Wake up my gaming PC"       → Sends Wake-on-LAN
+"What's the weather?"        → Gets weather info
+"Play trivia"                → Starts a game
+"Show unhealthy devices"     → Lists devices with issues
+"Is the bot running?"        → Shows server status
+"Change personality to tsundere" → Switches bot personality
+"List my reminders"          → Shows active reminders
+```
+
+### AI Intent Classification
+Uses Gemini AI to intelligently classify user intent and route to the appropriate action with high accuracy.
 
 ## Features
 
@@ -30,6 +51,19 @@ Transform your Discord bot from a command-driven tool into an intelligent conver
 - Extracts content from bot embeds (games, research, etc.)
 - Allows follow-up questions about any previous response
 
+### 🤖 AI Action Executor (56 Actions)
+- **Network & Devices (10)** - scan, wake, shutdown, rename, groups, tailscale
+- **Device Health (5)** - health reports, alerts, reliability metrics
+- **Speed & Internet (3)** - speedtest, history, alert config
+- **Server Admin (6)** - status, logs, restart, deploy, SSH
+- **Discord Moderation (7)** - kick, ban, timeout, roles, channels
+- **Games (3)** - play, list, leaderboard
+- **Reminders & Automation (5)** - create, list, delete, scheduled tasks
+- **Smart Home (3)** - weather, Home Assistant control
+- **Research & Info (3)** - AI research, web search, help
+- **User & Bot (8)** - stats, profiles, personalities, plugins
+- **Utilities (3)** - dashboard, insights history
+
 ## Commands
 
 | Command | Description |
@@ -42,6 +76,26 @@ Transform your Discord bot from a command-driven tool into an intelligent conver
 | `/ai settings` | View AI configuration |
 | `/ai context` | Show current context being used |
 | `/ai personality <style>` | Quick personality switch |
+
+## Natural Language Actions
+
+Just chat with the bot! Examples:
+
+| Say This | Action Executed |
+|----------|-----------------|
+| "scan the network" | `network-scan` |
+| "wake up [device]" | `wake-device` |
+| "run a speed test" | `speedtest` |
+| "what's the weather" | `weather` |
+| "play trivia" | `game-play` |
+| "show device health" | `device-health` |
+| "list my reminders" | `reminder-list` |
+| "restart the bot" | `server-restart` |
+| "kick @user" | `discord-kick` |
+| "change personality to butler" | `personality-change` |
+| "show unhealthy devices" | `device-health-unhealthy` |
+| "what plugins are loaded" | `plugin-list` |
+| "where's the dashboard" | `dashboard-url` |
 
 ## Prefix Commands
 

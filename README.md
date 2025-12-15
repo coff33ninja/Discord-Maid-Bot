@@ -35,6 +35,7 @@ An AI-powered Discord bot with network management, home automation, interactive 
 ## Features
 
 - 🤖 **AI Chat** - Powered by Google Gemini with 10 unique personalities
+- 💬 **56 Natural Language Actions** - Just chat to control the bot! 🆕
 - 🎮 **18 Games** - Trivia, Word Chain, Hangman, Connect Four, Mafia, and more
 - 🌐 **Network Tools** - Device scanning, Wake-on-LAN, Tailscale integration
 - 🚀 **Speed Tests** - Automated internet speed monitoring
@@ -43,6 +44,20 @@ An AI-powered Discord bot with network management, home automation, interactive 
 - 📊 **Web Dashboard** - Real-time monitoring with role-based access
 - 🔌 **Plugin System** - Hot-reloadable custom plugins
 - ⏰ **Task Scheduler** - Cron-based automated tasks
+
+### Natural Language Commands 🆕
+
+No need to memorize slash commands! Just chat naturally:
+
+```
+"Scan the network"           → Runs network scan
+"Wake up my gaming PC"       → Sends Wake-on-LAN
+"What's the weather?"        → Gets weather info
+"Play trivia"                → Starts a game
+"Show unhealthy devices"     → Lists devices with issues
+"Is the bot running?"        → Shows server status
+"Change personality to tsundere" → Switches bot personality
+```
 
 ## Quick Start
 
@@ -94,17 +109,29 @@ See [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) for full options.
 
 ## Commands
 
+### Slash Commands
 | Command | Description |
 |---------|-------------|
 | `/chat` | Talk to the AI maid |
-| `/personality` | Change bot personality |
-| `/scan` | Scan network for devices |
-| `/wake` | Send Wake-on-LAN packet |
-| `/speedtest` | Run internet speed test |
-| `/research` | AI web research |
-| `/trivia` | Start trivia game |
-| `/wordchain` | Word chain game |
+| `/bot personality` | Change bot personality |
+| `/network scan` | Scan network for devices |
+| `/network wol` | Send Wake-on-LAN packet |
+| `/network speedtest` | Run internet speed test |
+| `/research query` | AI web research |
+| `/game play` | Start a game |
 | `/help` | Show all commands |
+
+### Natural Language (56 Actions)
+Just mention the bot or DM it:
+| Say This | Does This |
+|----------|-----------|
+| "scan the network" | Scans for devices |
+| "wake up [device]" | Sends WOL packet |
+| "run a speed test" | Tests internet speed |
+| "play trivia" | Starts trivia game |
+| "show device health" | Shows health report |
+| "list plugins" | Lists loaded plugins |
+| "change personality to butler" | Changes AI personality |
 
 ## Dashboard
 

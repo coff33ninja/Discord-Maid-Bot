@@ -1,8 +1,9 @@
 # Plugin Catalog
 
 **Version:** 1.0.0.0-beta  
-**Last Updated:** December 14, 2025  
-**Total Plugins:** 17
+**Last Updated:** December 15, 2025  
+**Total Plugins:** 17  
+**AI Actions:** 56
 
 Complete catalog of all available plugins for Discord Maid Bot.
 
@@ -105,16 +106,39 @@ Plugins powered by Google Gemini AI.
 **Version:** 1.0.0.0-beta  
 **Status:** ✅ Active
 
-AI-powered conversational chat using Google Gemini.
+AI-powered conversational chat using Google Gemini with **56 natural language actions**.
 
 **Commands:**
 - `/chat` - Chat with the AI bot
+- Natural language commands (no slash needed!)
 
 **Features:**
 - Natural language conversations
+- **56 AI-powered action commands** 🆕
 - Personality-aware responses
 - Chat history tracking
 - Context-aware replies
+- Intent classification using Gemini AI
+
+**AI Action Categories:**
+- Network & Devices (10 actions)
+- Device Health (5 actions)
+- Speed & Internet (3 actions)
+- Server Admin (6 actions)
+- Discord Moderation (7 actions)
+- Games (3 actions)
+- Reminders & Automation (5 actions)
+- Smart Home (3 actions)
+- Research & Info (3 actions)
+- User & Bot (8 actions)
+- Utilities (3 actions)
+
+**Example Natural Commands:**
+- "Scan the network"
+- "Wake up my PC"
+- "Show unhealthy devices"
+- "Play trivia"
+- "What's the weather?"
 
 **Dependencies:** personality (optional)
 
@@ -507,6 +531,7 @@ Weather information and forecasts.
 **Total Commands:** 100+
 
 **New in 1.0.0.0-beta:**
+- ✨ **56 AI Natural Language Actions** - Chat naturally to control the bot
 - ✨ Power Management plugin with remote shutdown/restart
 - ✨ Schema extension system for plugins
 - ✨ Core handler system for shared services

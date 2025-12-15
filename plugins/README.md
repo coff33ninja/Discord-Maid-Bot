@@ -1,10 +1,27 @@
 # Discord Maid Bot - Plugins
 
 **Version:** 1.0.0.0-beta  
-**Last Updated:** December 14, 2025  
+**Last Updated:** December 15, 2025  
 **Total Plugins:** 17
 
-Complete plugin system for Discord Maid Bot with dynamic command loading and plugin-first architecture.
+Complete plugin system for Discord Maid Bot with dynamic command loading, plugin-first architecture, and **56 AI natural language actions**.
+
+---
+
+## 🆕 Latest Update: AI Natural Language Actions
+
+The Conversational AI plugin now supports **56 natural language actions** - users can ask the bot to do things naturally without memorizing slash commands!
+
+**Examples:**
+- "Scan the network" → Runs network scan
+- "Wake up my PC" → Sends Wake-on-LAN
+- "What's the weather?" → Gets weather info
+- "Play trivia" → Starts a game
+- "Show unhealthy devices" → Lists devices with issues
+- "Change personality to tsundere" → Switches bot personality
+- "Is the bot running?" → Shows server status
+
+See [AI Actions Documentation](#ai-natural-language-actions) for the complete list.
 
 ---
 
@@ -61,7 +78,7 @@ Essential bot functionality:
 
 ### AI Plugins (3)
 Powered by Google Gemini:
-- **Conversational AI** - Natural language chat
+- **Conversational AI** - Natural language chat with **56 action commands**
 - **Personality** - 10+ unique AI personalities
 - **Research** - AI-powered research and web search
 
@@ -243,7 +260,8 @@ const config = saved ? JSON.parse(saved) : defaultConfig;
 - Entertainment: 1
 - Integration: 3
 
-**Total Commands:** 100+
+**Total Commands:** 100+ slash commands  
+**AI Actions:** 56 natural language actions
 
 **Code Metrics:**
 - Core: 35 lines (down from 3,553)
@@ -326,6 +344,118 @@ node scripts/compare-features.js    # Compare with backup
 - ✅ Architecture 100% clean
 
 See [PLUGIN_VALIDATION_REPORT.md](../PLUGIN_VALIDATION_REPORT.md) for details.
+
+---
+
+## 🤖 AI Natural Language Actions
+
+The Conversational AI plugin includes an intelligent action executor that understands natural language requests. Users can simply chat with the bot to perform actions.
+
+### Action Categories (56 total)
+
+**Network & Devices (10):**
+- `network-scan` - Scan network for devices
+- `network-devices` - List all known devices
+- `wake-device` - Wake device using WOL
+- `shutdown-device` - Shutdown/restart remote device
+- `device-rename` - Rename a device
+- `device-emoji` - Set device emoji
+- `device-groups` - List device groups
+- `device-group-view` - View devices in a group
+- `network-insights` - AI network analysis
+- `tailscale-status` - Check Tailscale VPN
+
+**Device Health (5):**
+- `device-health` - Get device health report
+- `device-health-summary` - Overall health summary
+- `device-health-unhealthy` - List problem devices
+- `device-health-reliable` - List most reliable devices
+- `device-health-alerts` - Predictive health alerts
+
+**Speed & Internet (3):**
+- `speedtest` - Run internet speed test
+- `speedtest-history` - View speed test history
+- `speed-alert-config` - View speed alert settings
+
+**Server Admin (6):**
+- `server-status` - Check server/bot status
+- `server-logs` - View recent logs
+- `server-restart` - Restart the bot
+- `server-deploy` - Deploy latest code
+- `server-admin-help` - Show admin commands
+- `ssh-command` - Remote SSH (redirects to slash)
+
+**Discord Moderation (7):**
+- `discord-kick` - Kick a member
+- `discord-ban` - Ban a member
+- `discord-timeout` - Timeout a member
+- `discord-role` - Give/remove roles
+- `discord-lock` - Lock/unlock channels
+- `discord-create-channel` - Create a channel
+- `discord-delete-channel` - Delete a channel
+
+**Games (3):**
+- `game-list` - List available games
+- `game-play` - Start a game
+- `game-leaderboard` - Show leaderboard
+
+**Reminders & Automation (5):**
+- `reminder-create` - Create a reminder
+- `reminder-list` - List reminders
+- `reminder-delete` - Delete a reminder
+- `scheduled-tasks` - List scheduled tasks
+- `device-triggers-list` - List device triggers
+
+**Smart Home (3):**
+- `weather` - Get weather info
+- `homeassistant` - Control Home Assistant
+- `homeassistant-control` - Direct HA control
+
+**Research & Info (3):**
+- `research` - AI-powered research
+- `web-search` - Web search
+- `help` - Show help
+
+**User & Bot (8):**
+- `bot-stats` - Bot statistics
+- `ping` - Check latency
+- `profile-setup` - Create profile channel
+- `profile-view` - View user profile
+- `personality-change` - Change bot personality
+- `personality-list` - List personalities
+- `plugin-list` - List loaded plugins
+- `plugin-stats` - Plugin statistics
+
+**Utilities (3):**
+- `dashboard-url` - Get dashboard URL
+- `network-insights-history` - Past network insights
+- `scheduled-automation` - Schedule automation
+
+### How It Works
+
+1. User sends a natural message to the bot
+2. AI Intent Classifier (Gemini) analyzes the message
+3. If an action is detected with high confidence, it executes
+4. Results are formatted and returned to the user
+
+### Example Conversations
+
+```
+User: "What devices are online?"
+Bot: 🌐 Found 12 devices on the network...
+
+User: "Wake up Kusanagi"
+Bot: ⚡ Wake-on-LAN packet sent to Kusanagi (192.168.0.100)
+
+User: "Run a speed test"
+Bot: 🚀 Speed Test Results: ⬇️ 450 Mbps ⬆️ 50 Mbps 📶 12ms
+
+User: "Show me unhealthy devices"
+Bot: ⚠️ Unhealthy Devices: 🔴 OldRouter - 78% uptime...
+
+User: "Change personality to butler"
+Bot: 🎩 Personality changed to Butler! Try chatting with me~
+```
 
 ---
 
