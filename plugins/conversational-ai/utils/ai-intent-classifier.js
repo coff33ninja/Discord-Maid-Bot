@@ -121,6 +121,42 @@ const ACTION_CATEGORIES = {
     description: 'Delete a Discord channel',
     examples: ['delete channel old-chat', 'remove channel test', 'delete this channel']
   },
+  'discord-rename-channel': {
+    description: 'Rename a Discord channel',
+    examples: ['rename channel general to main-chat', 'rename this channel to announcements', 'change channel name']
+  },
+  'discord-set-topic': {
+    description: 'Set channel topic or description',
+    examples: ['set topic to Welcome!', 'change channel description', 'set channel topic']
+  },
+  'discord-set-slowmode': {
+    description: 'Set channel slowmode',
+    examples: ['set slowmode to 30 seconds', 'enable slowmode', 'disable slowmode', 'slow mode 1 minute']
+  },
+  'discord-unban': {
+    description: 'Unban a user from the server',
+    examples: ['unban user', 'remove ban', 'lift ban from user']
+  },
+  'discord-remove-timeout': {
+    description: 'Remove timeout from a user',
+    examples: ['unmute user', 'remove timeout', 'untimeout @user']
+  },
+  'discord-member-info': {
+    description: 'Get information about a server member',
+    examples: ['who is @user', 'member info', 'user info', 'info about @user']
+  },
+  'discord-server-info': {
+    description: 'Get server information and statistics',
+    examples: ['server info', 'server stats', 'about this server', 'guild info']
+  },
+  'discord-list-roles': {
+    description: 'List all server roles',
+    examples: ['list roles', 'show roles', 'what roles are there', 'server roles']
+  },
+  'discord-ban-list': {
+    description: 'View banned users',
+    examples: ['ban list', 'who is banned', 'show bans', 'list banned users']
+  },
   
   // Network & Device Health
   'network-insights': {
@@ -397,6 +433,15 @@ function fallbackClassification(query) {
     { keywords: ['my profile', 'what do you know about me', 'who am i'], action: 'profile-view' },
     { keywords: ['create channel', 'make channel', 'new channel', 'add channel'], action: 'discord-create-channel' },
     { keywords: ['delete channel', 'remove channel'], action: 'discord-delete-channel' },
+    { keywords: ['rename channel', 'change channel name'], action: 'discord-rename-channel' },
+    { keywords: ['set topic', 'channel topic', 'channel description'], action: 'discord-set-topic' },
+    { keywords: ['slowmode', 'slow mode', 'rate limit'], action: 'discord-set-slowmode' },
+    { keywords: ['unban', 'remove ban', 'lift ban'], action: 'discord-unban' },
+    { keywords: ['unmute', 'remove timeout', 'untimeout'], action: 'discord-remove-timeout' },
+    { keywords: ['member info', 'user info', 'whois', 'who is'], action: 'discord-member-info' },
+    { keywords: ['server info', 'guild info', 'server stats', 'about server'], action: 'discord-server-info' },
+    { keywords: ['list roles', 'show roles', 'server roles', 'all roles'], action: 'discord-list-roles' },
+    { keywords: ['ban list', 'banned users', 'show bans', 'who is banned'], action: 'discord-ban-list' },
     { keywords: ['network insights', 'analyze network', 'network health', 'network report'], action: 'network-insights' },
     { keywords: ['device health', 'health report', 'device uptime', 'unhealthy devices'], action: 'device-health' },
     { keywords: ['shutdown', 'turn off', 'power off', 'restart', 'reboot'], action: 'shutdown-device' },

@@ -2780,7 +2780,486 @@ Return ONLY the JSON, no other text.`;
   },
 
   // ============ DISCORD RENAME CHANNEL ============
-  'ditwork-insights': {
+  'discord-rename-channel': {
+    keywords: ['rename channel', 'change channel name', 'rename this channel'],
+    plugin: 'server-admin',
+    description: 'Rename a Discord channel',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      
+      if (!context.guild) {
+        return { needsGuild: true };
+      }
+      
+      let channelName = null;
+      let newName = null;
+      
+      // Check for "this channel"
+      if (query.toLowerCase().includes('this channel') && context.channel) {
+        channelName = context.channel.name;
+      }
+      
+      // Use AI to parse the rename request
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        const channels = context.guild.channels.cache
+          .filter(c => c.type === 0 || c.type === 2)
+          .map(c => c.name).slice(0, 30);
+        
+        if (aiPlugin) {
+          const prompt = `Parse a channel rename command.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE CHANNELS: ${channels.join(', ')}
+
+Return ONLY JSON:
+{
+  "currentName": "channel to rename (or 'this' if renaming current channel)",
+  "newName": "new name in kebab-case",
+  "confidence": "high", "medium", or "low"
+}
+
+Rules:
+- "rename general to main-chat" → currentName: "general", newName: "main-chat"
+- "rename this channel to announcements" → currentName: "this", newName: "announcements"
+- Convert spaces to hyphens, lowercase`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 100, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.currentName === 'this' && context.channel) {
+              channelName = context.channel.name;
+            } else if (parsed.currentName) {
+              channelName = parsed.currentName;
+            }
+            if (parsed.newName) newName = parsed.newName;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for channel rename:', error.message);
+      }
+      
+      if (!channelName || !newName) {
+        return { needsInfo: true };
+      }
+      
+      try {
+        const { findChannel, renameChannel } = await import('../../server-admin/discord/channel-manager.js');
+        const channel = findChannel(context.guild, channelName);
+        if (!channel) return { error: `Channel "${channelName}" not found` };
+        
+        const result = await renameChannel(channel, newName, {
+          executorId: context.userId,
+          executorName: context.username
+        });
+        return result;
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `📢 I can only rename channels in a server.`;
+      if (result.needsInfo) return `📝 How to rename: "Rename channel general to main-chat" or "Rename this channel to announcements"`;
+      if (result.error) return `❌ ${result.error}`;
+      return `✏️ Renamed **#${result.channel?.oldName}** → **#${result.channel?.name}**`;
+    }
+  },
+
+  // ============ DISCORD SET CHANNEL TOPIC ============
+  'discord-set-topic': {
+    keywords: ['set topic', 'channel topic', 'set description', 'channel description', 'change topic'],
+    plugin: 'server-admin',
+    description: 'Set channel topic/description',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      
+      if (!context.guild) return { needsGuild: true };
+      
+      let channel = context.channel;
+      let topic = null;
+      
+      // Use AI to parse
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse a channel topic command.
+
+USER MESSAGE: "${query}"
+
+Return ONLY JSON:
+{
+  "channelName": "channel name or 'this' for current channel",
+  "topic": "the topic/description to set (max 1024 chars)"
+}
+
+Examples:
+- "set topic to Welcome to our server!" → channelName: "this", topic: "Welcome to our server!"
+- "set general topic to General discussion" → channelName: "general", topic: "General discussion"`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 150, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.channelName && parsed.channelName !== 'this') {
+              const { findChannel } = await import('../../server-admin/discord/channel-manager.js');
+              channel = findChannel(context.guild, parsed.channelName);
+            }
+            topic = parsed.topic;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for set topic:', error.message);
+      }
+      
+      if (!channel) return { error: 'Channel not found' };
+      if (!topic) return { needsInfo: true };
+      
+      try {
+        const { setTopic } = await import('../../server-admin/discord/channel-manager.js');
+        return await setTopic(channel, topic, { executorId: context.userId, executorName: context.username });
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `📢 I can only set topics in a server.`;
+      if (result.needsInfo) return `📝 Usage: "Set topic to Welcome to our server!" or "Set general topic to General chat"`;
+      if (result.error) return `❌ ${result.error}`;
+      return `📝 Set topic for **#${result.channel?.name}**`;
+    }
+  },
+
+  // ============ DISCORD SET SLOWMODE ============
+  'discord-set-slowmode': {
+    keywords: ['set slowmode', 'slowmode', 'slow mode', 'rate limit'],
+    plugin: 'server-admin',
+    description: 'Set channel slowmode',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      
+      if (!context.guild) return { needsGuild: true };
+      
+      let channel = context.channel;
+      let seconds = null;
+      
+      // Use AI to parse duration
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse a slowmode command.
+
+USER MESSAGE: "${query}"
+
+Return ONLY JSON:
+{
+  "channelName": "channel name or 'this'",
+  "seconds": number (0 to disable, max 21600 = 6 hours)
+}
+
+Duration parsing:
+- "5 seconds" → 5
+- "30s" → 30
+- "1 minute" → 60
+- "5 minutes" → 300
+- "1 hour" → 3600
+- "disable" or "off" → 0`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 100, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.channelName && parsed.channelName !== 'this') {
+              const { findChannel } = await import('../../server-admin/discord/channel-manager.js');
+              channel = findChannel(context.guild, parsed.channelName);
+            }
+            seconds = parsed.seconds;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for slowmode:', error.message);
+      }
+      
+      if (!channel) return { error: 'Channel not found' };
+      if (seconds === null) return { needsInfo: true };
+      
+      try {
+        const { setSlowmode } = await import('../../server-admin/discord/channel-manager.js');
+        return await setSlowmode(channel, seconds, { executorId: context.userId, executorName: context.username });
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `📢 I can only set slowmode in a server.`;
+      if (result.needsInfo) return `⏱️ Usage: "Set slowmode to 30 seconds" or "Disable slowmode"`;
+      if (result.error) return `❌ ${result.error}`;
+      const duration = result.channel?.slowmode > 0 ? `${result.channel.slowmode} seconds` : 'disabled';
+      return `⏱️ Slowmode ${result.channel?.slowmode > 0 ? 'set to' : ''} **${duration}** in #${result.channel?.name}`;
+    }
+  },
+
+  // ============ DISCORD UNBAN ============
+  'discord-unban': {
+    keywords: ['unban', 'unban user', 'remove ban', 'lift ban'],
+    plugin: 'server-admin',
+    description: 'Unban a user from the server',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      
+      if (!context.guild) return { needsGuild: true };
+      
+      // Try to extract user ID from query
+      const userIdMatch = query.match(/(\d{17,19})/);
+      
+      if (!userIdMatch) {
+        // List recent bans
+        try {
+          const bans = await context.guild.bans.fetch({ limit: 10 });
+          return { needsUser: true, bans: bans.map(b => ({ id: b.user.id, tag: b.user.tag, reason: b.reason })) };
+        } catch {
+          return { needsUser: true, bans: [] };
+        }
+      }
+      
+      try {
+        await context.guild.members.unban(userIdMatch[1], `Unbanned by ${context.username} via AI`);
+        const user = await context.client.users.fetch(userIdMatch[1]).catch(() => null);
+        return { success: true, user: user?.tag || userIdMatch[1] };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `🔓 I can only unban users in a server.`;
+      if (result.needsUser) {
+        let response = `🔓 Who should I unban? Provide the user ID.`;
+        if (result.bans?.length > 0) {
+          response += `\n\n**Recent bans:**\n${result.bans.map(b => `• ${b.tag} (${b.id})`).join('\n')}`;
+        }
+        return response;
+      }
+      if (result.error) return `❌ Failed to unban: ${result.error}`;
+      return `🔓 **Unbanned** ${result.user}`;
+    }
+  },
+
+  // ============ DISCORD REMOVE TIMEOUT ============
+  'discord-remove-timeout': {
+    keywords: ['remove timeout', 'untimeout', 'unmute', 'remove mute', 'lift timeout'],
+    plugin: 'server-admin',
+    description: 'Remove timeout from a user',
+    permission: 'admin',
+    async execute(context) {
+      const userMatch = context.query?.match(/<@!?(\d+)>/);
+      
+      if (!userMatch) return { needsUser: true };
+      if (!context.guild) return { needsGuild: true };
+      
+      try {
+        const member = await context.guild.members.fetch(userMatch[1]);
+        await member.timeout(null, `Timeout removed by ${context.username} via AI`);
+        return { success: true, member: member.user.tag };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsUser) return `🔊 Who should I unmute? Mention the user: "Unmute @user"`;
+      if (result.needsGuild) return `🔊 I can only remove timeouts in a server.`;
+      if (result.error) return `❌ Failed: ${result.error}`;
+      return `🔊 **Removed timeout** from ${result.member}`;
+    }
+  },
+
+  // ============ DISCORD GET MEMBER INFO ============
+  'discord-member-info': {
+    keywords: ['member info', 'user info', 'who is', 'info about', 'whois'],
+    plugin: 'server-admin',
+    description: 'Get information about a member',
+    async execute(context) {
+      const userMatch = context.query?.match(/<@!?(\d+)>/);
+      
+      if (!userMatch) return { needsUser: true };
+      if (!context.guild) return { needsGuild: true };
+      
+      try {
+        const member = await context.guild.members.fetch(userMatch[1]);
+        const roles = member.roles.cache.filter(r => r.name !== '@everyone').map(r => r.name);
+        
+        return {
+          success: true,
+          user: {
+            tag: member.user.tag,
+            id: member.user.id,
+            nickname: member.nickname,
+            joinedAt: member.joinedAt,
+            createdAt: member.user.createdAt,
+            roles: roles.slice(0, 10),
+            isOwner: member.id === context.guild.ownerId,
+            isBot: member.user.bot
+          }
+        };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsUser) return `👤 Who do you want info about? Mention them: "Who is @user"`;
+      if (result.needsGuild) return `👤 I can only get member info in a server.`;
+      if (result.error) return `❌ ${result.error}`;
+      
+      const u = result.user;
+      let response = `**👤 ${u.tag}**${u.isBot ? ' 🤖' : ''}${u.isOwner ? ' 👑' : ''}\n\n`;
+      if (u.nickname) response += `📛 **Nickname:** ${u.nickname}\n`;
+      response += `🆔 **ID:** ${u.id}\n`;
+      response += `📅 **Joined:** ${new Date(u.joinedAt).toLocaleDateString()}\n`;
+      response += `🎂 **Created:** ${new Date(u.createdAt).toLocaleDateString()}\n`;
+      if (u.roles.length > 0) response += `🎭 **Roles:** ${u.roles.join(', ')}`;
+      return response;
+    }
+  },
+
+  // ============ DISCORD SERVER INFO ============
+  'discord-server-info': {
+    keywords: ['server info', 'guild info', 'server stats', 'about server', 'server details'],
+    plugin: 'server-admin',
+    description: 'Get server information',
+    async execute(context) {
+      if (!context.guild) return { needsGuild: true };
+      
+      const guild = context.guild;
+      const owner = await guild.fetchOwner().catch(() => null);
+      
+      return {
+        success: true,
+        server: {
+          name: guild.name,
+          id: guild.id,
+          owner: owner?.user?.tag || 'Unknown',
+          memberCount: guild.memberCount,
+          channelCount: guild.channels.cache.size,
+          roleCount: guild.roles.cache.size,
+          emojiCount: guild.emojis.cache.size,
+          boostLevel: guild.premiumTier,
+          boostCount: guild.premiumSubscriptionCount,
+          createdAt: guild.createdAt,
+          description: guild.description
+        }
+      };
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `🏠 I can only get server info in a server.`;
+      if (result.error) return `❌ ${result.error}`;
+      
+      const s = result.server;
+      let response = `**🏠 ${s.name}**\n\n`;
+      if (s.description) response += `📝 ${s.description}\n\n`;
+      response += `👑 **Owner:** ${s.owner}\n`;
+      response += `👥 **Members:** ${s.memberCount}\n`;
+      response += `💬 **Channels:** ${s.channelCount}\n`;
+      response += `🎭 **Roles:** ${s.roleCount}\n`;
+      response += `😀 **Emojis:** ${s.emojiCount}\n`;
+      response += `💎 **Boost Level:** ${s.boostLevel} (${s.boostCount} boosts)\n`;
+      response += `📅 **Created:** ${new Date(s.createdAt).toLocaleDateString()}`;
+      return response;
+    }
+  },
+
+  // ============ DISCORD LIST ROLES ============
+  'discord-list-roles': {
+    keywords: ['list roles', 'show roles', 'all roles', 'server roles', 'what roles'],
+    plugin: 'server-admin',
+    description: 'List all server roles',
+    async execute(context) {
+      if (!context.guild) return { needsGuild: true };
+      
+      const roles = context.guild.roles.cache
+        .filter(r => r.name !== '@everyone')
+        .sort((a, b) => b.position - a.position)
+        .map(r => ({
+          name: r.name,
+          color: r.hexColor,
+          members: r.members.size,
+          mentionable: r.mentionable
+        }));
+      
+      return { success: true, roles };
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `🎭 I can only list roles in a server.`;
+      if (result.error) return `❌ ${result.error}`;
+      
+      if (result.roles.length === 0) return `🎭 No roles found.`;
+      
+      const list = result.roles.slice(0, 20).map(r => 
+        `• **${r.name}** - ${r.members} members`
+      ).join('\n');
+      
+      return `**🎭 Server Roles (${result.roles.length})**\n\n${list}` +
+        (result.roles.length > 20 ? `\n\n_...and ${result.roles.length - 20} more_` : '');
+    }
+  },
+
+  // ============ DISCORD BAN LIST ============
+  'discord-ban-list': {
+    keywords: ['ban list', 'banned users', 'show bans', 'list bans', 'who is banned'],
+    plugin: 'server-admin',
+    description: 'View banned users',
+    permission: 'admin',
+    async execute(context) {
+      if (!context.guild) return { needsGuild: true };
+      
+      try {
+        const bans = await context.guild.bans.fetch({ limit: 20 });
+        return {
+          success: true,
+          bans: bans.map(b => ({
+            tag: b.user.tag,
+            id: b.user.id,
+            reason: b.reason || 'No reason provided'
+          }))
+        };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `🔨 I can only view bans in a server.`;
+      if (result.error) return `❌ ${result.error}`;
+      
+      if (result.bans.length === 0) return `🔨 No banned users.`;
+      
+      const list = result.bans.map(b => 
+        `• **${b.tag}**\n  ID: ${b.id}\n  Reason: ${b.reason}`
+      ).join('\n\n');
+      
+      return `**🔨 Banned Users (${result.bans.length})**\n\n${list}`;
+    }
+  },
+
+  // ============ NETWORK INSIGHTS ============
+  'network-insights': {
     keywords: ['network insights', 'network analysis', 'analyze network', 'network report', 'network health'],
     plugin: 'network-insights',
     description: 'Generate AI-powered network insights and analysis',
@@ -3229,7 +3708,80 @@ Return ONLY the JSON, no other text.`;
             const responseText = result?.response?.text?.() || '';
             const jsonMatch = responseText.match(/\{[\s\S]*\}/);
             
-            if (jsonMa
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.groupName && parsed.confidence !== 'low') {
+                groupName = parsed.groupName;
+                logger.info(`AI matched group: "${groupName}"`);
+              }
+            }
+          }
+        } catch (error) {
+          logger.warn('AI parsing failed for group view:', error.message);
+        }
+      }
+      
+      // Fallback to regex
+      if (!groupName) {
+        const match = query.match(/(?:in\s+group|show\s+group|group|in)\s+["']?([a-zA-Z0-9_\-\s]+)["']?/i);
+        if (match) {
+          groupName = match[1].trim();
+        }
+      }
+      
+      if (!groupName) {
+        return { needsGroup: true, availableGroups: allGroups };
+      }
+      
+      // Try exact match first, then fuzzy
+      let devices = deviceOps.getByGroup(groupName);
+      
+      if ((!devices || devices.length === 0) && allGroups.length > 0) {
+        // Try fuzzy match
+        const fuzzyMatch = allGroups.find(g => 
+          g.toLowerCase().includes(groupName.toLowerCase()) ||
+          groupName.toLowerCase().includes(g.toLowerCase())
+        );
+        if (fuzzyMatch) {
+          groupName = fuzzyMatch;
+          devices = deviceOps.getByGroup(groupName);
+        }
+      }
+      
+      if (!devices || devices.length === 0) {
+        return { notFound: true, groupName, availableGroups: allGroups };
+      }
+      
+      return { success: true, groupName, devices, aiParsed: true };
+    },
+    formatResult(result) {
+      if (result.needsGroup) {
+        let response = `📁 Which group would you like to see?`;
+        if (result.availableGroups?.length > 0) {
+          response += `\n\n**Available groups:**\n${result.availableGroups.map(g => `• ${g}`).join('\n')}`;
+        }
+        response += `\n\nTry: "Show group Gaming" or "Devices in Servers"`;
+        return response;
+      }
+      
+      if (result.notFound) {
+        let response = `📁 No devices found in group "${result.groupName}"`;
+        if (result.availableGroups?.length > 0) {
+          response += `\n\n**Available groups:**\n${result.availableGroups.map(g => `• ${g}`).join('\n')}`;
+        }
+        return response;
+      }
+      
+      const list = result.devices.slice(0, 10).map(d => {
+        const status = d.online ? '🟢' : '🔴';
+        const emoji = d.emoji || '📱';
+        return `${status} ${emoji} ${d.name || d.ip}`;
+      }).join('\n');
+      
+      return `**📁 Group: ${result.groupName}**\n\n${list}` +
+        (result.devices.length > 10 ? `\n\n_...and ${result.devices.length - 10} more_` : '');
+    }
+  },
 
   // ============ SCHEDULED TASKS ============
   'scheduled-tasks': {
