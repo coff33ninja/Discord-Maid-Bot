@@ -184,21 +184,19 @@ export async function classifyIntent(query, context = {}) {
     
     const prompt = buildClassificationPrompt(query);
     
-    const result = await generateWithRotation(prompt, {
+    const { result } = await generateWithRotation(prompt, {
       maxOutputTokens: 150,
       temperature: 0.1 // Low temperature for consistent classification
     });
 
     const response = result?.response;
-    const text = response?.text?.() || response?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!text) {
-      logger.warn('Empty response from Gemini, falling back to conversation');
-      return { action: 'conversation', confidence: 0.5, reason: 'No AI response' };
+    
+    if (!response || typeof response.text !== 'function') {
+      logger.warn('Empty response from Gemini, falling back to fallback');
+      return fallbackClassification(query);
     }
 
-    // Use text variable instead of response.text
-    const responseText = text;
+    const responseText = response.text();
 
     // Parse the JSON response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
