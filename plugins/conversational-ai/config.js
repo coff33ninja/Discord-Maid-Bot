@@ -34,6 +34,12 @@ const CONFIG_SCHEMA = {
   PASSIVE_TRIGGERS_ENABLED: { default: true, type: 'boolean' },
   MENTION_REQUIRED: { default: false, type: 'boolean' },
   
+  // Smart response settings (after mention activation)
+  ATTENTION_WINDOW_MS: { default: 120000, type: 'number', min: 0, max: 600000 }, // 2 minutes default
+  SMART_RESPONSE_ENABLED: { default: true, type: 'boolean' }, // Analyze if message is for bot
+  RESPOND_TO_REPLIES: { default: true, type: 'boolean' }, // Always respond to direct replies
+  MIN_CONFIDENCE_TO_RESPOND: { default: 0.6, type: 'number', min: 0, max: 1 }, // Confidence threshold
+  
   // Context settings
   MAX_CONTEXT_TOKENS: { default: 6000, type: 'number', min: 1000, max: 15000 },
   SEMANTIC_SEARCH_LIMIT: { default: 5, type: 'number', min: 1, max: 20 }
@@ -99,6 +105,10 @@ export function loadConfig() {
     prefixCommandsEnabled: config.PREFIX_COMMANDS_ENABLED,
     passiveTriggersEnabled: config.PASSIVE_TRIGGERS_ENABLED,
     mentionRequired: config.MENTION_REQUIRED,
+    attentionWindowMs: config.ATTENTION_WINDOW_MS,
+    smartResponseEnabled: config.SMART_RESPONSE_ENABLED,
+    respondToReplies: config.RESPOND_TO_REPLIES,
+    minConfidenceToRespond: config.MIN_CONFIDENCE_TO_RESPOND,
     maxContextTokens: config.MAX_CONTEXT_TOKENS,
     semanticSearchLimit: config.SEMANTIC_SEARCH_LIMIT
   };

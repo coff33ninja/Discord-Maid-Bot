@@ -2,7 +2,7 @@
  * Message Event Handler
  * 
  * Handles incoming Discord messages and routes them appropriately.
- * Integrates with MessageRouter, ResponseHandler, PrefixHandler, and TriggerSystem.
+ * Integrates with MessageRouter, ResponseHandler, PrefixHandler, TriggerSystem, and ResponseFilter.
  * 
  * @module plugins/conversational-ai/handlers/message-handler
  */
@@ -11,6 +11,7 @@ import { EmbedBuilder } from 'discord.js';
 import { createLogger } from '../../../src/logging/logger.js';
 import { PrefixHandler } from '../router/prefix-handler.js';
 import { TriggerSystem } from '../triggers/trigger-system.js';
+import { ResponseFilter } from '../router/response-filter.js';
 
 const logger = createLogger('message-handler');
 
@@ -30,6 +31,16 @@ export class MessageHandler {
     this.prefixHandler = new PrefixHandler();
     this.triggerSystem = new TriggerSystem({
       enabled: plugin.getConfig().passiveTriggersEnabled
+    });
+    
+    // Initialize response filter for smart response decisions
+    const config = plugin.getConfig();
+    this.responseFilter = new ResponseFilter({
+      attentionWindowMs: config.attentionWindowMs,
+      smartResponseEnabled: config.smartResponseEnabled,
+      respondToReplies: config.respondToReplies,
+      minConfidenceToRespond: config.minConfidenceToRespond,
+      botId: plugin.client?.user?.id
     });
     
     // Bind the handler
@@ -107,6 +118,9 @@ export class MessageHandler {
    * @param {Object} message - Discord message
    */
   async handleMention(message) {
+    // Record the mention to start attention window
+    this.responseFilter.recordMention(message.channelId);
+    
     // Remove the mention from content for cleaner processing
     const botId = this.plugin.client?.user?.id;
     let content = message.content;
@@ -132,6 +146,8 @@ export class MessageHandler {
         .setTimestamp();
       
       await message.reply({ embeds: [embed] });
+      // Still record bot message for attention tracking
+      this.responseFilter.recordBotMessage(message.channelId);
       return;
     }
     
@@ -153,6 +169,31 @@ export class MessageHandler {
       return;
     }
     
+    // Check if this is a reply to the bot (always respond to direct replies)
+    if (message.reference?.messageId && config.respondToReplies) {
+      try {
+        const referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
+        const botId = this.plugin.client?.user?.id;
+        if (referencedMessage && botId && referencedMessage.author.id === botId) {
+          logger.debug('Responding to direct reply to bot');
+          await this.generateAndReply(message, message.content);
+          return;
+        }
+      } catch (e) {
+        // Ignore fetch errors
+      }
+    }
+    
+    // Use smart response filter to decide if we should respond
+    const classification = { type: 'natural' };
+    const decision = this.responseFilter.shouldRespond(message, classification);
+    
+    if (!decision.respond) {
+      logger.debug(`Skipping natural message: ${decision.reason} (confidence: ${decision.confidence?.toFixed(2) || 'N/A'})`);
+      return;
+    }
+    
+    logger.debug(`Responding to natural message: ${decision.reason}`);
     await this.generateAndReply(message, message.content);
   }
 
@@ -208,6 +249,10 @@ export class MessageHandler {
       
       if (!referencedMessage) return null;
 
+      // Check if this is a reply to the bot
+      const botId = this.plugin.client?.user?.id;
+      const isReplyToBot = botId && referencedMessage.author.id === botId;
+
       // Extract content from the referenced message
       let referencedContent = referencedMessage.content || '';
       
@@ -240,6 +285,7 @@ export class MessageHandler {
         authorId: referencedMessage.author.id,
         authorUsername: referencedMessage.author.username,
         isBot: referencedMessage.author.bot,
+        isReplyToBot,
         content: referencedContent,
         timestamp: referencedMessage.createdTimestamp
       };
@@ -289,6 +335,9 @@ export class MessageHandler {
       
       await message.reply({ embeds: [embed] });
       
+      // Record bot message for attention tracking
+      this.responseFilter.recordBotMessage(message.channelId);
+      
     } catch (error) {
       logger.error('Error generating response:', error);
       
@@ -304,6 +353,11 @@ export class MessageHandler {
    * @param {Object} client - Discord.js client
    */
   register(client) {
+    // Set bot ID for response filter
+    if (client.user?.id) {
+      this.responseFilter.setBotId(client.user.id);
+    }
+    
     client.on('messageCreate', this.handleMessage);
     logger.info('Message handler registered');
   }
