@@ -209,7 +209,8 @@ async function handleGroupView(interaction) {
     
     const deviceList = devices.map(d => {
       const status = d.online ? '🟢' : '🔴';
-      return `${status} ${d.emoji || '📱'} ${d.name || d.ip}`;
+      const label = d.name ? `${d.name} (${d.ip})` : d.ip;
+      return `${status} ${d.emoji || '📱'} ${label}`;
     }).join('\n');
     
     const embed = new EmbedBuilder()
@@ -341,9 +342,9 @@ async function handleDeviceList(interaction) {
     const deviceList = devices.slice(0, 20).map(d => {
       const status = d.online ? '🟢' : '🔴';
       const emoji = d.emoji || '📱';
-      const name = d.name || d.hostname || d.ip;
+      const label = d.name ? `${d.name} (${d.ip})` : (d.hostname || d.ip);
       const group = d.group ? ` [${d.group}]` : '';
-      return `${status} ${emoji} ${name}${group}`;
+      return `${status} ${emoji} ${label}${group}`;
     }).join('\n');
     
     const embed = new EmbedBuilder()

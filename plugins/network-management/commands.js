@@ -197,6 +197,13 @@ async function handleDevicesCommand(interaction) {
     const onlineDevices = devices.filter(d => d.online);
     const offlineDevices = devices.filter(d => !d.online);
     
+    // Helper to format device: "Name (IP)" if named, otherwise just IP
+    const formatDevice = (d) => {
+      const emoji = d.emoji || '📱';
+      const label = d.name ? `${d.name} (${d.ip})` : d.ip;
+      return `${emoji} ${label}`;
+    };
+    
     const embed = new EmbedBuilder()
       .setColor('#667eea')
       .setTitle('📡 Network Devices')
@@ -205,14 +212,14 @@ async function handleDevicesCommand(interaction) {
         { 
           name: `🟢 Online (${onlineDevices.length})`, 
           value: onlineDevices.length > 0 
-            ? onlineDevices.slice(0, 10).map(d => `${d.emoji || '📱'} ${d.name || d.ip}`).join('\n')
+            ? onlineDevices.slice(0, 10).map(formatDevice).join('\n')
             : 'None',
           inline: false 
         },
         { 
           name: `🔴 Offline (${offlineDevices.length})`, 
           value: offlineDevices.length > 0 
-            ? offlineDevices.slice(0, 5).map(d => `${d.emoji || '📱'} ${d.name || d.ip}`).join('\n')
+            ? offlineDevices.slice(0, 5).map(formatDevice).join('\n')
             : 'None',
           inline: false 
         }
