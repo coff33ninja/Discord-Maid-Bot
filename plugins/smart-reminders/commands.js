@@ -167,29 +167,114 @@ export async function handleAutocomplete(interaction, plugin) {
   }
 }
 
-// Helper: Parse time string
+// Helper: Parse time string with improved flexibility
 function parseTimeString(timeStr) {
-  const now = Date.now();
+  if (!timeStr) return null;
   
-  if (timeStr.includes(':')) {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    const targetTime = new Date();
-    targetTime.setHours(hours, minutes, 0, 0);
-    if (targetTime.getTime() < now) {
-      targetTime.setDate(targetTime.getDate() + 1);
-    }
-    return targetTime.getTime();
+  const now = Date.now();
+  const clean = timeStr.toLowerCase().trim();
+  
+  // Handle relative words
+  if (clean === 'tomorrow') {
+    const target = new Date();
+    target.setDate(target.getDate() + 1);
+    target.setHours(9, 0, 0, 0);
+    return target.getTime();
   }
   
-  const value = parseInt(timeStr);
-  const unit = timeStr.slice(-1);
+  if (clean === 'tonight') {
+    const target = new Date();
+    target.setHours(20, 0, 0, 0);
+    if (target.getTime() < now) target.setDate(target.getDate() + 1);
+    return target.getTime();
+  }
   
-  let ms = 0;
-  if (unit === 'm') ms = value * 60 * 1000;
-  else if (unit === 'h') ms = value * 60 * 60 * 1000;
-  else if (unit === 'd') ms = value * 24 * 60 * 60 * 1000;
+  if (clean === 'noon') {
+    const target = new Date();
+    target.setHours(12, 0, 0, 0);
+    if (target.getTime() < now) target.setDate(target.getDate() + 1);
+    return target.getTime();
+  }
   
-  return now + ms;
+  // Handle 24-hour format: "15:00", "9:30"
+  if (/^\d{1,2}:\d{2}$/.test(clean)) {
+    const [hours, minutes] = clean.split(':').map(Number);
+    const target = new Date();
+    target.setHours(hours, minutes, 0, 0);
+    if (target.getTime() < now) target.setDate(target.getDate() + 1);
+    return target.getTime();
+  }
+  
+  // Handle 12-hour format: "3pm", "3:30pm", "3 pm"
+  const match12 = clean.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);
+  if (match12) {
+    let hours = parseInt(match12[1]);
+    const minutes = match12[2] ? parseInt(match12[2]) : 0;
+    const period = match12[3];
+    
+    if (period === 'pm' && hours !== 12) hours += 12;
+    if (period === 'am' && hours === 12) hours = 0;
+    
+    const target = new Date();
+    target.setHours(hours, minutes, 0, 0);
+    if (target.getTime() < now) target.setDate(target.getDate() + 1);
+    return target.getTime();
+  }
+  
+  // Handle duration: "5m", "2h", "1d", "30min", "2 hours"
+  const durationMatch = clean.match(/^(\d+)\s*(s|sec|seconds?|m|min|minutes?|h|hr|hours?|d|days?|w|weeks?)$/);
+  if (durationMatch) {
+    const value = parseInt(durationMatch[1]);
+    const unit = durationMatch[2].charAt(0);
+    
+    const multipliers = { s: 1000, m: 60000, h: 3600000, d: 86400000, w: 604800000 };
+    return now + (value * multipliers[unit]);
+  }
+  
+  // Fallback: try to parse as number with last char as unit
+  const value = parseInt(clean);
+  const unit = clean.slice(-1);
+  if (!isNaN(value) && ['m', 'h', 'd', 'w'].includes(unit)) {
+    const multipliers = { m: 60000, h: 3600000, d: 86400000, w: 604800000 };
+    return now + (value * multipliers[unit]);
+  }
+  
+  return null;
+}
+
+// Helper: Parse interval string for recurring reminders
+function parseIntervalString(intervalStr) {
+  if (!intervalStr) return null;
+  
+  const clean = intervalStr.toLowerCase().trim();
+  
+  // Handle word intervals
+  const wordIntervals = {
+    'hourly': '1h',
+    'daily': '1d',
+    'weekly': '1w',
+    'every hour': '1h',
+    'every day': '1d',
+    'every week': '1w',
+    'morning': '1d',
+    'night': '1d',
+    'evening': '1d'
+  };
+  
+  if (wordIntervals[clean]) return wordIntervals[clean];
+  
+  // Handle "every X" format
+  const everyMatch = clean.match(/^every\s+(\d+)\s*(m|min|minutes?|h|hr|hours?|d|days?|w|weeks?)$/);
+  if (everyMatch) {
+    const value = everyMatch[1];
+    const unit = everyMatch[2].charAt(0);
+    return `${value}${unit}`;
+  }
+  
+  // Handle direct format: "1h", "30m", "1d"
+  if (/^\d+[mhdw]$/.test(clean)) return clean;
+  
+  return intervalStr; // Return as-is if can't parse
 }
 
 async function handleCreate(interaction, plugin) {
@@ -216,9 +301,22 @@ async function handleCreate(interaction, plugin) {
     };
     
     if (type === 'time') {
-      reminderData.triggerTime = parseTimeString(when);
+      const triggerTime = parseTimeString(when);
+      if (!triggerTime) {
+        await interaction.editReply({
+          content: `❌ Couldn't parse time "${when}". Try formats like:\n` +
+            `• \`5m\` or \`30min\` - in 5 minutes / 30 minutes\n` +
+            `• \`2h\` or \`2 hours\` - in 2 hours\n` +
+            `• \`1d\` - in 1 day\n` +
+            `• \`3pm\` or \`15:00\` - at 3 PM\n` +
+            `• \`tomorrow\` or \`tonight\``,
+          ephemeral: true
+        });
+        return;
+      }
+      reminderData.triggerTime = triggerTime;
     } else if (type === 'recurring') {
-      reminderData.interval = when;
+      reminderData.interval = parseIntervalString(when);
     } else if (type === 'presence') {
       if (!deviceMac) {
         await interaction.editReply('❌ Device is required for presence reminders!');
@@ -226,7 +324,15 @@ async function handleCreate(interaction, plugin) {
       }
       reminderData.deviceMac = deviceMac;
     } else if (type === 'automation') {
-      reminderData.triggerTime = parseTimeString(when);
+      const triggerTime = parseTimeString(when);
+      if (!triggerTime) {
+        await interaction.editReply({
+          content: `❌ Couldn't parse time "${when}". Try formats like \`5m\`, \`2h\`, \`3pm\`, \`15:00\``,
+          ephemeral: true
+        });
+        return;
+      }
+      reminderData.triggerTime = triggerTime;
       reminderData.target = 'automation';
       reminderData.actions = [];
       
@@ -276,6 +382,17 @@ async function handleFor(interaction, plugin) {
   
   try {
     const triggerTime = parseTimeString(when);
+    
+    if (!triggerTime) {
+      await interaction.editReply({
+        content: `❌ Couldn't parse time "${when}". Try formats like:\n` +
+          `• \`5m\`, \`30min\`, \`2h\`, \`1d\`\n` +
+          `• \`3pm\`, \`15:00\`\n` +
+          `• \`tomorrow\`, \`tonight\``,
+        ephemeral: true
+      });
+      return;
+    }
     
     const reminder = await plugin.addReminder({
       name,
@@ -390,14 +507,19 @@ async function handleSnooze(interaction, plugin) {
   const durationStr = interaction.options.getString('duration');
   
   try {
-    const value = parseInt(durationStr);
-    const unit = durationStr.slice(-1);
+    // Use improved time parsing
+    const now = Date.now();
+    const triggerTime = parseTimeString(durationStr);
     
-    let ms = 0;
-    if (unit === 'm') ms = value * 60 * 1000;
-    else if (unit === 'h') ms = value * 60 * 60 * 1000;
-    else if (unit === 'd') ms = value * 24 * 60 * 60 * 1000;
+    if (!triggerTime) {
+      await interaction.editReply({
+        content: `❌ Couldn't parse duration "${durationStr}". Try formats like \`10m\`, \`1h\`, \`1d\``,
+        ephemeral: true
+      });
+      return;
+    }
     
+    const ms = triggerTime - now;
     const reminder = await plugin.snoozeReminder(reminderId, ms);
     
     await interaction.editReply({
