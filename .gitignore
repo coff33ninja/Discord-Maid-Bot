@@ -88,3 +88,4 @@ TODO.md
 # Optional: Uncomment to ignore plugins during development
 # plugins/*.js
 # !plugins/example-plugin.js
+.kiro/
