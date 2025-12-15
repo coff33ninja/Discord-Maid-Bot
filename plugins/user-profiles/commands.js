@@ -1,91 +1,94 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandSubcommandGroupBuilder, PermissionFlagsBits } from 'discord.js';
+import { createLogger } from '../../src/logging/logger.js';
+
+const logger = createLogger('user-profiles-commands');
 
 /**
  * User Profile Commands
  * 
- * Commands for managing user profiles and profile setup channels.
+ * Injected into /bot as /bot profile subcommand group
  */
 
-export const commands = [
-  {
-    data: new SlashCommandBuilder()
-      .setName('profile')
-      .setDescription('Manage your user profile')
-      .addSubcommand(sub =>
-        sub.setName('view')
-          .setDescription('View your profile or another user\'s profile')
-          .addUserOption(opt =>
-            opt.setName('user')
-              .setDescription('User to view (leave empty for your own)')
-              .setRequired(false)
+// Parent command to inject into
+export const parentCommand = 'bot';
+
+// Command group definition
+export const commandGroup = new SlashCommandSubcommandGroupBuilder()
+  .setName('profile')
+  .setDescription('Manage your user profile')
+  .addSubcommand(sub =>
+    sub.setName('view')
+      .setDescription('View your profile or another user\'s profile')
+      .addUserOption(opt =>
+        opt.setName('user')
+          .setDescription('User to view (leave empty for your own)')
+          .setRequired(false)
+      )
+  )
+  .addSubcommand(sub =>
+    sub.setName('edit')
+      .setDescription('Edit your profile')
+      .addStringOption(opt =>
+        opt.setName('field')
+          .setDescription('Field to edit')
+          .setRequired(true)
+          .addChoices(
+            { name: '📛 Display Name', value: 'displayName' },
+            { name: '⚧️ Gender', value: 'gender' },
+            { name: '💬 Pronouns', value: 'pronouns' },
+            { name: '🎭 Personality', value: 'personality' },
+            { name: '🎯 Interests', value: 'interests' },
+            { name: '🌍 Timezone', value: 'timezone' },
+            { name: '📝 Bio', value: 'bio' }
           )
       )
-      .addSubcommand(sub =>
-        sub.setName('edit')
-          .setDescription('Edit your profile')
-          .addStringOption(opt =>
-            opt.setName('field')
-              .setDescription('Field to edit')
-              .setRequired(true)
-              .addChoices(
-                { name: '📛 Display Name', value: 'displayName' },
-                { name: '⚧️ Gender', value: 'gender' },
-                { name: '💬 Pronouns', value: 'pronouns' },
-                { name: '🎭 Personality', value: 'personality' },
-                { name: '🎯 Interests', value: 'interests' },
-                { name: '🌍 Timezone', value: 'timezone' },
-                { name: '📝 Bio', value: 'bio' }
-              )
-          )
-          .addStringOption(opt =>
-            opt.setName('value')
-              .setDescription('New value (for interests, separate with commas)')
-              .setRequired(true)
-          )
+      .addStringOption(opt =>
+        opt.setName('value')
+          .setDescription('New value (for interests, separate with commas)')
+          .setRequired(true)
       )
-      .addSubcommand(sub =>
-        sub.setName('setup')
-          .setDescription('Start interactive profile setup')
+  )
+  .addSubcommand(sub =>
+    sub.setName('setup')
+      .setDescription('Start interactive profile setup')
+  )
+  .addSubcommand(sub =>
+    sub.setName('delete')
+      .setDescription('Delete your profile data')
+  )
+  .addSubcommand(sub =>
+    sub.setName('createchannel')
+      .setDescription('Create a profile setup channel (Admin only)')
+      .addStringOption(opt =>
+        opt.setName('name')
+          .setDescription('Channel name')
+          .setRequired(false)
       )
-      .addSubcommand(sub =>
-        sub.setName('delete')
-          .setDescription('Delete your profile data')
-      )
-      .addSubcommand(sub =>
-        sub.setName('createchannel')
-          .setDescription('Create a profile setup channel for new members (Admin only)')
-          .addStringOption(opt =>
-            opt.setName('name')
-              .setDescription('Channel name')
-              .setRequired(false)
-          )
-          .addChannelOption(opt =>
-            opt.setName('category')
-              .setDescription('Category to create channel in')
-              .setRequired(false)
-          )
-      ),
-    
-    async execute(interaction, plugin) {
-      const subcommand = interaction.options.getSubcommand();
-      
-      switch (subcommand) {
-        case 'view':
-          return handleView(interaction, plugin);
-        case 'edit':
-          return handleEdit(interaction, plugin);
-        case 'setup':
-          return handleSetup(interaction, plugin);
-        case 'delete':
-          return handleDelete(interaction, plugin);
-        case 'createchannel':
-          return handleCreateChannel(interaction, plugin);
-        default:
-          return interaction.reply({ content: 'Unknown subcommand', ephemeral: true });
-      }
-    }
+  );
+
+/**
+ * Handle profile commands
+ * @param {Object} interaction - Discord interaction
+ * @param {Object} plugin - Plugin instance
+ */
+export async function handleCommand(interaction, plugin) {
+  const subcommand = interaction.options.getSubcommand();
+  
+  switch (subcommand) {
+    case 'view':
+      return handleView(interaction, plugin);
+    case 'edit':
+      return handleEdit(interaction, plugin);
+    case 'setup':
+      return handleSetup(interaction, plugin);
+    case 'delete':
+      return handleDelete(interaction, plugin);
+    case 'createchannel':
+      return handleCreateChannel(interaction, plugin);
+    default:
+      return interaction.reply({ content: 'Unknown subcommand', ephemeral: true });
   }
-];
+}
 
 async function handleView(interaction, plugin) {
   const targetUser = interaction.options.getUser('user') || interaction.user;
@@ -94,7 +97,7 @@ async function handleView(interaction, plugin) {
   if (!profile) {
     if (targetUser.id === interaction.user.id) {
       return interaction.reply({
-        content: "You haven't set up your profile yet! Use `/profile setup` or `/profile edit` to get started~",
+        content: "You haven't set up your profile yet! Use `/bot profile setup` or `/bot profile edit` to get started~",
         ephemeral: true
       });
     }
@@ -120,10 +123,10 @@ async function handleView(interaction, plugin) {
     embed.fields.push({ name: '💬 Pronouns', value: profile.pronouns, inline: true });
   }
   if (profile.personality) {
-    embed.fields.push({ name: '🎭 Personality', value: profile.personality, inline: true });
+    embed.fields.push({ name: '� Personnality', value: profile.personality, inline: true });
   }
   if (profile.timezone) {
-    embed.fields.push({ name: '🌍 Timezone', value: profile.timezone, inline: true });
+    embed.fields.push({ name: '� Titmezone', value: profile.timezone, inline: true });
   }
   if (profile.interests?.length) {
     embed.fields.push({ name: '🎯 Interests', value: profile.interests.join(', '), inline: false });
@@ -150,16 +153,8 @@ async function handleEdit(interaction, plugin) {
     processedValue = value.split(',').map(i => i.trim()).filter(i => i.length > 0);
   }
   
-  // Validate some fields
-  if (field === 'gender') {
-    const validGenders = ['male', 'female', 'non-binary', 'other', 'prefer not to say'];
-    if (!validGenders.some(g => value.toLowerCase().includes(g))) {
-      // Allow custom but warn
-    }
-  }
-  
   const updates = { [field]: processedValue };
-  const profile = await plugin.updateProfile(interaction.user.id, updates);
+  await plugin.updateProfile(interaction.user.id, updates);
   
   const fieldNames = {
     displayName: '📛 Display Name',
@@ -176,7 +171,7 @@ async function handleEdit(interaction, plugin) {
       color: 0x2ECC71,
       title: '✅ Profile Updated!',
       description: `**${fieldNames[field]}** has been set to:\n${Array.isArray(processedValue) ? processedValue.join(', ') : processedValue}`,
-      footer: { text: 'Use /profile view to see your full profile' }
+      footer: { text: 'Use /bot profile view to see your full profile' }
     }],
     ephemeral: true
   });
@@ -217,7 +212,7 @@ async function handleDelete(interaction, plugin) {
       color: 0xE74C3C,
       title: '🗑️ Profile Deleted',
       description: 'Your profile data has been removed.',
-      footer: { text: 'You can set up a new profile anytime with /profile setup' }
+      footer: { text: 'You can set up a new profile anytime with /bot profile setup' }
     }],
     ephemeral: true
   });
@@ -235,12 +230,10 @@ async function handleCreateChannel(interaction, plugin) {
   await interaction.deferReply();
   
   const channelName = interaction.options.getString('name') || '👤-profile-setup';
-  const category = interaction.options.getChannel('category');
   
   try {
     const result = await plugin.createProfileChannel(interaction.guild, {
-      name: channelName,
-      categoryId: category?.id
+      name: channelName
     });
     
     if (result.created) {
@@ -263,10 +256,11 @@ async function handleCreateChannel(interaction, plugin) {
       });
     }
   } catch (error) {
+    logger.error('Failed to create profile channel:', error);
     return interaction.editReply({
       content: `❌ Failed to create channel: ${error.message}`,
     });
   }
 }
 
-export default commands;
+export default { commandGroup, handleCommand, parentCommand };
