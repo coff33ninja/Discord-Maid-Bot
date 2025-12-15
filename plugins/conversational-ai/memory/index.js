@@ -5,4 +5,4 @@
  */
 
 export { ShortTermMemory } from './short-term.js';
-// SemanticMemory will be added in Task 7
+export { SemanticMemory } from './semantic.js';
