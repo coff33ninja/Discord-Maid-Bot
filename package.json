@@ -48,6 +48,7 @@
     "wake_on_lan": "^1.0.0"
   },
   "devDependencies": {
-    "fast-check": "^4.4.0"
+    "fast-check": "^4.4.0",
+    "vitest": "^4.0.15"
   }
 }

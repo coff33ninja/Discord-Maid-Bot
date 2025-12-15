@@ -51,7 +51,19 @@ export const PERMISSIONS = {
   RUN_SCRIPT: 'run_script',
   
   // Logs (Admin only)
-  VIEW_LOGS: 'view_logs'
+  VIEW_LOGS: 'view_logs',
+  
+  // Server Administration (Linux/Windows/macOS)
+  SERVER_STATUS: 'server_status',           // View server status, logs, diagnostics
+  SERVER_SERVICE: 'server_service',         // Restart/stop services
+  SERVER_DEPLOY: 'server_deploy',           // Deploy code updates
+  SERVER_MAINTENANCE: 'server_maintenance', // System updates, reboot
+  
+  // Discord Server Administration
+  DISCORD_MANAGE_ROLES: 'discord_manage_roles',       // Add/remove/create/delete roles
+  DISCORD_MANAGE_CHANNELS: 'discord_manage_channels', // Create/delete/modify channels
+  DISCORD_MODERATE_MEMBERS: 'discord_moderate_members', // Kick/ban/timeout members
+  DISCORD_MANAGE_SERVER: 'discord_manage_server'      // Server settings, slowmode
 };
 
 // Role permissions mapping
@@ -69,7 +81,9 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.ACCESS_DASHBOARD,
     PERMISSIONS.CONTROL_LIGHTS,
     PERMISSIONS.CONTROL_SWITCHES,
-    PERMISSIONS.CONTROL_CLIMATE
+    PERMISSIONS.CONTROL_CLIMATE,
+    // Operators can view server status (read-only)
+    PERMISSIONS.SERVER_STATUS
   ],
   [ROLES.VIEWER]: [
     PERMISSIONS.VIEW_SPEEDTEST,
