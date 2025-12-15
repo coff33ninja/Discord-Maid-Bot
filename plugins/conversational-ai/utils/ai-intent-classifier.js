@@ -182,6 +182,62 @@ const ACTION_CATEGORIES = {
     examples: ['game leaderboard', 'who is winning', 'top players', 'game scores']
   },
   
+  // Personality
+  'personality-change': {
+    description: 'Change the bot personality style',
+    examples: ['change personality to tsundere', 'be more energetic', 'switch to butler mode', 'act like a catgirl']
+  },
+  'personality-list': {
+    description: 'List available bot personalities',
+    examples: ['list personalities', 'what personalities are available', 'show personality options']
+  },
+  
+  // Device Health Extended
+  'device-health-summary': {
+    description: 'Get overall health summary for all devices',
+    examples: ['health summary', 'network health overview', 'overall device health']
+  },
+  'device-health-unhealthy': {
+    description: 'List devices with poor health or issues',
+    examples: ['unhealthy devices', 'problem devices', 'which devices have issues']
+  },
+  'device-health-reliable': {
+    description: 'List most reliable devices with high uptime',
+    examples: ['reliable devices', 'most stable devices', 'best uptime devices']
+  },
+  'device-health-alerts': {
+    description: 'Check for predictive health alerts',
+    examples: ['health alerts', 'any device warnings', 'predictive alerts']
+  },
+  
+  // Network Insights History
+  'network-insights-history': {
+    description: 'View past network analysis insights',
+    examples: ['insights history', 'past network insights', 'previous analysis']
+  },
+  
+  // Plugin Management
+  'plugin-list': {
+    description: 'List all loaded plugins',
+    examples: ['list plugins', 'what plugins are loaded', 'show plugins']
+  },
+  'plugin-stats': {
+    description: 'Show plugin statistics',
+    examples: ['plugin stats', 'plugin statistics', 'how many plugins']
+  },
+  
+  // Dashboard
+  'dashboard-url': {
+    description: 'Get the web dashboard URL',
+    examples: ['dashboard url', 'open dashboard', 'web interface', 'where is the dashboard']
+  },
+  
+  // Tailscale
+  'tailscale-status': {
+    description: 'Check Tailscale VPN status and connected peers',
+    examples: ['tailscale status', 'vpn status', 'tailscale devices', 'is tailscale connected']
+  },
+  
   // User Profiles
   'profile-setup': {
     description: 'Create a profile setup channel for members to introduce themselves',
@@ -352,7 +408,18 @@ function fallbackClassification(query) {
     { keywords: ['scheduled tasks', 'list tasks', 'automation tasks'], action: 'scheduled-tasks' },
     { keywords: ['device triggers', 'list triggers', 'my triggers'], action: 'device-triggers-list' },
     { keywords: ['speed alert', 'speed threshold', 'speed notification'], action: 'speed-alert-config' },
-    { keywords: ['leaderboard', 'top players', 'game scores', 'who is winning'], action: 'game-leaderboard' }
+    { keywords: ['leaderboard', 'top players', 'game scores', 'who is winning'], action: 'game-leaderboard' },
+    { keywords: ['change personality', 'switch personality', 'personality to', 'act like'], action: 'personality-change' },
+    { keywords: ['list personalities', 'show personalities', 'available personalities'], action: 'personality-list' },
+    { keywords: ['health summary', 'overall health', 'health overview'], action: 'device-health-summary' },
+    { keywords: ['unhealthy devices', 'problem devices', 'devices with issues'], action: 'device-health-unhealthy' },
+    { keywords: ['reliable devices', 'most stable', 'best uptime'], action: 'device-health-reliable' },
+    { keywords: ['health alerts', 'predictive alerts', 'device warnings'], action: 'device-health-alerts' },
+    { keywords: ['insights history', 'past insights', 'previous insights'], action: 'network-insights-history' },
+    { keywords: ['list plugins', 'show plugins', 'loaded plugins'], action: 'plugin-list' },
+    { keywords: ['plugin stats', 'plugin statistics'], action: 'plugin-stats' },
+    { keywords: ['dashboard', 'web dashboard', 'dashboard url'], action: 'dashboard-url' },
+    { keywords: ['tailscale', 'tailscale status', 'vpn status'], action: 'tailscale-status' }
   ];
 
   for (const match of quickMatches) {

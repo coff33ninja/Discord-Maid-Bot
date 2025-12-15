@@ -2475,21 +2475,25 @@ const ACTIONS = {
     keywords: ['device triggers', 'list triggers', 'my triggers', 'automation triggers'],
     plugin: 'device-triggers',
     description: 'List device automation triggers',
-    async execute() {
-      const { getPlugin } = await import('../../../src/core/plugin-system.js');
-      const plugin = getPlugin('device-triggers');
-      
-      if (!plugin?.listTriggers) {
-        return { error: 'Device triggers plugin not available' };
+    async execute(context) {
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const triggersPlugin = getPlugin('device-triggers');
+        
+        if (!triggersPlugin?.listTriggers) {
+          return { error: 'Device triggers plugin not available' };
+        }
+        
+        const triggers = await triggersPlugin.listTriggers(context.userId);
+        
+        if (!triggers || triggers.length === 0) {
+          return { empty: true };
+        }
+        
+        return { success: true, triggers };
+      } catch (error) {
+        return { error: error.message };
       }
-      
-      const triggers = await plugin.listTriggers();
-      
-      if (!triggers || triggers.length === 0) {
-        return { empty: true };
-      }
-      
-      return { success: true, triggers };
     },
     formatResult(result) {
       if (result.error) {
@@ -2506,6 +2510,436 @@ const ACTIONS = {
       }).join('\n\n');
       
       return `**🔔 Device Triggers**\n\n${list}`;
+    }
+  },
+
+  // ============ PERSONALITY ============
+  'personality-change': {
+    keywords: ['change personality', 'set personality', 'switch personality', 'be more', 'act like', 'personality to'],
+    plugin: 'personality',
+    description: 'Change bot personality style',
+    async execute(context) {
+      const query = context.query?.toLowerCase() || '';
+      
+      // Available personalities
+      const personalities = {
+        'maid': { name: 'Maid', emoji: '🌸' },
+        'tsundere': { name: 'Tsundere', emoji: '💢' },
+        'kuudere': { name: 'Kuudere', emoji: '❄️' },
+        'dandere': { name: 'Dandere', emoji: '🥺' },
+        'yandere': { name: 'Yandere', emoji: '🖤' },
+        'genki': { name: 'Genki', emoji: '⭐' },
+        'oneesan': { name: 'Onee-san', emoji: '💋' },
+        'chuunibyou': { name: 'Chuunibyou', emoji: '🔮' },
+        'butler': { name: 'Butler', emoji: '🎩' },
+        'catgirl': { name: 'Catgirl', emoji: '🐱' }
+      };
+      
+      // Try to detect which personality they want
+      let selectedKey = null;
+      for (const [key, info] of Object.entries(personalities)) {
+        if (query.includes(key) || query.includes(info.name.toLowerCase())) {
+          selectedKey = key;
+          break;
+        }
+      }
+      
+      if (!selectedKey) {
+        return { needsSelection: true, personalities };
+      }
+      
+      // Set the personality
+      try {
+        const { configOps } = await import('../../../src/database/db.js');
+        configOps.set(`personality_${context.userId}`, selectedKey);
+        return { success: true, personality: personalities[selectedKey], key: selectedKey };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsSelection) {
+        const list = Object.entries(result.personalities)
+          .map(([key, info]) => `${info.emoji} **${info.name}**`)
+          .join('\n');
+        return `🎭 Which personality would you like?\n\n${list}\n\nSay "change personality to [name]"`;
+      }
+      
+      if (result.error) {
+        return `❌ Failed to change personality: ${result.error}`;
+      }
+      
+      return `${result.personality.emoji} **Personality changed to ${result.personality.name}!**\n\n_Try chatting with me to see the difference~_`;
+    }
+  },
+
+  'personality-list': {
+    keywords: ['list personalities', 'show personalities', 'available personalities', 'what personalities'],
+    plugin: 'personality',
+    description: 'List available bot personalities',
+    async execute(context) {
+      const { configOps } = await import('../../../src/database/db.js');
+      const currentKey = configOps.get(`personality_${context.userId}`) || 'maid';
+      
+      const personalities = [
+        { key: 'maid', name: 'Maid', emoji: '🌸', desc: 'Polite and helpful' },
+        { key: 'tsundere', name: 'Tsundere', emoji: '💢', desc: 'Reluctantly helpful' },
+        { key: 'kuudere', name: 'Kuudere', emoji: '❄️', desc: 'Cool and composed' },
+        { key: 'dandere', name: 'Dandere', emoji: '🥺', desc: 'Shy and quiet' },
+        { key: 'yandere', name: 'Yandere', emoji: '🖤', desc: 'Obsessively devoted' },
+        { key: 'genki', name: 'Genki', emoji: '⭐', desc: 'Energetic and cheerful' },
+        { key: 'oneesan', name: 'Onee-san', emoji: '💋', desc: 'Mature and caring' },
+        { key: 'chuunibyou', name: 'Chuunibyou', emoji: '🔮', desc: 'Dramatic and mystical' },
+        { key: 'butler', name: 'Butler', emoji: '🎩', desc: 'Formal and refined' },
+        { key: 'catgirl', name: 'Catgirl', emoji: '🐱', desc: 'Playful and cute' }
+      ];
+      
+      return { personalities, currentKey };
+    },
+    formatResult(result) {
+      const list = result.personalities.map(p => {
+        const current = p.key === result.currentKey ? ' ← current' : '';
+        return `${p.emoji} **${p.name}**${current}\n   _${p.desc}_`;
+      }).join('\n');
+      
+      return `**🎭 Available Personalities**\n\n${list}\n\nSay "change personality to [name]" to switch!`;
+    }
+  },
+
+  // ============ DEVICE HEALTH EXTENDED ============
+  'device-health-summary': {
+    keywords: ['health summary', 'network health summary', 'overall health', 'health overview'],
+    plugin: 'device-health',
+    description: 'Get health summary for all devices',
+    async execute() {
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const healthPlugin = getPlugin('device-health');
+        
+        if (!healthPlugin?.getHealthSummary) {
+          return { error: 'Device health plugin not available' };
+        }
+        
+        const summary = healthPlugin.getHealthSummary();
+        return { success: true, summary };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      const s = result.summary;
+      if (s.totalDevices === 0) {
+        return `📊 No health data available. Run a network scan first!`;
+      }
+      
+      let response = `**📊 Network Health Summary**\n\n`;
+      response += `📱 **Total Devices:** ${s.totalDevices}\n`;
+      response += `📈 **Average Uptime:** ${s.averageUptime}%\n`;
+      response += `✅ **Healthy (≥90%):** ${s.healthyDevices}\n`;
+      response += `⚠️ **Unhealthy (<90%):** ${s.unhealthyDevices}\n`;
+      
+      if (s.mostReliable) {
+        response += `\n🏆 **Most Reliable:** ${s.mostReliable.name} (${s.mostReliable.uptimePercentage}%)`;
+      }
+      if (s.leastReliable) {
+        response += `\n⚠️ **Needs Attention:** ${s.leastReliable.name} (${s.leastReliable.uptimePercentage}%)`;
+      }
+      
+      return response;
+    }
+  },
+
+  'device-health-unhealthy': {
+    keywords: ['unhealthy devices', 'problem devices', 'devices with issues', 'unreliable devices'],
+    plugin: 'device-health',
+    description: 'List devices with poor health',
+    async execute() {
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const healthPlugin = getPlugin('device-health');
+        
+        if (!healthPlugin?.getUnhealthyDevices) {
+          return { error: 'Device health plugin not available' };
+        }
+        
+        const unhealthy = healthPlugin.getUnhealthyDevices();
+        return { success: true, devices: unhealthy };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      if (!result.devices || result.devices.length === 0) {
+        return `✅ All devices are healthy! (≥90% uptime)`;
+      }
+      
+      const list = result.devices.slice(0, 10).map(d => 
+        `🔴 **${d.name}** - ${d.uptimePercentage}% uptime (${d.offlineIncidents} incidents)`
+      ).join('\n');
+      
+      return `**⚠️ Unhealthy Devices (<90% uptime)**\n\n${list}\n\n_${result.devices.length} device(s) need attention_`;
+    }
+  },
+
+  'device-health-reliable': {
+    keywords: ['reliable devices', 'best devices', 'most stable', 'highest uptime'],
+    plugin: 'device-health',
+    description: 'List most reliable devices',
+    async execute() {
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const healthPlugin = getPlugin('device-health');
+        
+        if (!healthPlugin?.getMostReliableDevices) {
+          return { error: 'Device health plugin not available' };
+        }
+        
+        const reliable = healthPlugin.getMostReliableDevices();
+        return { success: true, devices: reliable };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      if (!result.devices || result.devices.length === 0) {
+        return `❌ No devices with >99% uptime found`;
+      }
+      
+      const list = result.devices.slice(0, 10).map(d => 
+        `🟢 **${d.name}** - ${d.uptimePercentage}% uptime (${d.averageResponseTime}ms avg)`
+      ).join('\n');
+      
+      return `**🏆 Most Reliable Devices (>99% uptime)**\n\n${list}\n\n_${result.devices.length} rock-solid device(s)_`;
+    }
+  },
+
+  'device-health-alerts': {
+    keywords: ['health alerts', 'predictive alerts', 'device warnings', 'unusual behavior'],
+    plugin: 'device-health',
+    description: 'Check for predictive health alerts',
+    async execute() {
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const healthPlugin = getPlugin('device-health');
+        
+        if (!healthPlugin?.checkPredictiveAlerts) {
+          return { error: 'Device health plugin not available' };
+        }
+        
+        const alerts = await healthPlugin.checkPredictiveAlerts();
+        return { success: true, alerts };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      if (!result.alerts || result.alerts.length === 0) {
+        return `✅ No predictive alerts. All devices are behaving normally.`;
+      }
+      
+      const list = result.alerts.map(a => 
+        `⚠️ **${a.device}** - offline for ${a.offlineDuration} min (usually ${a.uptimePercentage}% uptime)`
+      ).join('\n');
+      
+      return `**🔮 Predictive Alerts**\n\n${list}\n\n_${result.alerts.length} unusual behavior(s) detected_`;
+    }
+  },
+
+  // ============ NETWORK INSIGHTS HISTORY ============
+  'network-insights-history': {
+    keywords: ['insights history', 'past insights', 'previous insights', 'network analysis history'],
+    plugin: 'network-insights',
+    description: 'View past network insights',
+    async execute() {
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const insightsPlugin = getPlugin('network-insights');
+        
+        if (!insightsPlugin?.getInsightHistory) {
+          return { error: 'Network insights plugin not available' };
+        }
+        
+        const history = await insightsPlugin.getInsightHistory(5);
+        return { success: true, history };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      if (!result.history || result.history.length === 0) {
+        return `📚 No insights history available. Say "analyze network" to generate insights.`;
+      }
+      
+      const list = result.history.map((insight, i) => {
+        const date = new Date(insight.timestamp).toLocaleDateString();
+        const preview = insight.insights.split('\n')[0].substring(0, 80);
+        return `**${i + 1}. ${date}**\n${preview}...`;
+      }).join('\n\n');
+      
+      return `**📚 Network Insights History**\n\n${list}`;
+    }
+  },
+
+  // ============ PLUGIN MANAGEMENT ============
+  'plugin-list': {
+    keywords: ['list plugins', 'show plugins', 'what plugins', 'loaded plugins', 'available plugins'],
+    plugin: 'core',
+    description: 'List loaded plugins',
+    async execute() {
+      try {
+        const { getLoadedPlugins } = await import('../../../src/core/plugin-system.js');
+        const plugins = getLoadedPlugins();
+        return { success: true, plugins };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      const enabled = result.plugins.filter(p => p.enabled);
+      const disabled = result.plugins.filter(p => !p.enabled);
+      
+      let response = `**🔌 Loaded Plugins (${result.plugins.length})**\n\n`;
+      
+      response += `**✅ Enabled (${enabled.length}):**\n`;
+      response += enabled.slice(0, 12).map(p => `• ${p.name} v${p.version}`).join('\n');
+      if (enabled.length > 12) response += `\n...and ${enabled.length - 12} more`;
+      
+      if (disabled.length > 0) {
+        response += `\n\n**❌ Disabled (${disabled.length}):**\n`;
+        response += disabled.map(p => `• ${p.name}`).join('\n');
+      }
+      
+      return response;
+    }
+  },
+
+  'plugin-stats': {
+    keywords: ['plugin stats', 'plugin statistics', 'plugin info'],
+    plugin: 'core',
+    description: 'Show plugin statistics',
+    async execute() {
+      try {
+        const { getPluginStats } = await import('../../../src/core/plugin-system.js');
+        const stats = getPluginStats();
+        return { success: true, stats };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      const s = result.stats;
+      return `**📊 Plugin Statistics**\n\n` +
+        `📦 **Total:** ${s.total}\n` +
+        `✅ **Enabled:** ${s.enabled}\n` +
+        `❌ **Disabled:** ${s.disabled}\n` +
+        `📋 **With Commands:** ${s.withCommands}`;
+    }
+  },
+
+  // ============ DASHBOARD ============
+  'dashboard-url': {
+    keywords: ['dashboard', 'web dashboard', 'dashboard url', 'open dashboard', 'web interface'],
+    plugin: 'core',
+    description: 'Get web dashboard URL',
+    async execute() {
+      const port = process.env.DASHBOARD_PORT || 3000;
+      const host = process.env.DASHBOARD_HOST || 'localhost';
+      return { 
+        success: true, 
+        url: `http://${host}:${port}`,
+        port 
+      };
+    },
+    formatResult(result) {
+      return `**🌐 Web Dashboard**\n\n` +
+        `🔗 **URL:** ${result.url}\n\n` +
+        `**Features:**\n` +
+        `• Real-time device monitoring\n` +
+        `• Speed test history graphs\n` +
+        `• Scheduled task management\n` +
+        `• Plugin management\n` +
+        `• Log viewing (admin)\n\n` +
+        `🔐 Default: \`admin\` / \`admin123\``;
+    }
+  },
+
+  // ============ TAILSCALE STATUS ============
+  'tailscale-status': {
+    keywords: ['tailscale', 'tailscale status', 'vpn status', 'tailscale devices'],
+    plugin: 'network-management',
+    description: 'Check Tailscale VPN status',
+    async execute() {
+      try {
+        const { isTailscaleAvailable, getTailscaleStatus } = await import('../../network-management/scanner.js');
+        
+        const available = await isTailscaleAvailable();
+        if (!available) {
+          return { available: false };
+        }
+        
+        const status = await getTailscaleStatus();
+        return { success: true, available: true, status };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      if (!result.available) {
+        return `📡 Tailscale is not available on this system.`;
+      }
+      
+      const s = result.status;
+      if (!s) {
+        return `📡 Tailscale is installed but status unavailable.`;
+      }
+      
+      let response = `**📡 Tailscale Status**\n\n`;
+      response += `🔗 **Connected:** ${s.BackendState === 'Running' ? 'Yes' : 'No'}\n`;
+      
+      if (s.Self) {
+        response += `🖥️ **This Device:** ${s.Self.HostName}\n`;
+        response += `🌐 **Tailscale IP:** ${s.Self.TailscaleIPs?.[0] || 'N/A'}\n`;
+      }
+      
+      if (s.Peer && Object.keys(s.Peer).length > 0) {
+        const peers = Object.values(s.Peer);
+        const online = peers.filter(p => p.Online).length;
+        response += `\n👥 **Peers:** ${online}/${peers.length} online`;
+      }
+      
+      return response;
     }
   }
 };
