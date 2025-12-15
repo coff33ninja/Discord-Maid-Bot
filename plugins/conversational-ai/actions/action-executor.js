@@ -45,6 +45,71 @@ function extractDeviceIdentifier(query) {
 }
 
 /**
+ * Parse automation actions from a message
+ * Detects actions like "wake PC", "scan network", "run speedtest", "turn on lights"
+ * @param {string} message - Message to parse
+ * @returns {Object[]} Array of action objects
+ */
+function parseAutomationActions(message) {
+  if (!message) return [];
+  
+  const actions = [];
+  const lowerMsg = message.toLowerCase();
+  
+  // Wake-on-LAN patterns
+  const wolPatterns = [
+    /wake\s+(?:up\s+)?(?:my\s+)?(?:device\s+)?["']?([a-zA-Z0-9_\-]+)["']?/i,
+    /boot\s+(?:up\s+)?(?:my\s+)?["']?([a-zA-Z0-9_\-]+)["']?/i,
+    /turn\s+on\s+(?:my\s+)?(?:pc|computer|server)\s*["']?([a-zA-Z0-9_\-]*)["']?/i,
+    /start\s+(?:my\s+)?(?:pc|computer|server)\s*["']?([a-zA-Z0-9_\-]*)["']?/i
+  ];
+  
+  for (const pattern of wolPatterns) {
+    const match = message.match(pattern);
+    if (match) {
+      const device = match[1]?.trim();
+      if (device && !['the', 'my', 'a', 'and', 'then'].includes(device.toLowerCase())) {
+        actions.push({ type: 'wol', device });
+      } else if (lowerMsg.includes('pc') || lowerMsg.includes('computer')) {
+        actions.push({ type: 'wol', device: 'pc' });
+      }
+      break;
+    }
+  }
+  
+  // Network scan
+  if (lowerMsg.includes('scan') && (lowerMsg.includes('network') || lowerMsg.includes('devices'))) {
+    actions.push({ type: 'scan' });
+  }
+  
+  // Speed test
+  if (lowerMsg.includes('speed') && (lowerMsg.includes('test') || lowerMsg.includes('check'))) {
+    actions.push({ type: 'speedtest' });
+  }
+  
+  // Home Assistant actions
+  const haPatterns = [
+    /turn\s+(on|off)\s+(?:the\s+)?(.+?)(?:\s+(?:and|then)|$)/i,
+    /switch\s+(on|off)\s+(?:the\s+)?(.+?)(?:\s+(?:and|then)|$)/i,
+    /activate\s+(?:scene\s+)?(.+?)(?:\s+(?:and|then)|$)/i
+  ];
+  
+  for (const pattern of haPatterns) {
+    const match = message.match(pattern);
+    if (match) {
+      if (pattern.source.includes('activate')) {
+        actions.push({ type: 'homeassistant', action: 'scene', scene: match[1] });
+      } else {
+        actions.push({ type: 'homeassistant', action: match[1], device: match[2] });
+      }
+      break;
+    }
+  }
+  
+  return actions;
+}
+
+/**
  * Action definitions with their execution logic
  * Each action has:
  * - keywords: triggers for detection
@@ -854,15 +919,25 @@ const ACTIONS = {
 
   // ============ REMINDER CREATION ============
   'reminder-create': {
-    keywords: ['remind me', 'set reminder', 'reminder in', 'reminder at', 'remind me every', "don't forget"],
+    keywords: ['remind me', 'remind us', 'set reminder', 'reminder in', 'reminder at', 'remind me every', "don't forget", 'wake me', 'alert me'],
     plugin: 'smart-reminders',
     description: 'Create a reminder via natural language',
     async execute(context) {
-      const { extractTimeFromSentence, formatDuration, TimeType } = await import('../utils/time-parser.js');
+      const { extractTimeFromSentence, parseTimeExpression, TimeType } = await import('../utils/time-parser.js');
       const { getPlugin } = await import('../../../src/core/plugin-system.js');
       
       const query = context.query || '';
-      const extracted = extractTimeFromSentence(query);
+      
+      // Check for "remind @user" pattern
+      const mentionMatch = query.match(/remind\s+<@!?(\d+)>\s+/i);
+      const targetUserId = mentionMatch ? mentionMatch[1] : null;
+      
+      // Clean query for time extraction
+      const cleanQuery = targetUserId 
+        ? query.replace(/<@!?\d+>\s*/, '').replace(/remind\s+/i, 'remind me ')
+        : query;
+      
+      const extracted = extractTimeFromSentence(cleanQuery);
       
       if (!extracted.time || extracted.time.type === TimeType.INVALID) {
         return { needsInfo: true, error: extracted.time?.error };
@@ -873,12 +948,17 @@ const ACTIONS = {
         return { error: 'Smart reminders plugin not available' };
       }
       
+      // Check for automation actions in the message
+      const actions = parseAutomationActions(extracted.message || '');
+      
       const reminderData = {
         name: extracted.message?.substring(0, 30) || 'Reminder',
         message: extracted.message || 'Reminder',
         userId: context.userId,
+        targetUserId: targetUserId || context.userId,
         channelId: context.channelId,
-        target: 'dm'
+        target: targetUserId ? 'user' : 'dm',
+        actions: actions.length > 0 ? actions : undefined
       };
       
       if (extracted.time.type === TimeType.RECURRING) {
@@ -895,7 +975,9 @@ const ACTIONS = {
           success: true,
           reminder,
           time: extracted.time,
-          message: extracted.message
+          message: extracted.message,
+          targetUserId,
+          actions
         };
       } catch (error) {
         return { error: error.message };
@@ -903,14 +985,17 @@ const ACTIONS = {
     },
     formatResult(result) {
       if (result.needsInfo) {
-        return `⏰ I'd love to set a reminder for you! Please tell me:\n\n` +
-          `"Remind me in [time] to [message]"\n` +
-          `"Remind me at [time] to [message]"\n` +
-          `"Remind me every [interval] to [message]"\n\n` +
-          `Examples:\n` +
+        return `⏰ I'd love to set a reminder! Here's what I can do:\n\n` +
+          `**Basic Reminders:**\n` +
           `• "Remind me in 30 minutes to check the server"\n` +
-          `• "Remind me at 3pm to call mom"\n` +
-          `• "Remind me every hour to drink water"`;
+          `• "Remind me at 6am to wake up"\n` +
+          `• "Remind me every hour to drink water"\n\n` +
+          `**Remind Others:**\n` +
+          `• "Remind @user in 1 hour about the meeting"\n\n` +
+          `**With Automations:**\n` +
+          `• "At 6am wake my PC and run a speed test"\n` +
+          `• "Every day at 8am scan the network"\n` +
+          `• "In 30 minutes turn on the lights"`;
       }
       
       if (result.error) {
@@ -921,9 +1006,140 @@ const ACTIONS = {
         ? `every ${result.time.interval}`
         : new Date(result.time.triggerTime).toLocaleString();
       
-      return `✅ **Reminder Set!**\n\n` +
+      let response = `✅ **Reminder Set!**\n\n` +
         `📝 **Message:** ${result.message}\n` +
+        `⏰ **When:** ${timeStr}\n`;
+      
+      if (result.targetUserId && result.targetUserId !== result.reminder.userId) {
+        response += `👤 **For:** <@${result.targetUserId}>\n`;
+      }
+      
+      if (result.actions && result.actions.length > 0) {
+        response += `⚡ **Actions:** ${result.actions.map(a => a.type).join(', ')}\n`;
+      }
+      
+      response += `🆔 **ID:** ${result.reminder.id}`;
+      
+      return response;
+    }
+  },
+
+  // ============ SCHEDULED AUTOMATION ============
+  'scheduled-automation': {
+    keywords: ['at ', 'every day at', 'every morning', 'every night', 'schedule', 'automate'],
+    plugin: 'smart-reminders',
+    description: 'Schedule automated actions',
+    async execute(context) {
+      const { parseTimeExpression, TimeType } = await import('../utils/time-parser.js');
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      
+      const query = context.query || '';
+      
+      // Parse patterns like "at 6am wake my PC" or "every day at 8am scan network"
+      const patterns = [
+        /(?:at|every\s+day\s+at)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s+(.+)/i,
+        /every\s+(morning|night|hour|day)\s+(.+)/i,
+        /(in\s+\d+\s*(?:m|h|d|minutes?|hours?|days?))\s+(.+)/i
+      ];
+      
+      let timeStr = null;
+      let actionStr = null;
+      
+      for (const pattern of patterns) {
+        const match = query.match(pattern);
+        if (match) {
+          timeStr = match[1];
+          actionStr = match[2];
+          break;
+        }
+      }
+      
+      if (!timeStr || !actionStr) {
+        return { needsInfo: true };
+      }
+      
+      // Convert morning/night to times
+      if (timeStr === 'morning') timeStr = '8am';
+      if (timeStr === 'night') timeStr = '10pm';
+      
+      const time = parseTimeExpression(timeStr.startsWith('in ') ? timeStr : `at ${timeStr}`);
+      if (time.type === TimeType.INVALID) {
+        return { needsInfo: true, error: 'Could not parse time' };
+      }
+      
+      // Parse the actions from the action string
+      const actions = parseAutomationActions(actionStr);
+      
+      if (actions.length === 0) {
+        return { needsInfo: true, error: 'No valid actions found' };
+      }
+      
+      const reminderPlugin = getPlugin('smart-reminders');
+      if (!reminderPlugin?.addReminder) {
+        return { error: 'Smart reminders plugin not available' };
+      }
+      
+      const reminderData = {
+        name: `Automation: ${actions.map(a => a.type).join(' + ')}`,
+        message: actionStr,
+        userId: context.userId,
+        channelId: context.channelId,
+        target: 'automation',
+        type: query.includes('every') ? 'recurring' : 'time',
+        triggerTime: time.triggerTime,
+        interval: query.includes('every day') ? '1d' : (query.includes('every hour') ? '1h' : undefined),
+        actions
+      };
+      
+      try {
+        const reminder = await reminderPlugin.addReminder(reminderData);
+        return {
+          success: true,
+          reminder,
+          time,
+          actions,
+          isRecurring: reminderData.type === 'recurring'
+        };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        return `⚡ **Schedule Automations:**\n\n` +
+          `**Wake devices:**\n` +
+          `• "At 6am wake my PC"\n` +
+          `• "Every day at 7am wake Kusanagi"\n\n` +
+          `**Network tasks:**\n` +
+          `• "Every hour scan the network"\n` +
+          `• "At 8am run a speed test"\n\n` +
+          `**Chained actions:**\n` +
+          `• "At 6am wake my PC then run a speed test"\n` +
+          `• "Every morning scan network and check speed"`;
+      }
+      
+      if (result.error) {
+        return `❌ Couldn't schedule automation: ${result.error}`;
+      }
+      
+      const timeStr = result.isRecurring 
+        ? `${result.reminder.interval || 'daily'}`
+        : new Date(result.time.triggerTime).toLocaleString();
+      
+      const actionList = result.actions.map(a => {
+        switch (a.type) {
+          case 'wol': return `⚡ Wake ${a.device || 'device'}`;
+          case 'scan': return `📡 Network scan`;
+          case 'speedtest': return `🚀 Speed test`;
+          case 'homeassistant': return `🏠 ${a.action || 'HA action'}`;
+          default: return `📌 ${a.type}`;
+        }
+      }).join('\n');
+      
+      return `✅ **Automation Scheduled!**\n\n` +
         `⏰ **When:** ${timeStr}\n` +
+        `🔄 **Recurring:** ${result.isRecurring ? 'Yes' : 'No'}\n\n` +
+        `**Actions:**\n${actionList}\n\n` +
         `🆔 **ID:** ${result.reminder.id}`;
     }
   },
