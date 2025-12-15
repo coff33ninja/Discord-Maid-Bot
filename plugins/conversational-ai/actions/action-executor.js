@@ -923,24 +923,29 @@ const ACTIONS = {
     plugin: 'smart-reminders',
     description: 'Create a reminder via natural language',
     async execute(context) {
-      const { extractTimeFromSentence, parseTimeExpression, TimeType } = await import('../utils/time-parser.js');
       const { getPlugin } = await import('../../../src/core/plugin-system.js');
       
       const query = context.query || '';
       
-      // Check for "remind @user" pattern
-      const mentionMatch = query.match(/remind\s+<@!?(\d+)>\s+/i);
-      const targetUserId = mentionMatch ? mentionMatch[1] : null;
+      // Use AI-powered parser for better understanding
+      const { parseReminderWithAI } = await import('../utils/ai-reminder-parser.js');
+      const parsed = await parseReminderWithAI(query, context);
       
-      // Clean query for time extraction
-      const cleanQuery = targetUserId 
-        ? query.replace(/<@!?\d+>\s*/, '').replace(/remind\s+/i, 'remind me ')
-        : query;
+      // If AI parsing failed or needs clarification
+      if (!parsed.success || !parsed.understood) {
+        return { 
+          needsInfo: true, 
+          clarification: parsed.clarification,
+          error: parsed.error 
+        };
+      }
       
-      const extracted = extractTimeFromSentence(cleanQuery);
-      
-      if (!extracted.time || extracted.time.type === TimeType.INVALID) {
-        return { needsInfo: true, error: extracted.time?.error };
+      // Check if we have enough info
+      if (!parsed.message || (!parsed.time?.triggerTime && !parsed.time?.interval)) {
+        return { 
+          needsInfo: true, 
+          clarification: parsed.clarification || "I need more details. When should I remind you?"
+        };
       }
       
       const reminderPlugin = getPlugin('smart-reminders');
@@ -949,24 +954,28 @@ const ACTIONS = {
       }
       
       // Check for automation actions in the message
-      const actions = parseAutomationActions(extracted.message || '');
+      const actions = parseAutomationActions(parsed.message || '');
+      
+      // Determine target user
+      const targetUserId = parsed.target?.userId || context.userId;
       
       const reminderData = {
-        name: extracted.message?.substring(0, 30) || 'Reminder',
-        message: extracted.message || 'Reminder',
+        name: parsed.message?.substring(0, 30) || 'Reminder',
+        message: parsed.message || 'Reminder',
         userId: context.userId,
-        targetUserId: targetUserId || context.userId,
+        targetUserId: targetUserId,
         channelId: context.channelId,
-        target: targetUserId ? 'user' : 'dm',
+        target: parsed.target?.type === 'user' ? 'user' : 
+                parsed.target?.type === 'channel' ? 'channel' : 'dm',
         actions: actions.length > 0 ? actions : undefined
       };
       
-      if (extracted.time.type === TimeType.RECURRING) {
+      if (parsed.type === 'recurring') {
         reminderData.type = 'recurring';
-        reminderData.interval = extracted.time.interval;
+        reminderData.interval = parsed.time.interval || parsed.time.value;
       } else {
         reminderData.type = 'time';
-        reminderData.triggerTime = extracted.time.triggerTime;
+        reminderData.triggerTime = parsed.time.triggerTime;
       }
       
       try {
@@ -974,10 +983,11 @@ const ACTIONS = {
         return {
           success: true,
           reminder,
-          time: extracted.time,
-          message: extracted.message,
+          time: parsed.time,
+          message: parsed.message,
           targetUserId,
-          actions
+          actions,
+          confidence: parsed.confidence
         };
       } catch (error) {
         return { error: error.message };
@@ -985,10 +995,15 @@ const ACTIONS = {
     },
     formatResult(result) {
       if (result.needsInfo) {
+        // Use AI clarification if available
+        if (result.clarification) {
+          return `❓ ${result.clarification}`;
+        }
+        
         return `⏰ I'd love to set a reminder! Here's what I can do:\n\n` +
           `**Basic Reminders:**\n` +
           `• "Remind me in 30 minutes to check the server"\n` +
-          `• "Remind me at 6am to wake up"\n` +
+          `• "Remind me at 6pm to call mom"\n` +
           `• "Remind me every hour to drink water"\n\n` +
           `**Remind Others:**\n` +
           `• "Remind @user in 1 hour about the meeting"\n\n` +
@@ -1002,15 +1017,21 @@ const ACTIONS = {
         return `❌ Couldn't create reminder: ${result.error}`;
       }
       
-      const timeStr = result.time.type === 'recurring' 
-        ? `every ${result.time.interval}`
-        : new Date(result.time.triggerTime).toLocaleString();
+      // Format time string
+      let timeStr;
+      if (result.time?.type === 'recurring' || result.time?.interval) {
+        timeStr = `every ${result.time.interval || result.time.value}`;
+      } else if (result.time?.triggerTime) {
+        timeStr = new Date(result.time.triggerTime).toLocaleString();
+      } else {
+        timeStr = result.time?.value || 'scheduled';
+      }
       
       let response = `✅ **Reminder Set!**\n\n` +
         `📝 **Message:** ${result.message}\n` +
         `⏰ **When:** ${timeStr}\n`;
       
-      if (result.targetUserId && result.targetUserId !== result.reminder.userId) {
+      if (result.targetUserId && result.targetUserId !== result.reminder?.userId) {
         response += `👤 **For:** <@${result.targetUserId}>\n`;
       }
       
@@ -1018,7 +1039,12 @@ const ACTIONS = {
         response += `⚡ **Actions:** ${result.actions.map(a => a.type).join(', ')}\n`;
       }
       
-      response += `🆔 **ID:** ${result.reminder.id}`;
+      response += `🆔 **ID:** ${result.reminder?.id || 'N/A'}`;
+      
+      // Add confidence warning if low
+      if (result.confidence && result.confidence < 0.8) {
+        response += `\n\n⚠️ *I'm ${Math.round(result.confidence * 100)}% confident I understood correctly. Use \`/bot reminder list\` to verify.*`;
+      }
       
       return response;
     }
