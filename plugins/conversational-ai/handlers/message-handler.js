@@ -63,6 +63,19 @@ export class MessageHandler {
       // Ignore bot messages
       if (message.author.bot) return;
       
+      // Check if this is a profile setup channel or user is in setup mode
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const profilePlugin = getPlugin('user-profiles');
+        if (profilePlugin) {
+          const { handleProfileMessage } = await import('../../user-profiles/profile-handler.js');
+          const handled = await handleProfileMessage(message, profilePlugin);
+          if (handled) return; // Profile handler took care of it
+        }
+      } catch (e) {
+        // Profile plugin not available, continue normally
+      }
+      
       // Classify the message
       const classification = this.plugin.classifyMessage(message);
       

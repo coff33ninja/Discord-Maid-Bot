@@ -160,6 +160,12 @@ export class ResponseHandler {
       parts.push('');
     }
     
+    // Add user profile context
+    if (extras.userProfile) {
+      parts.push(`**User Profile:** ${extras.userProfile}`);
+      parts.push('');
+    }
+    
     // Add extra context (network, etc.)
     if (extras.networkContext) {
       parts.push(`**Current Network Status:** ${extras.networkContext.deviceCount} devices online`);
@@ -204,13 +210,26 @@ export class ResponseHandler {
     const pluginAwareness = await formatPluginAwarenessForPrompt();
     const suggestedCommand = await suggestCommand(content);
     
-    // 4. Build prompt with all context
+    // 4. Get user profile context
+    let userProfile = null;
+    try {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const profilePlugin = getPlugin('user-profiles');
+      if (profilePlugin?.getProfileSummary) {
+        userProfile = await profilePlugin.getProfileSummary(userId);
+      }
+    } catch (e) {
+      // Profile plugin not available, continue without
+    }
+    
+    // 5. Build prompt with all context
     const prompt = this.buildPrompt(content, context, personality, {
       networkContext,
       username,
       replyContext,
       pluginAwareness,
-      suggestedCommand
+      suggestedCommand,
+      userProfile
     });
     
     // 5. Generate response

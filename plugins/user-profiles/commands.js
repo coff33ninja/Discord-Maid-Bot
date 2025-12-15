@@ -1,0 +1,272 @@
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+
+/**
+ * User Profile Commands
+ * 
+ * Commands for managing user profiles and profile setup channels.
+ */
+
+export const commands = [
+  {
+    data: new SlashCommandBuilder()
+      .setName('profile')
+      .setDescription('Manage your user profile')
+      .addSubcommand(sub =>
+        sub.setName('view')
+          .setDescription('View your profile or another user\'s profile')
+          .addUserOption(opt =>
+            opt.setName('user')
+              .setDescription('User to view (leave empty for your own)')
+              .setRequired(false)
+          )
+      )
+      .addSubcommand(sub =>
+        sub.setName('edit')
+          .setDescription('Edit your profile')
+          .addStringOption(opt =>
+            opt.setName('field')
+              .setDescription('Field to edit')
+              .setRequired(true)
+              .addChoices(
+                { name: '📛 Display Name', value: 'displayName' },
+                { name: '⚧️ Gender', value: 'gender' },
+                { name: '💬 Pronouns', value: 'pronouns' },
+                { name: '🎭 Personality', value: 'personality' },
+                { name: '🎯 Interests', value: 'interests' },
+                { name: '🌍 Timezone', value: 'timezone' },
+                { name: '📝 Bio', value: 'bio' }
+              )
+          )
+          .addStringOption(opt =>
+            opt.setName('value')
+              .setDescription('New value (for interests, separate with commas)')
+              .setRequired(true)
+          )
+      )
+      .addSubcommand(sub =>
+        sub.setName('setup')
+          .setDescription('Start interactive profile setup')
+      )
+      .addSubcommand(sub =>
+        sub.setName('delete')
+          .setDescription('Delete your profile data')
+      )
+      .addSubcommand(sub =>
+        sub.setName('createchannel')
+          .setDescription('Create a profile setup channel for new members (Admin only)')
+          .addStringOption(opt =>
+            opt.setName('name')
+              .setDescription('Channel name')
+              .setRequired(false)
+          )
+          .addChannelOption(opt =>
+            opt.setName('category')
+              .setDescription('Category to create channel in')
+              .setRequired(false)
+          )
+      ),
+    
+    async execute(interaction, plugin) {
+      const subcommand = interaction.options.getSubcommand();
+      
+      switch (subcommand) {
+        case 'view':
+          return handleView(interaction, plugin);
+        case 'edit':
+          return handleEdit(interaction, plugin);
+        case 'setup':
+          return handleSetup(interaction, plugin);
+        case 'delete':
+          return handleDelete(interaction, plugin);
+        case 'createchannel':
+          return handleCreateChannel(interaction, plugin);
+        default:
+          return interaction.reply({ content: 'Unknown subcommand', ephemeral: true });
+      }
+    }
+  }
+];
+
+async function handleView(interaction, plugin) {
+  const targetUser = interaction.options.getUser('user') || interaction.user;
+  const profile = await plugin.getProfile(targetUser.id);
+  
+  if (!profile) {
+    if (targetUser.id === interaction.user.id) {
+      return interaction.reply({
+        content: "You haven't set up your profile yet! Use `/profile setup` or `/profile edit` to get started~",
+        ephemeral: true
+      });
+    }
+    return interaction.reply({
+      content: `${targetUser.username} hasn't set up their profile yet.`,
+      ephemeral: true
+    });
+  }
+  
+  const embed = {
+    color: 0x9B59B6,
+    title: `👤 ${profile.displayName || targetUser.username}'s Profile`,
+    thumbnail: { url: targetUser.displayAvatarURL({ dynamic: true }) },
+    fields: [],
+    footer: { text: `Profile last updated` },
+    timestamp: profile.updatedAt ? new Date(profile.updatedAt) : new Date()
+  };
+  
+  if (profile.gender) {
+    embed.fields.push({ name: '⚧️ Gender', value: profile.gender, inline: true });
+  }
+  if (profile.pronouns) {
+    embed.fields.push({ name: '💬 Pronouns', value: profile.pronouns, inline: true });
+  }
+  if (profile.personality) {
+    embed.fields.push({ name: '🎭 Personality', value: profile.personality, inline: true });
+  }
+  if (profile.timezone) {
+    embed.fields.push({ name: '🌍 Timezone', value: profile.timezone, inline: true });
+  }
+  if (profile.interests?.length) {
+    embed.fields.push({ name: '🎯 Interests', value: profile.interests.join(', '), inline: false });
+  }
+  if (profile.bio) {
+    embed.fields.push({ name: '📝 Bio', value: profile.bio, inline: false });
+  }
+  
+  if (embed.fields.length === 0) {
+    embed.description = '_No profile information set yet_';
+  }
+  
+  return interaction.reply({ embeds: [embed], ephemeral: targetUser.id === interaction.user.id });
+}
+
+async function handleEdit(interaction, plugin) {
+  const field = interaction.options.getString('field');
+  const value = interaction.options.getString('value');
+  
+  let processedValue = value;
+  
+  // Special handling for interests (comma-separated)
+  if (field === 'interests') {
+    processedValue = value.split(',').map(i => i.trim()).filter(i => i.length > 0);
+  }
+  
+  // Validate some fields
+  if (field === 'gender') {
+    const validGenders = ['male', 'female', 'non-binary', 'other', 'prefer not to say'];
+    if (!validGenders.some(g => value.toLowerCase().includes(g))) {
+      // Allow custom but warn
+    }
+  }
+  
+  const updates = { [field]: processedValue };
+  const profile = await plugin.updateProfile(interaction.user.id, updates);
+  
+  const fieldNames = {
+    displayName: '📛 Display Name',
+    gender: '⚧️ Gender',
+    pronouns: '💬 Pronouns',
+    personality: '🎭 Personality',
+    interests: '🎯 Interests',
+    timezone: '🌍 Timezone',
+    bio: '📝 Bio'
+  };
+  
+  return interaction.reply({
+    embeds: [{
+      color: 0x2ECC71,
+      title: '✅ Profile Updated!',
+      description: `**${fieldNames[field]}** has been set to:\n${Array.isArray(processedValue) ? processedValue.join(', ') : processedValue}`,
+      footer: { text: 'Use /profile view to see your full profile' }
+    }],
+    ephemeral: true
+  });
+}
+
+async function handleSetup(interaction, plugin) {
+  // Start interactive setup mode
+  plugin.startSetup(interaction.user.id, interaction.channelId);
+  
+  const profile = await plugin.getProfile(interaction.user.id);
+  
+  return interaction.reply({
+    embeds: [{
+      color: 0x9B59B6,
+      title: '👤 Profile Setup',
+      description: profile 
+        ? "Let's update your profile! Just chat with me naturally and tell me about yourself~"
+        : "Hi there! I'd love to get to know you better~ Just tell me about yourself!\n\n" +
+          "You can share things like:\n" +
+          "• Your preferred name\n" +
+          "• Gender & pronouns\n" +
+          "• Interests & hobbies\n" +
+          "• Your personality type\n" +
+          "• Timezone\n\n" +
+          "_Or just chat naturally and I'll pick up on the details!_",
+      footer: { text: 'Say "done" or "finish" when you\'re finished' }
+    }]
+  });
+}
+
+async function handleDelete(interaction, plugin) {
+  const { configOps } = await import('../../src/database/db.js');
+  configOps.delete(`user_profile_${interaction.user.id}`);
+  plugin.endSetup(interaction.user.id);
+  
+  return interaction.reply({
+    embeds: [{
+      color: 0xE74C3C,
+      title: '🗑️ Profile Deleted',
+      description: 'Your profile data has been removed.',
+      footer: { text: 'You can set up a new profile anytime with /profile setup' }
+    }],
+    ephemeral: true
+  });
+}
+
+async function handleCreateChannel(interaction, plugin) {
+  // Check admin permission
+  if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+    return interaction.reply({
+      content: '❌ You need the "Manage Channels" permission to create a profile channel.',
+      ephemeral: true
+    });
+  }
+  
+  await interaction.deferReply();
+  
+  const channelName = interaction.options.getString('name') || '👤-profile-setup';
+  const category = interaction.options.getChannel('category');
+  
+  try {
+    const result = await plugin.createProfileChannel(interaction.guild, {
+      name: channelName,
+      categoryId: category?.id
+    });
+    
+    if (result.created) {
+      return interaction.editReply({
+        embeds: [{
+          color: 0x2ECC71,
+          title: '✅ Profile Channel Created!',
+          description: `Created ${result.channel} for profile setup.\n\n` +
+            `New members can introduce themselves there and I'll remember their preferences~`,
+          footer: { text: 'The bot will automatically respond to messages in this channel' }
+        }]
+      });
+    } else {
+      return interaction.editReply({
+        embeds: [{
+          color: 0xF39C12,
+          title: '⚠️ Channel Already Exists',
+          description: `A profile channel already exists: ${result.channel}`,
+        }]
+      });
+    }
+  } catch (error) {
+    return interaction.editReply({
+      content: `❌ Failed to create channel: ${error.message}`,
+    });
+  }
+}
+
+export default commands;

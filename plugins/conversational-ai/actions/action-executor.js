@@ -1345,6 +1345,91 @@ const ACTIONS = {
       const emoji = result.action === 'on' ? '💡' : '🌙';
       return `${emoji} Turned **${result.action}** ${result.device}`;
     }
+  },
+
+  // ============ USER PROFILES ============
+  'profile-setup': {
+    keywords: ['create profile channel', 'setup profile channel', 'profile channel', 'introduce themselves', 'member profiles', 'user profiles'],
+    plugin: 'user-profiles',
+    description: 'Create a profile setup channel for members',
+    permission: 'manage_channels',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const profilePlugin = getPlugin('user-profiles');
+      
+      if (!profilePlugin) {
+        return { error: 'User profiles plugin not available' };
+      }
+      
+      // Need guild context
+      if (!context.guild) {
+        return { needsGuild: true };
+      }
+      
+      try {
+        const result = await profilePlugin.createProfileChannel(context.guild);
+        return { success: true, ...result };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) {
+        return `👤 To create a profile channel, use the slash command:\n\n\`/profile createchannel\``;
+      }
+      
+      if (result.error) {
+        return `❌ Failed to create profile channel: ${result.error}`;
+      }
+      
+      if (result.created) {
+        return `✅ **Profile Channel Created!**\n\n` +
+          `I've created ${result.channel} where new members can introduce themselves~\n\n` +
+          `Members can chat naturally in that channel and I'll learn about them!`;
+      }
+      
+      return `👤 A profile channel already exists: ${result.channel}`;
+    }
+  },
+
+  'profile-view': {
+    keywords: ['my profile', 'view profile', 'show profile', 'what do you know about me', 'who am i'],
+    plugin: 'user-profiles',
+    description: 'View your profile',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const profilePlugin = getPlugin('user-profiles');
+      
+      if (!profilePlugin) {
+        return { error: 'User profiles plugin not available' };
+      }
+      
+      const profile = await profilePlugin.getProfile(context.userId);
+      return { profile, userId: context.userId };
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      if (!result.profile) {
+        return `👤 You haven't set up your profile yet!\n\n` +
+          `Use \`/profile setup\` to get started, or just tell me about yourself~`;
+      }
+      
+      const p = result.profile;
+      let response = `👤 **Your Profile:**\n\n`;
+      
+      if (p.displayName) response += `📛 **Name:** ${p.displayName}\n`;
+      if (p.gender) response += `⚧️ **Gender:** ${p.gender}\n`;
+      if (p.pronouns) response += `💬 **Pronouns:** ${p.pronouns}\n`;
+      if (p.personality) response += `🎭 **Personality:** ${p.personality}\n`;
+      if (p.timezone) response += `🌍 **Timezone:** ${p.timezone}\n`;
+      if (p.interests?.length) response += `🎯 **Interests:** ${p.interests.join(', ')}\n`;
+      if (p.bio) response += `📝 **Bio:** ${p.bio}\n`;
+      
+      return response;
+    }
   }
 };
 

@@ -114,6 +114,16 @@ const ACTION_CATEGORIES = {
     examples: ['lock channel', 'unlock this channel', 'prevent messages']
   },
   
+  // User Profiles
+  'profile-setup': {
+    description: 'Create a profile setup channel for members to introduce themselves',
+    examples: ['create profile channel', 'setup profile channel', 'let members introduce themselves', 'member profiles']
+  },
+  'profile-view': {
+    description: 'View your own profile or what the bot knows about you',
+    examples: ['my profile', 'view profile', 'what do you know about me', 'who am i to you', 'show my profile']
+  },
+  
   // SSH/Remote
   'ssh-command': {
     description: 'Execute a command on a remote server via SSH',
@@ -255,7 +265,9 @@ function fallbackClassification(query) {
     { keywords: ['timeout', 'mute'], action: 'discord-timeout' },
     { keywords: ['help', 'what can you do', 'commands'], action: 'help' },
     { keywords: ['research', 'look up', 'tell me about'], action: 'research' },
-    { keywords: ['home assistant', 'smart home', 'lights'], action: 'home-assistant' }
+    { keywords: ['home assistant', 'smart home', 'lights'], action: 'home-assistant' },
+    { keywords: ['profile channel', 'introduce themselves', 'member profiles'], action: 'profile-setup' },
+    { keywords: ['my profile', 'what do you know about me', 'who am i'], action: 'profile-view' }
   ];
 
   for (const match of quickMatches) {
