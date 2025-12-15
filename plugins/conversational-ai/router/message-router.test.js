@@ -33,9 +33,11 @@ const mockMessageArbitrary = fc.record({
 
 /**
  * Generate a message with specific prefix
+ * Ensures the command part is non-empty alphanumeric
  */
 const prefixMessageArbitrary = (prefix) => fc.record({
-  content: fc.string({ minLength: 1, maxLength: 50 }).map(s => `${prefix}${s.replace(/^[!?.]/g, '')}`),
+  content: fc.array(fc.constantFrom(...'abcdefghijklmnopqrstuvwxyz0123456789'.split('')), { minLength: 1, maxLength: 20 })
+    .map(arr => `${prefix}${arr.join('')}`),
   author: fc.record({
     bot: fc.constant(false),
     id: fc.string({ minLength: 1, maxLength: 20 })

@@ -160,10 +160,15 @@ export class MessageRouter {
     if (!prefixType) return null;
     
     const rest = content.slice(1).trim();
-    const parts = rest.split(/\s+/);
+    
+    // Must have actual content after prefix
+    if (!rest || rest.length === 0) return null;
+    
+    const parts = rest.split(/\s+/).filter(p => p.length > 0);
     const command = parts[0]?.toLowerCase() || '';
     const args = parts.slice(1);
     
+    // Command must be non-empty
     if (!command) return null;
     
     return {
