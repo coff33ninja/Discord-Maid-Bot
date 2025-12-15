@@ -192,6 +192,64 @@ export class MessageHandler {
   }
 
   /**
+   * Extract reply context from a message
+   * @param {Object} message - Discord message
+   * @returns {Promise<Object|null>} Reply context or null
+   */
+  async extractReplyContext(message) {
+    // Check if this message is a reply to another message
+    if (!message.reference?.messageId) {
+      return null;
+    }
+
+    try {
+      // Fetch the referenced message
+      const referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
+      
+      if (!referencedMessage) return null;
+
+      // Extract content from the referenced message
+      let referencedContent = referencedMessage.content || '';
+      
+      // If the referenced message has embeds (like bot responses), extract that content too
+      if (referencedMessage.embeds?.length > 0) {
+        const embedContents = referencedMessage.embeds
+          .map(embed => {
+            const parts = [];
+            if (embed.title) parts.push(`**${embed.title}**`);
+            if (embed.description) parts.push(embed.description);
+            if (embed.fields?.length > 0) {
+              parts.push(embed.fields.map(f => `${f.name}: ${f.value}`).join('\n'));
+            }
+            return parts.join('\n');
+          })
+          .filter(Boolean);
+        
+        if (embedContents.length > 0) {
+          referencedContent = embedContents.join('\n\n');
+        }
+      }
+
+      // Truncate if too long
+      if (referencedContent.length > 2000) {
+        referencedContent = referencedContent.slice(0, 2000) + '...';
+      }
+
+      return {
+        messageId: referencedMessage.id,
+        authorId: referencedMessage.author.id,
+        authorUsername: referencedMessage.author.username,
+        isBot: referencedMessage.author.bot,
+        content: referencedContent,
+        timestamp: referencedMessage.createdTimestamp
+      };
+    } catch (error) {
+      logger.debug('Could not fetch referenced message:', error.message);
+      return null;
+    }
+  }
+
+  /**
    * Generate AI response and reply
    * @param {Object} message - Discord message
    * @param {string} content - Message content to process
@@ -206,12 +264,16 @@ export class MessageHandler {
       // Show typing indicator
       await message.channel.sendTyping();
       
-      // Generate response
+      // Extract reply context if this is a reply to another message
+      const replyContext = await this.extractReplyContext(message);
+      
+      // Generate response with reply context
       const result = await this.responseHandler.generateResponse({
         channelId: message.channelId,
         userId: message.author.id,
         username: message.author.username,
-        content
+        content,
+        replyContext
       });
       
       // Build embed response

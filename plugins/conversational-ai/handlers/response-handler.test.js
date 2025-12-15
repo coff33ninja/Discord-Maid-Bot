@@ -326,6 +326,123 @@ try {
   failed++;
 }
 
+/**
+ * Property: Reply Context Included in Prompt
+ */
+console.log('Property: Reply Context Included in Prompt');
+try {
+  const { handler } = createTestHandler();
+  
+  const personality = {
+    name: 'Test',
+    prompt: 'You are a test personality.'
+  };
+  
+  const context = {
+    shortTerm: [],
+    semantic: [],
+    userPrefs: null,
+    totalTokens: 0
+  };
+  
+  const replyContext = {
+    messageId: '123456789',
+    authorId: 'user456',
+    authorUsername: 'OriginalUser',
+    isBot: false,
+    content: 'This is the original message being replied to',
+    timestamp: Date.now()
+  };
+  
+  const userMessage = 'What do you think about that?';
+  const prompt = handler.buildPrompt(userMessage, context, personality, {
+    replyContext
+  });
+  
+  // Should include reply context
+  if (!prompt.includes('Message Being Replied To')) {
+    throw new Error('Missing reply context header');
+  }
+  
+  if (!prompt.includes('OriginalUser')) {
+    throw new Error('Missing original author');
+  }
+  
+  if (!prompt.includes('This is the original message being replied to')) {
+    throw new Error('Missing original message content');
+  }
+  
+  // Test with bot reply context
+  const botReplyContext = {
+    ...replyContext,
+    isBot: true,
+    authorUsername: 'Bot'
+  };
+  
+  const promptWithBotReply = handler.buildPrompt(userMessage, context, personality, {
+    replyContext: botReplyContext
+  });
+  
+  if (!promptWithBotReply.includes('From: Bot')) {
+    throw new Error('Bot reply context should show "Bot" as author');
+  }
+  
+  console.log('  ✅ PASSED\n');
+  passed++;
+} catch (error) {
+  console.log('  ❌ FAILED:', error.message, '\n');
+  failed++;
+}
+
+/**
+ * Property: Reply Context Stored in Memory
+ */
+console.log('Property: Reply Context Stored in Memory');
+try {
+  await fc.assert(
+    fc.asyncProperty(
+      fc.record({
+        channelId: fc.string({ minLength: 1, maxLength: 20 }),
+        userId: fc.string({ minLength: 1, maxLength: 20 }),
+        username: fc.string({ minLength: 1, maxLength: 32 }),
+        content: fc.string({ minLength: 1, maxLength: 200 })
+      }),
+      fc.record({
+        messageId: fc.string({ minLength: 1, maxLength: 20 }),
+        authorId: fc.string({ minLength: 1, maxLength: 20 }),
+        authorUsername: fc.string({ minLength: 1, maxLength: 32 }),
+        isBot: fc.boolean(),
+        content: fc.string({ minLength: 1, maxLength: 200 }),
+        timestamp: fc.integer({ min: 0, max: Date.now() })
+      }),
+      async (options, replyContext) => {
+        const { handler, shortTermMemory } = createTestHandler();
+        shortTermMemory.clear(options.channelId);
+        
+        // Generate response with reply context
+        await handler.generateResponse({
+          ...options,
+          replyContext
+        });
+        
+        // Get messages
+        const messages = shortTermMemory.getContext(options.channelId, 100000);
+        const userMessage = messages.find(m => !m.isBot);
+        
+        // User message should include reply reference
+        const expectedPrefix = `[Replying to ${replyContext.isBot ? 'Bot' : replyContext.authorUsername}]`;
+        return userMessage.content.includes(expectedPrefix);
+      }
+    ),
+    { numRuns: 30 }
+  );
+  console.log('  ✅ PASSED\n');
+  passed++;
+} catch (error) {
+  console.log('  ❌ FAILED:', error.message, '\n');
+  failed++;
+}
+
 // Summary
 console.log('═'.repeat(50));
 console.log(`Results: ${passed} passed, ${failed} failed`);

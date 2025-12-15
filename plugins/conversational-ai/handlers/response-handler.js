@@ -13,12 +13,23 @@ import { ContextReconstructor } from '../context/context-reconstructor.js';
 const logger = createLogger('response-handler');
 
 /**
+ * @typedef {Object} ReplyContext
+ * @property {string} messageId - Referenced message ID
+ * @property {string} authorId - Original author ID
+ * @property {string} authorUsername - Original author username
+ * @property {boolean} isBot - Whether original author is bot
+ * @property {string} content - Referenced message content
+ * @property {number} timestamp - Referenced message timestamp
+ */
+
+/**
  * @typedef {Object} ResponseOptions
  * @property {string} channelId - Discord channel ID
  * @property {string} userId - Discord user ID
  * @property {string} username - Discord username
  * @property {string} content - Message content
  * @property {Object} [networkContext] - Optional network context
+ * @property {ReplyContext} [replyContext] - Context from replied-to message
  */
 
 /**
@@ -114,7 +125,7 @@ export class ResponseHandler {
    * @param {string} userMessage - User's message
    * @param {Object} context - Reconstructed context
    * @param {Object} personality - Personality config
-   * @param {Object} [extras] - Extra context (network, etc.)
+   * @param {Object} [extras] - Extra context (network, replyContext, etc.)
    * @returns {string}
    */
   buildPrompt(userMessage, context, personality, extras = {}) {
@@ -128,6 +139,18 @@ export class ResponseHandler {
     const contextText = this.contextReconstructor.formatForPrompt(context);
     if (contextText) {
       parts.push(contextText);
+    }
+    
+    // Add reply context if user is replying to another message
+    if (extras.replyContext) {
+      const rc = extras.replyContext;
+      const authorLabel = rc.isBot ? 'Bot' : rc.authorUsername;
+      parts.push('**Message Being Replied To:**');
+      parts.push(`From: ${authorLabel}`);
+      parts.push(`Content: ${rc.content}`);
+      parts.push('');
+      parts.push('(The user is asking about or responding to the above message. Consider this context in your response.)');
+      parts.push('');
     }
     
     // Add extra context (network, etc.)
@@ -151,7 +174,7 @@ export class ResponseHandler {
    * @returns {Promise<ResponseResult>}
    */
   async generateResponse(options) {
-    const { channelId, userId, username, content, networkContext } = options;
+    const { channelId, userId, username, content, networkContext, replyContext } = options;
     
     // 1. Reconstruct context
     const context = this.contextReconstructor.reconstruct({
@@ -164,20 +187,25 @@ export class ResponseHandler {
     const personalityKey = await this.getUserPersonality(userId);
     const personality = await this.getPersonality(personalityKey);
     
-    // 3. Build prompt
+    // 3. Build prompt with reply context
     const prompt = this.buildPrompt(content, context, personality, {
       networkContext,
-      username
+      username,
+      replyContext
     });
     
     // 4. Generate response
     const response = await this.generateFn(prompt);
     
-    // 5. Update short-term memory with user message
+    // 5. Update short-term memory with user message (include reply reference)
+    const userMessageContent = replyContext 
+      ? `[Replying to ${replyContext.isBot ? 'Bot' : replyContext.authorUsername}] ${content}`
+      : content;
+    
     this.shortTermMemory.addMessage(channelId, {
       userId,
       username,
-      content,
+      content: userMessageContent,
       timestamp: Date.now(),
       isBot: false
     });
@@ -198,7 +226,8 @@ export class ResponseHandler {
       response,
       context,
       stats,
-      personalityKey
+      personalityKey,
+      hadReplyContext: !!replyContext
     };
   }
 
