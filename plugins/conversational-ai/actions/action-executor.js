@@ -2260,6 +2260,253 @@ const ACTIONS = {
       return `✅ **Reminder Deleted**\n\n` +
         `Removed: "${result.reminder?.name || result.reminder?.message?.substring(0, 50)}"`;
     }
+  },
+
+  // ============ SPEED TEST HISTORY ============
+  'speedtest-history': {
+    keywords: ['speed history', 'speed test history', 'internet history', 'past speed tests', 'speed trends'],
+    plugin: 'integrations',
+    description: 'View speed test history and trends',
+    async execute(context) {
+      const { speedTestOps } = await import('../../../src/database/db.js');
+      const history = speedTestOps.getRecent(20);
+      
+      if (!history || history.length === 0) {
+        return { empty: true };
+      }
+      
+      const avgDownload = history.reduce((sum, t) => sum + parseFloat(t.download), 0) / history.length;
+      const avgUpload = history.reduce((sum, t) => sum + parseFloat(t.upload), 0) / history.length;
+      const avgPing = history.reduce((sum, t) => sum + parseFloat(t.ping), 0) / history.length;
+      
+      return {
+        success: true,
+        count: history.length,
+        avgDownload: avgDownload.toFixed(2),
+        avgUpload: avgUpload.toFixed(2),
+        avgPing: avgPing.toFixed(0),
+        latest: history[0]
+      };
+    },
+    formatResult(result) {
+      if (result.empty) {
+        return `📊 No speed test history found. Run "speed test" first!`;
+      }
+      
+      return `**📊 Speed Test History**\n\n` +
+        `📈 **${result.count} tests recorded**\n\n` +
+        `⬇️ **Avg Download:** ${result.avgDownload} Mbps\n` +
+        `⬆️ **Avg Upload:** ${result.avgUpload} Mbps\n` +
+        `📶 **Avg Ping:** ${result.avgPing} ms\n\n` +
+        `_Latest: ${result.latest?.download} Mbps down_`;
+    }
+  },
+
+  // ============ DEVICE GROUPS ============
+  'device-groups': {
+    keywords: ['device groups', 'list groups', 'show groups', 'what groups'],
+    plugin: 'device-management',
+    description: 'List device groups',
+    async execute() {
+      const { deviceOps } = await import('../../../src/database/db.js');
+      const groups = deviceOps.getAllGroups();
+      
+      if (!groups || groups.length === 0) {
+        return { empty: true };
+      }
+      
+      const groupData = groups.map(g => {
+        const devices = deviceOps.getByGroup(g);
+        const online = devices.filter(d => d.online).length;
+        return { name: g, total: devices.length, online };
+      });
+      
+      return { success: true, groups: groupData };
+    },
+    formatResult(result) {
+      if (result.empty) {
+        return `📁 No device groups found.\n\nCreate one with: "Add device X to group Gaming"`;
+      }
+      
+      const list = result.groups.map(g => 
+        `📁 **${g.name}** - ${g.total} devices (${g.online} online)`
+      ).join('\n');
+      
+      return `**📁 Device Groups**\n\n${list}`;
+    }
+  },
+
+  'device-group-view': {
+    keywords: ['devices in group', 'show group', 'group devices'],
+    plugin: 'device-management',
+    description: 'View devices in a specific group',
+    async execute(context) {
+      const { deviceOps } = await import('../../../src/database/db.js');
+      const query = context.query?.toLowerCase() || '';
+      
+      // Extract group name
+      const match = query.match(/(?:in\s+group|show\s+group|group)\s+["']?([a-zA-Z0-9_\-\s]+)["']?/i);
+      
+      if (!match) {
+        return { needsGroup: true };
+      }
+      
+      const groupName = match[1].trim();
+      const devices = deviceOps.getByGroup(groupName);
+      
+      if (!devices || devices.length === 0) {
+        return { notFound: true, groupName };
+      }
+      
+      return { success: true, groupName, devices };
+    },
+    formatResult(result) {
+      if (result.needsGroup) {
+        return `📁 Which group? Try: "Show group Gaming" or "Devices in group Servers"`;
+      }
+      
+      if (result.notFound) {
+        return `📁 No devices found in group "${result.groupName}"`;
+      }
+      
+      const list = result.devices.slice(0, 10).map(d => {
+        const status = d.online ? '🟢' : '🔴';
+        const emoji = d.emoji || '📱';
+        return `${status} ${emoji} ${d.name || d.ip}`;
+      }).join('\n');
+      
+      return `**📁 Group: ${result.groupName}**\n\n${list}` +
+        (result.devices.length > 10 ? `\n\n_...and ${result.devices.length - 10} more_` : '');
+    }
+  },
+
+  // ============ SCHEDULED TASKS ============
+  'scheduled-tasks': {
+    keywords: ['scheduled tasks', 'list tasks', 'show tasks', 'automation tasks', 'cron jobs'],
+    plugin: 'automation',
+    description: 'List scheduled automation tasks',
+    async execute() {
+      const { taskOps } = await import('../../../src/database/db.js');
+      const tasks = taskOps.getAll();
+      
+      if (!tasks || tasks.length === 0) {
+        return { empty: true };
+      }
+      
+      return { success: true, tasks };
+    },
+    formatResult(result) {
+      if (result.empty) {
+        return `⏰ No scheduled tasks found.\n\nUse \`/automation schedule\` to create one.`;
+      }
+      
+      const list = result.tasks.slice(0, 10).map(t => {
+        const status = t.enabled ? '🟢' : '🔴';
+        return `${status} **${t.name}** - \`${t.cron_expression}\`\n   Command: ${t.command}`;
+      }).join('\n\n');
+      
+      return `**⏰ Scheduled Tasks**\n\n${list}`;
+    }
+  },
+
+  // ============ GAME LEADERBOARD ============
+  'game-leaderboard': {
+    keywords: ['game leaderboard', 'leaderboard', 'top players', 'game scores', 'who is winning'],
+    plugin: 'games',
+    description: 'Show game leaderboard',
+    async execute() {
+      const { getGlobalLeaderboard } = await import('../../games/games/game-manager.js');
+      const leaderboard = await getGlobalLeaderboard(10);
+      
+      if (!leaderboard || leaderboard.length === 0) {
+        return { empty: true };
+      }
+      
+      return { success: true, leaderboard };
+    },
+    formatResult(result) {
+      if (result.empty) {
+        return `🏆 No scores yet! Play some games to get on the leaderboard.`;
+      }
+      
+      const medals = ['🥇', '🥈', '🥉'];
+      const list = result.leaderboard.map((p, i) => {
+        const medal = medals[i] || `${i + 1}.`;
+        return `${medal} <@${p.odId}> - **${p.totalPoints}** pts (${p.gamesWon} wins)`;
+      }).join('\n');
+      
+      return `**🏆 Game Leaderboard**\n\n${list}`;
+    }
+  },
+
+  // ============ SPEED ALERTS ============
+  'speed-alert-config': {
+    keywords: ['speed alert', 'set speed threshold', 'alert when slow', 'speed notification'],
+    plugin: 'speed-alerts',
+    description: 'Configure speed alerts',
+    permission: 'admin',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const plugin = getPlugin('speed-alerts');
+      
+      if (!plugin) {
+        return { error: 'Speed alerts plugin not available' };
+      }
+      
+      const settings = await plugin.getSettings();
+      return { success: true, settings };
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      const s = result.settings;
+      return `**🚨 Speed Alert Settings**\n\n` +
+        `📊 **Threshold:** ${s.threshold} Mbps\n` +
+        `📢 **Channel:** ${s.alertChannel ? `<#${s.alertChannel}>` : 'Not set'}\n` +
+        `✅ **Status:** ${s.enabled ? 'Enabled' : 'Disabled'}\n\n` +
+        `_Use \`/automation speedalert config\` to change settings_`;
+    }
+  },
+
+  // ============ DEVICE TRIGGERS LIST ============
+  'device-triggers-list': {
+    keywords: ['device triggers', 'list triggers', 'my triggers', 'automation triggers'],
+    plugin: 'device-triggers',
+    description: 'List device automation triggers',
+    async execute() {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const plugin = getPlugin('device-triggers');
+      
+      if (!plugin?.listTriggers) {
+        return { error: 'Device triggers plugin not available' };
+      }
+      
+      const triggers = await plugin.listTriggers();
+      
+      if (!triggers || triggers.length === 0) {
+        return { empty: true };
+      }
+      
+      return { success: true, triggers };
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      if (result.empty) {
+        return `🔔 No device triggers configured.\n\nUse \`/automation devicetrigger add\` to create one.`;
+      }
+      
+      const list = result.triggers.slice(0, 8).map(t => {
+        const status = t.enabled ? '✅' : '⚠️';
+        return `${status} **${t.name}**\n   Event: ${t.event} → ${t.action.replace('_', ' ')}`;
+      }).join('\n\n');
+      
+      return `**🔔 Device Triggers**\n\n${list}`;
+    }
   }
 };
 

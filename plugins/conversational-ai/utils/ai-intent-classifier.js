@@ -146,6 +146,42 @@ const ACTION_CATEGORIES = {
     examples: ['delete reminder', 'remove reminder', 'cancel reminder']
   },
   
+  // Speed & History
+  'speedtest-history': {
+    description: 'View speed test history and trends',
+    examples: ['speed test history', 'how has my internet been', 'past speed tests', 'speed trends']
+  },
+  
+  // Device Groups
+  'device-groups': {
+    description: 'List all device groups',
+    examples: ['list device groups', 'show groups', 'what groups do I have']
+  },
+  'device-group-view': {
+    description: 'View devices in a specific group',
+    examples: ['show devices in group Gaming', 'devices in group Servers', 'show group IoT']
+  },
+  
+  // Automation
+  'scheduled-tasks': {
+    description: 'List scheduled automation tasks',
+    examples: ['list scheduled tasks', 'show automation tasks', 'what tasks are scheduled']
+  },
+  'device-triggers-list': {
+    description: 'List device automation triggers',
+    examples: ['list device triggers', 'show my triggers', 'what triggers do I have']
+  },
+  'speed-alert-config': {
+    description: 'View or configure speed alerts',
+    examples: ['speed alert settings', 'show speed alerts', 'speed notification config']
+  },
+  
+  // Games
+  'game-leaderboard': {
+    description: 'Show game leaderboard and top players',
+    examples: ['game leaderboard', 'who is winning', 'top players', 'game scores']
+  },
+  
   // User Profiles
   'profile-setup': {
     description: 'Create a profile setup channel for members to introduce themselves',
@@ -309,7 +345,14 @@ function fallbackClassification(query) {
     { keywords: ['device health', 'health report', 'device uptime', 'unhealthy devices'], action: 'device-health' },
     { keywords: ['shutdown', 'turn off', 'power off', 'restart', 'reboot'], action: 'shutdown-device' },
     { keywords: ['list reminders', 'show reminders', 'my reminders', 'view reminders'], action: 'reminder-list' },
-    { keywords: ['delete reminder', 'remove reminder', 'cancel reminder'], action: 'reminder-delete' }
+    { keywords: ['delete reminder', 'remove reminder', 'cancel reminder'], action: 'reminder-delete' },
+    { keywords: ['speed history', 'speed test history', 'past speed tests'], action: 'speedtest-history' },
+    { keywords: ['device groups', 'list groups', 'show groups'], action: 'device-groups' },
+    { keywords: ['devices in group', 'show group', 'group devices'], action: 'device-group-view' },
+    { keywords: ['scheduled tasks', 'list tasks', 'automation tasks'], action: 'scheduled-tasks' },
+    { keywords: ['device triggers', 'list triggers', 'my triggers'], action: 'device-triggers-list' },
+    { keywords: ['speed alert', 'speed threshold', 'speed notification'], action: 'speed-alert-config' },
+    { keywords: ['leaderboard', 'top players', 'game scores', 'who is winning'], action: 'game-leaderboard' }
   ];
 
   for (const match of quickMatches) {
