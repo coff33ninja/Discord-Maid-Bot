@@ -31,6 +31,14 @@ export default class SmartRemindersPlugin extends Plugin {
     if (savedReminders) {
       try {
         this.reminders = JSON.parse(savedReminders);
+        
+        // Convert triggerTime strings to timestamps for proper comparison
+        for (const reminder of this.reminders) {
+          if (reminder.triggerTime && typeof reminder.triggerTime === 'string') {
+            reminder.triggerTime = new Date(reminder.triggerTime).getTime();
+          }
+        }
+        
         this.logger.info(`   Loaded ${this.reminders.length} reminder(s)`);
       } catch (e) {
         this.logger.error('   Failed to parse reminders:', e);
@@ -366,6 +374,12 @@ Variation:`;
   }
   
   async addReminder(reminderData) {
+    // Ensure triggerTime is a timestamp (number), not a string
+    let triggerTime = reminderData.triggerTime;
+    if (triggerTime && typeof triggerTime === 'string') {
+      triggerTime = new Date(triggerTime).getTime();
+    }
+    
     const reminder = {
       id: Date.now().toString(),
       name: reminderData.name,
@@ -376,7 +390,7 @@ Variation:`;
       targetUserId: reminderData.targetUserId, // Who to remind (if different from creator)
       targetRoleId: reminderData.targetRoleId, // Role to remind
       channelId: reminderData.channelId,
-      triggerTime: reminderData.triggerTime,
+      triggerTime: triggerTime,
       deviceMac: reminderData.deviceMac,
       interval: reminderData.interval,
       context: reminderData.context,
