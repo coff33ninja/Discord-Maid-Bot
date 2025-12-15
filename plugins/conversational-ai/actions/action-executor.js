@@ -361,37 +361,89 @@ const ACTIONS = {
     plugin: 'games',
     description: 'Start a game',
     async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
       const query = context.query?.toLowerCase() || '';
       
-      // Detect which game
+      // All available games with their keywords and display names
       const gameMap = {
-        'trivia': ['trivia', 'quiz'],
-        'hangman': ['hangman', 'hang man'],
-        'numguess': ['number', 'guess number', 'number guess'],
-        'rps': ['rps', 'rock paper', 'rock-paper'],
-        'tictactoe': ['tic tac', 'tictactoe', 'tic-tac'],
-        'connect4': ['connect', 'connect 4', 'connect four'],
-        'riddle': ['riddle', 'riddles'],
-        'wordchain': ['word chain', 'wordchain'],
-        '20questions': ['20 questions', 'twenty questions'],
-        'emojidecode': ['emoji', 'decode'],
-        'wouldyourather': ['would you rather', 'wyr'],
-        'mathblitz': ['math', 'math blitz'],
-        'reaction': ['reaction', 'reaction race'],
-        'mafia': ['mafia']
+        'trivia': { keywords: ['trivia', 'quiz'], name: 'Trivia', emoji: '🧠' },
+        'hangman': { keywords: ['hangman', 'hang man'], name: 'Hangman', emoji: '🎯' },
+        'numguess': { keywords: ['number', 'guess number', 'number guess'], name: 'Number Guess', emoji: '🔢' },
+        'rps': { keywords: ['rps', 'rock paper', 'rock-paper', 'rock scissors'], name: 'Rock Paper Scissors', emoji: '✊' },
+        'tictactoe': { keywords: ['tic tac', 'tictactoe', 'tic-tac', 'noughts'], name: 'Tic Tac Toe', emoji: '⭕' },
+        'connect4': { keywords: ['connect', 'connect 4', 'connect four'], name: 'Connect Four', emoji: '🔴' },
+        'riddle': { keywords: ['riddle', 'riddles'], name: 'Riddles', emoji: '🧩' },
+        'wordchain': { keywords: ['word chain', 'wordchain'], name: 'Word Chain', emoji: '🔗' },
+        '20questions': { keywords: ['20 questions', 'twenty questions'], name: '20 Questions', emoji: '❓' },
+        'emojidecode': { keywords: ['emoji', 'decode', 'emoji decode'], name: 'Emoji Decode', emoji: '😀' },
+        'wouldyourather': { keywords: ['would you rather', 'wyr'], name: 'Would You Rather', emoji: '🤔' },
+        'mathblitz': { keywords: ['math', 'math blitz', 'maths'], name: 'Math Blitz', emoji: '➕' },
+        'reaction': { keywords: ['reaction', 'reaction race', 'quick'], name: 'Reaction Race', emoji: '⚡' },
+        'mafia': { keywords: ['mafia', 'werewolf'], name: 'Mafia', emoji: '🎭' }
       };
       
+      // Check for active game in channel
+      const gamesPlugin = getPlugin('games');
+      if (gamesPlugin?.getActiveGame && context.channelId) {
+        const activeGame = gamesPlugin.getActiveGame(context.channelId);
+        if (activeGame) {
+          return { 
+            activeGame: true, 
+            currentGame: activeGame.type || 'unknown',
+            channelId: context.channelId
+          };
+        }
+      }
+      
+      // Try exact keyword match first
       let selectedGame = null;
-      for (const [gameKey, keywords] of Object.entries(gameMap)) {
-        if (keywords.some(kw => query.includes(kw))) {
+      for (const [gameKey, gameInfo] of Object.entries(gameMap)) {
+        if (gameInfo.keywords.some(kw => query.includes(kw))) {
           selectedGame = gameKey;
           break;
         }
       }
       
-      // Default to trivia if no specific game mentioned
+      // If no exact match, try fuzzy matching
+      if (!selectedGame) {
+        // Extract potential game name from query
+        const playMatch = query.match(/(?:play|start|lets play|let's play)\s+(.+?)(?:\s+game)?$/i);
+        if (playMatch) {
+          const searchTerm = playMatch[1].trim();
+          
+          // Simple fuzzy match: find games where name contains search term or vice versa
+          const matches = Object.entries(gameMap).filter(([key, info]) => {
+            const nameLower = info.name.toLowerCase();
+            return nameLower.includes(searchTerm) || 
+                   searchTerm.includes(nameLower) ||
+                   key.includes(searchTerm) ||
+                   searchTerm.includes(key);
+          });
+          
+          if (matches.length === 1) {
+            selectedGame = matches[0][0];
+          } else if (matches.length > 1) {
+            return { 
+              suggestions: matches.map(([key, info]) => ({ key, ...info })),
+              searchTerm
+            };
+          } else {
+            // No matches - suggest similar games
+            return { 
+              notFound: true, 
+              searchTerm,
+              allGames: Object.entries(gameMap).map(([key, info]) => ({ key, ...info }))
+            };
+          }
+        }
+      }
+      
+      // Default to showing game list if just "play" or "game"
       if (!selectedGame && (query.includes('play') || query.includes('game'))) {
-        selectedGame = 'trivia';
+        return { 
+          needsSelection: true,
+          allGames: Object.entries(gameMap).map(([key, info]) => ({ key, ...info }))
+        };
       }
       
       if (!selectedGame) {
@@ -399,23 +451,42 @@ const ACTIONS = {
       }
       
       return { 
-        game: selectedGame, 
+        game: selectedGame,
+        gameInfo: gameMap[selectedGame],
         message: context.message,
         channelId: context.channelId,
         requiresInteraction: true
       };
     },
     formatResult(result) {
+      if (result.activeGame) {
+        return `🎮 There's already a **${result.currentGame}** game active in this channel!\n\n` +
+          `Use \`/game stop\` to end it first, or join the current game.`;
+      }
+      
+      if (result.suggestions) {
+        const suggestionList = result.suggestions.map(g => `${g.emoji} **${g.name}** - \`play ${g.key}\``).join('\n');
+        return `🎮 Did you mean one of these?\n\n${suggestionList}\n\n` +
+          `Say "play [game name]" to start!`;
+      }
+      
+      if (result.notFound) {
+        const topGames = result.allGames.slice(0, 5).map(g => `${g.emoji} ${g.name}`).join(', ');
+        return `🎮 I don't know a game called "${result.searchTerm}".\n\n` +
+          `Try: ${topGames}\n\nOr say "what games" to see all available games!`;
+      }
+      
       if (result.needsSelection) {
-        return `🎮 Which game would you like to play?\n\n` +
-          `Say "play trivia", "play hangman", "play riddles", etc.\n` +
-          `Or use \`/game list\` to see all games!`;
+        const gameList = result.allGames?.slice(0, 8).map(g => `${g.emoji} **${g.name}**`).join('\n') || 
+          '🧠 Trivia, 🎯 Hangman, 🔢 Number Guess, ✊ RPS...';
+        return `🎮 Which game would you like to play?\n\n${gameList}\n\n` +
+          `Say "play [game name]" to start!`;
       }
       
       if (result.requiresInteraction) {
-        return `🎮 To start **${result.game}**, please use the slash command:\n\n` +
+        return `🎮 To start **${result.gameInfo?.name || result.game}**, please use:\n\n` +
           `\`/game play game:${result.game}\`\n\n` +
-          `_Games require Discord interactions for buttons and responses._`;
+          `_Games need Discord buttons for interaction._`;
       }
       
       return `🎮 Starting ${result.game}...`;
@@ -626,6 +697,113 @@ const ACTIONS = {
     }
   },
 
+  // ============ WEB SEARCH ============
+  'web-search': {
+    keywords: ['search for', 'search the web', 'google', 'look up online', 'find online', 'web search'],
+    plugin: 'research',
+    description: 'Search the web using DuckDuckGo',
+    async execute(context) {
+      const query = context.query || '';
+      
+      // Extract search query
+      const searchPatterns = [
+        /search\s+(?:for|the web for)?\s*(.+)/i,
+        /google\s+(.+)/i,
+        /look\s+up\s+online\s+(.+)/i,
+        /find\s+online\s+(.+)/i,
+        /web\s+search\s+(?:for)?\s*(.+)/i
+      ];
+      
+      let searchQuery = null;
+      for (const pattern of searchPatterns) {
+        const match = query.match(pattern);
+        if (match) {
+          searchQuery = match[1].trim().replace(/\?$/, '');
+          break;
+        }
+      }
+      
+      if (!searchQuery) {
+        return { needsQuery: true };
+      }
+      
+      try {
+        // Use DuckDuckGo Instant Answer API
+        const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(searchQuery)}&format=json&no_html=1&skip_disambig=1`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        const results = [];
+        
+        // Add abstract if available
+        if (data.AbstractText) {
+          results.push({
+            title: data.Heading || searchQuery,
+            snippet: data.AbstractText,
+            url: data.AbstractURL || `https://duckduckgo.com/?q=${encodeURIComponent(searchQuery)}`
+          });
+        }
+        
+        // Add related topics
+        if (data.RelatedTopics) {
+          for (const topic of data.RelatedTopics.slice(0, 4)) {
+            if (topic.Text && topic.FirstURL) {
+              results.push({
+                title: topic.Text.split(' - ')[0] || topic.Text.substring(0, 50),
+                snippet: topic.Text,
+                url: topic.FirstURL
+              });
+            }
+          }
+        }
+        
+        // If no results from API, provide search link
+        if (results.length === 0) {
+          return {
+            query: searchQuery,
+            noResults: true,
+            searchUrl: `https://duckduckgo.com/?q=${encodeURIComponent(searchQuery)}`
+          };
+        }
+        
+        return {
+          query: searchQuery,
+          results: results.slice(0, 5),
+          searchUrl: `https://duckduckgo.com/?q=${encodeURIComponent(searchQuery)}`
+        };
+      } catch (error) {
+        return { error: error.message, query: searchQuery };
+      }
+    },
+    formatResult(result) {
+      if (result.needsQuery) {
+        return `🔎 What would you like me to search for?\n\n` +
+          `Say "Search for [query]" or "Google [query]"`;
+      }
+      
+      if (result.error) {
+        return `❌ Search failed: ${result.error}\n\n` +
+          `Try searching directly: ${result.searchUrl || 'https://duckduckgo.com'}`;
+      }
+      
+      if (result.noResults) {
+        return `🔎 No instant results for "${result.query}"\n\n` +
+          `Try searching directly: [DuckDuckGo](${result.searchUrl})`;
+      }
+      
+      let response = `**🔎 Search: ${result.query}**\n\n`;
+      
+      for (const r of result.results) {
+        const snippet = r.snippet.length > 150 ? r.snippet.substring(0, 150) + '...' : r.snippet;
+        response += `**${r.title}**\n${snippet}\n[Link](${r.url})\n\n`;
+      }
+      
+      response += `_[More results](${result.searchUrl})_`;
+      
+      return response;
+    }
+  },
+
   // ============ REMINDERS ============
   'reminder-set': {
     keywords: ['remind me', 'set reminder', 'reminder for', 'remember to', "don't let me forget"],
@@ -671,6 +849,263 @@ const ACTIONS = {
     },
     formatResult(result) {
       return `🏓 **Pong!** Latency: ${result.ping}ms`;
+    }
+  },
+
+  // ============ REMINDER CREATION ============
+  'reminder-create': {
+    keywords: ['remind me', 'set reminder', 'reminder in', 'reminder at', 'remind me every', "don't forget"],
+    plugin: 'smart-reminders',
+    description: 'Create a reminder via natural language',
+    async execute(context) {
+      const { extractTimeFromSentence, formatDuration, TimeType } = await import('../utils/time-parser.js');
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      
+      const query = context.query || '';
+      const extracted = extractTimeFromSentence(query);
+      
+      if (!extracted.time || extracted.time.type === TimeType.INVALID) {
+        return { needsInfo: true, error: extracted.time?.error };
+      }
+      
+      const reminderPlugin = getPlugin('smart-reminders');
+      if (!reminderPlugin?.addReminder) {
+        return { error: 'Smart reminders plugin not available' };
+      }
+      
+      const reminderData = {
+        name: extracted.message?.substring(0, 30) || 'Reminder',
+        message: extracted.message || 'Reminder',
+        userId: context.userId,
+        channelId: context.channelId,
+        target: 'dm'
+      };
+      
+      if (extracted.time.type === TimeType.RECURRING) {
+        reminderData.type = 'recurring';
+        reminderData.interval = extracted.time.interval;
+      } else {
+        reminderData.type = 'time';
+        reminderData.triggerTime = extracted.time.triggerTime;
+      }
+      
+      try {
+        const reminder = await reminderPlugin.addReminder(reminderData);
+        return {
+          success: true,
+          reminder,
+          time: extracted.time,
+          message: extracted.message
+        };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        return `⏰ I'd love to set a reminder for you! Please tell me:\n\n` +
+          `"Remind me in [time] to [message]"\n` +
+          `"Remind me at [time] to [message]"\n` +
+          `"Remind me every [interval] to [message]"\n\n` +
+          `Examples:\n` +
+          `• "Remind me in 30 minutes to check the server"\n` +
+          `• "Remind me at 3pm to call mom"\n` +
+          `• "Remind me every hour to drink water"`;
+      }
+      
+      if (result.error) {
+        return `❌ Couldn't create reminder: ${result.error}`;
+      }
+      
+      const timeStr = result.time.type === 'recurring' 
+        ? `every ${result.time.interval}`
+        : new Date(result.time.triggerTime).toLocaleString();
+      
+      return `✅ **Reminder Set!**\n\n` +
+        `📝 **Message:** ${result.message}\n` +
+        `⏰ **When:** ${timeStr}\n` +
+        `🆔 **ID:** ${result.reminder.id}`;
+    }
+  },
+
+  // ============ HOME ASSISTANT CONTROL ============
+  'homeassistant-control': {
+    keywords: ['turn on the', 'turn off the', 'switch on', 'switch off', 'lights on', 'lights off', 'set brightness', 'activate scene', 'what lights'],
+    plugin: 'integrations',
+    description: 'Control Home Assistant devices',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const query = context.query?.toLowerCase() || '';
+      
+      const integrationsPlugin = getPlugin('integrations');
+      if (!integrationsPlugin?.homeassistant) {
+        return { error: 'Home Assistant integration not configured', notConfigured: true };
+      }
+      
+      const ha = integrationsPlugin.homeassistant;
+      
+      // Parse the command
+      // "turn on/off [device]"
+      const toggleMatch = query.match(/turn\s+(on|off)\s+(?:the\s+)?(.+)/i);
+      if (toggleMatch) {
+        const action = toggleMatch[1];
+        const deviceName = toggleMatch[2].trim();
+        
+        try {
+          const entities = await ha.getEntities();
+          const entity = entities.find(e => 
+            e.attributes?.friendly_name?.toLowerCase().includes(deviceName) ||
+            e.entity_id.toLowerCase().includes(deviceName.replace(/\s+/g, '_'))
+          );
+          
+          if (!entity) {
+            return { error: `Device "${deviceName}" not found`, notFound: true, query: deviceName };
+          }
+          
+          const domain = entity.entity_id.split('.')[0];
+          const service = action === 'on' ? 'turn_on' : 'turn_off';
+          
+          await ha.callService(domain, service, { entity_id: entity.entity_id });
+          
+          return {
+            success: true,
+            action,
+            device: entity.attributes?.friendly_name || entity.entity_id,
+            entityId: entity.entity_id
+          };
+        } catch (error) {
+          return { error: error.message };
+        }
+      }
+      
+      // "set [light] to [X]%"
+      const brightnessMatch = query.match(/set\s+(.+?)\s+(?:to\s+)?(\d+)\s*%/i);
+      if (brightnessMatch) {
+        const deviceName = brightnessMatch[1].trim();
+        const brightness = Math.min(100, Math.max(0, parseInt(brightnessMatch[2])));
+        
+        try {
+          const entities = await ha.getEntities();
+          const entity = entities.find(e => 
+            e.entity_id.startsWith('light.') &&
+            (e.attributes?.friendly_name?.toLowerCase().includes(deviceName) ||
+             e.entity_id.toLowerCase().includes(deviceName.replace(/\s+/g, '_')))
+          );
+          
+          if (!entity) {
+            return { error: `Light "${deviceName}" not found`, notFound: true };
+          }
+          
+          await ha.callService('light', 'turn_on', {
+            entity_id: entity.entity_id,
+            brightness_pct: brightness
+          });
+          
+          return {
+            success: true,
+            action: 'brightness',
+            device: entity.attributes?.friendly_name || entity.entity_id,
+            brightness
+          };
+        } catch (error) {
+          return { error: error.message };
+        }
+      }
+      
+      // "what lights are on"
+      if (query.includes('what lights') || query.includes('which lights')) {
+        try {
+          const entities = await ha.getEntities();
+          const lights = entities.filter(e => 
+            e.entity_id.startsWith('light.') && e.state === 'on'
+          );
+          
+          return {
+            success: true,
+            action: 'query',
+            lights: lights.map(l => ({
+              name: l.attributes?.friendly_name || l.entity_id,
+              brightness: l.attributes?.brightness ? Math.round(l.attributes.brightness / 255 * 100) : null
+            }))
+          };
+        } catch (error) {
+          return { error: error.message };
+        }
+      }
+      
+      // "activate [scene]"
+      const sceneMatch = query.match(/activate\s+(?:scene\s+)?(.+)/i);
+      if (sceneMatch) {
+        const sceneName = sceneMatch[1].trim();
+        
+        try {
+          const entities = await ha.getEntities();
+          const scene = entities.find(e => 
+            e.entity_id.startsWith('scene.') &&
+            (e.attributes?.friendly_name?.toLowerCase().includes(sceneName) ||
+             e.entity_id.toLowerCase().includes(sceneName.replace(/\s+/g, '_')))
+          );
+          
+          if (!scene) {
+            return { error: `Scene "${sceneName}" not found`, notFound: true };
+          }
+          
+          await ha.callService('scene', 'turn_on', { entity_id: scene.entity_id });
+          
+          return {
+            success: true,
+            action: 'scene',
+            scene: scene.attributes?.friendly_name || scene.entity_id
+          };
+        } catch (error) {
+          return { error: error.message };
+        }
+      }
+      
+      return { needsInfo: true };
+    },
+    formatResult(result) {
+      if (result.notConfigured) {
+        return `🏠 Home Assistant is not configured.\n\nSet up the integration in your \`.env\` file with:\n• \`HOMEASSISTANT_URL\`\n• \`HOMEASSISTANT_TOKEN\``;
+      }
+      
+      if (result.notFound) {
+        return `❌ Device "${result.query || 'unknown'}" not found.\n\nTry using the exact device name from Home Assistant.`;
+      }
+      
+      if (result.needsInfo) {
+        return `🏠 I can control your smart home! Try:\n\n` +
+          `• "Turn on the living room lights"\n` +
+          `• "Turn off the bedroom fan"\n` +
+          `• "Set kitchen lights to 50%"\n` +
+          `• "What lights are on?"\n` +
+          `• "Activate movie scene"`;
+      }
+      
+      if (result.error) {
+        return `❌ Home Assistant error: ${result.error}`;
+      }
+      
+      if (result.action === 'query') {
+        if (result.lights.length === 0) {
+          return `💡 No lights are currently on.`;
+        }
+        const lightList = result.lights.map(l => 
+          `• ${l.name}${l.brightness ? ` (${l.brightness}%)` : ''}`
+        ).join('\n');
+        return `💡 **Lights currently on:**\n\n${lightList}`;
+      }
+      
+      if (result.action === 'brightness') {
+        return `💡 Set **${result.device}** to **${result.brightness}%** brightness`;
+      }
+      
+      if (result.action === 'scene') {
+        return `🎬 Activated scene: **${result.scene}**`;
+      }
+      
+      const emoji = result.action === 'on' ? '💡' : '🌙';
+      return `${emoji} Turned **${result.action}** ${result.device}`;
     }
   }
 };
