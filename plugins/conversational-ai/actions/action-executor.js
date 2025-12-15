@@ -296,11 +296,12 @@ const ACTIONS = {
       const { getPlugin } = await import('../../../src/core/plugin-system.js');
       const integrationsPlugin = getPlugin('integrations');
       
-      if (!integrationsPlugin?.speedtest?.runSpeedTest) {
+      // Note: method is runSpeedtest (lowercase 't')
+      if (!integrationsPlugin?.speedtest?.runSpeedtest) {
         throw new Error('Speed test not available');
       }
       
-      return await integrationsPlugin.speedtest.runSpeedTest();
+      return await integrationsPlugin.speedtest.runSpeedtest();
     },
     formatResult(result) {
       return `**🚀 Speed Test Results:**\n\n` +
@@ -1521,6 +1522,391 @@ const ACTIONS = {
       if (p.bio) response += `📝 **Bio:** ${p.bio}\n`;
       
       return response;
+    }
+  },
+
+  // ============ DISCORD CHANNEL CREATION ============
+  'discord-create-channel': {
+    keywords: ['create channel', 'make channel', 'new channel', 'add channel', 'create a channel', 'make a channel'],
+    plugin: 'server-admin',
+    description: 'Create a new Discord channel',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query?.toLowerCase() || '';
+      
+      // Need guild context
+      if (!context.guild) {
+        return { needsGuild: true };
+      }
+      
+      // Parse channel name and type from query
+      // Patterns: "create channel general", "create voice channel gaming", "make a text channel announcements"
+      const patterns = [
+        /create\s+(?:a\s+)?(?:(text|voice)\s+)?channel\s+(?:called\s+|named\s+)?["']?([a-zA-Z0-9_\-\s]+)["']?/i,
+        /make\s+(?:a\s+)?(?:(text|voice)\s+)?channel\s+(?:called\s+|named\s+)?["']?([a-zA-Z0-9_\-\s]+)["']?/i,
+        /new\s+(?:(text|voice)\s+)?channel\s+(?:called\s+|named\s+)?["']?([a-zA-Z0-9_\-\s]+)["']?/i,
+        /add\s+(?:a\s+)?(?:(text|voice)\s+)?channel\s+(?:called\s+|named\s+)?["']?([a-zA-Z0-9_\-\s]+)["']?/i
+      ];
+      
+      let channelType = 'text';
+      let channelName = null;
+      
+      for (const pattern of patterns) {
+        const match = query.match(pattern);
+        if (match) {
+          if (match[1]) channelType = match[1].toLowerCase();
+          if (match[2]) channelName = match[2].trim();
+          break;
+        }
+      }
+      
+      // Also check for voice keyword anywhere
+      if (query.includes('voice')) {
+        channelType = 'voice';
+      }
+      
+      if (!channelName) {
+        return { needsName: true };
+      }
+      
+      try {
+        const { createChannel } = await import('../../server-admin/discord/channel-manager.js');
+        const result = await createChannel(context.guild, channelName, channelType, null, {
+          executorId: context.userId,
+          executorName: context.username || 'User'
+        });
+        
+        return result;
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) {
+        return `📢 I can only create channels in a server. Please use this command in a Discord server, not DMs.`;
+      }
+      
+      if (result.needsName) {
+        return `📢 What should I name the channel?\n\n` +
+          `Try: "Create channel general" or "Create voice channel gaming"`;
+      }
+      
+      if (result.error) {
+        return `❌ Failed to create channel: ${result.error}`;
+      }
+      
+      if (result.success) {
+        const emoji = result.channel?.type === 'voice' ? '🔊' : '💬';
+        return `${emoji} **Channel Created!**\n\n` +
+          `Created ${result.channel?.type || 'text'} channel **#${result.channel?.name}**`;
+      }
+      
+      return `❌ Something went wrong creating the channel.`;
+    }
+  },
+
+  // ============ DISCORD DELETE CHANNEL ============
+  'discord-delete-channel': {
+    keywords: ['delete channel', 'remove channel', 'delete this channel'],
+    plugin: 'server-admin',
+    description: 'Delete a Discord channel',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query?.toLowerCase() || '';
+      
+      if (!context.guild) {
+        return { needsGuild: true };
+      }
+      
+      // Parse channel name from query
+      const patterns = [
+        /delete\s+(?:the\s+)?channel\s+(?:#)?["']?([a-zA-Z0-9_\-]+)["']?/i,
+        /remove\s+(?:the\s+)?channel\s+(?:#)?["']?([a-zA-Z0-9_\-]+)["']?/i
+      ];
+      
+      let channelName = null;
+      
+      // Check for "this channel"
+      if (query.includes('this channel') && context.channel) {
+        channelName = context.channel.name || context.channelId;
+      } else {
+        for (const pattern of patterns) {
+          const match = query.match(pattern);
+          if (match && match[1]) {
+            channelName = match[1].trim();
+            break;
+          }
+        }
+      }
+      
+      if (!channelName) {
+        return { needsName: true };
+      }
+      
+      try {
+        const { deleteChannel } = await import('../../server-admin/discord/channel-manager.js');
+        const result = await deleteChannel(context.guild, channelName, {
+          executorId: context.userId,
+          executorName: context.username || 'User'
+        });
+        
+        return result;
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) {
+        return `📢 I can only delete channels in a server.`;
+      }
+      
+      if (result.needsName) {
+        return `📢 Which channel should I delete?\n\n` +
+          `Try: "Delete channel old-chat" or "Delete this channel"`;
+      }
+      
+      if (result.error) {
+        return `❌ Failed to delete channel: ${result.error}`;
+      }
+      
+      if (result.success) {
+        return `🗑️ **Channel Deleted!**\n\nDeleted channel **#${result.deletedChannel?.name}**`;
+      }
+      
+      return `❌ Something went wrong deleting the channel.`;
+    }
+  },
+
+  // ============ NETWORK INSIGHTS ============
+  'network-insights': {
+    keywords: ['network insights', 'network analysis', 'analyze network', 'network report', 'network health'],
+    plugin: 'network-insights',
+    description: 'Generate AI-powered network insights and analysis',
+    permission: 'admin',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const insightsPlugin = getPlugin('network-insights');
+      
+      if (!insightsPlugin?.generateInsights) {
+        return { error: 'Network insights plugin not available' };
+      }
+      
+      try {
+        const insight = await insightsPlugin.generateInsights();
+        return { success: true, insight };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ Failed to generate insights: ${result.error}`;
+      }
+      
+      return `**🧠 Network Insights**\n\n${result.insight?.insights || 'No insights available'}\n\n` +
+        `_Devices: ${result.insight?.deviceCount || 0} | Speed tests: ${result.insight?.speedTestCount || 0}_`;
+    }
+  },
+
+  // ============ DEVICE HEALTH ============
+  'device-health': {
+    keywords: ['device health', 'health report', 'device uptime', 'device reliability', 'unhealthy devices'],
+    plugin: 'device-health',
+    description: 'Get device health and uptime reports',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const healthPlugin = getPlugin('device-health');
+      
+      if (!healthPlugin?.getHealthSummary) {
+        return { error: 'Device health plugin not available' };
+      }
+      
+      const summary = healthPlugin.getHealthSummary();
+      const unhealthy = healthPlugin.getUnhealthyDevices();
+      
+      return { success: true, summary, unhealthy };
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      const s = result.summary;
+      let response = `**🏥 Device Health Summary**\n\n` +
+        `📊 **Total Devices:** ${s.totalDevices}\n` +
+        `✅ **Healthy (>90% uptime):** ${s.healthyDevices}\n` +
+        `⚠️ **Unhealthy (<90% uptime):** ${s.unhealthyDevices}\n` +
+        `📈 **Average Uptime:** ${s.averageUptime}%\n`;
+      
+      if (s.mostReliable) {
+        response += `\n🏆 **Most Reliable:** ${s.mostReliable.name} (${s.mostReliable.uptimePercentage}%)`;
+      }
+      
+      if (result.unhealthy?.length > 0) {
+        response += `\n\n**⚠️ Devices Needing Attention:**\n`;
+        response += result.unhealthy.slice(0, 5).map(d => 
+          `• ${d.name}: ${d.uptimePercentage}% uptime`
+        ).join('\n');
+      }
+      
+      return response;
+    }
+  },
+
+  // ============ SHUTDOWN/RESTART DEVICE ============
+  'shutdown-device': {
+    keywords: ['shutdown', 'turn off', 'power off', 'restart', 'reboot'],
+    plugin: 'power-management',
+    description: 'Shutdown or restart a remote device',
+    permission: 'admin',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const { deviceOps } = await import('../../../src/database/db.js');
+      const query = context.query?.toLowerCase() || '';
+      
+      // Determine action type
+      const isRestart = query.includes('restart') || query.includes('reboot');
+      const action = isRestart ? 'restart' : 'shutdown';
+      
+      // Extract device identifier
+      const deviceId = extractDeviceIdentifier(query);
+      
+      if (!deviceId) {
+        return { needsDevice: true, action };
+      }
+      
+      // Find device
+      const devices = deviceOps.getAll();
+      const device = devices.find(d => 
+        d.ip === deviceId ||
+        d.mac?.toLowerCase() === deviceId.toLowerCase() ||
+        d.name?.toLowerCase() === deviceId.toLowerCase()
+      );
+      
+      if (!device) {
+        return { error: `Device "${deviceId}" not found`, notFound: true };
+      }
+      
+      const powerPlugin = getPlugin('power-management');
+      if (!powerPlugin?.powerControlDevice) {
+        return { error: 'Power management plugin not available' };
+      }
+      
+      try {
+        await powerPlugin.powerControlDevice(device.mac, action);
+        return { success: true, device: device.name || device.ip, action };
+      } catch (error) {
+        return { error: error.message, device: device.name || device.ip };
+      }
+    },
+    formatResult(result) {
+      if (result.needsDevice) {
+        return `⚡ Which device would you like to ${result.action}?\n\n` +
+          `Try: "${result.action} my PC" or "${result.action} 192.168.0.100"`;
+      }
+      
+      if (result.notFound) {
+        return `❌ ${result.error}\n\nUse "list devices" to see available devices.`;
+      }
+      
+      if (result.error) {
+        return `❌ Failed to ${result.action} **${result.device}**: ${result.error}\n\n` +
+          `_Note: Device must have shutdown API configured._`;
+      }
+      
+      const emoji = result.action === 'restart' ? '🔄' : '⏹️';
+      return `${emoji} **${result.action === 'restart' ? 'Restarting' : 'Shutting down'}** ${result.device}...`;
+    }
+  },
+
+  // ============ LIST REMINDERS ============
+  'reminder-list': {
+    keywords: ['list reminders', 'show reminders', 'my reminders', 'view reminders', 'what reminders'],
+    plugin: 'smart-reminders',
+    description: 'List your active reminders',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const reminderPlugin = getPlugin('smart-reminders');
+      
+      if (!reminderPlugin?.listReminders) {
+        return { error: 'Smart reminders plugin not available' };
+      }
+      
+      const reminders = await reminderPlugin.listReminders(context.userId);
+      const active = reminders.filter(r => r.active);
+      
+      return { success: true, reminders: active, total: reminders.length };
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      if (result.reminders.length === 0) {
+        return `⏰ You don't have any active reminders.\n\n` +
+          `Create one with: "Remind me in 30 minutes to check the server"`;
+      }
+      
+      let response = `**⏰ Your Active Reminders (${result.reminders.length})**\n\n`;
+      
+      for (const r of result.reminders.slice(0, 10)) {
+        const timeStr = r.type === 'recurring' 
+          ? `Every ${r.interval}` 
+          : new Date(r.triggerTime).toLocaleString();
+        
+        response += `• **${r.name || r.message?.substring(0, 30)}**\n`;
+        response += `  ⏰ ${timeStr} | ID: \`${r.id}\`\n`;
+      }
+      
+      if (result.reminders.length > 10) {
+        response += `\n_...and ${result.reminders.length - 10} more_`;
+      }
+      
+      return response;
+    }
+  },
+
+  // ============ DELETE REMINDER ============
+  'reminder-delete': {
+    keywords: ['delete reminder', 'remove reminder', 'cancel reminder'],
+    plugin: 'smart-reminders',
+    description: 'Delete a reminder',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const query = context.query || '';
+      
+      // Extract reminder ID
+      const idMatch = query.match(/(\d{13,})/); // Timestamp-based IDs
+      
+      if (!idMatch) {
+        return { needsId: true };
+      }
+      
+      const reminderPlugin = getPlugin('smart-reminders');
+      if (!reminderPlugin?.removeReminder) {
+        return { error: 'Smart reminders plugin not available' };
+      }
+      
+      try {
+        const removed = await reminderPlugin.removeReminder(idMatch[1]);
+        return { success: true, reminder: removed };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsId) {
+        return `🗑️ Which reminder should I delete?\n\n` +
+          `Use "list reminders" to see your reminders and their IDs, then:\n` +
+          `"Delete reminder [ID]"`;
+      }
+      
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      return `✅ **Reminder Deleted**\n\n` +
+        `Removed: "${result.reminder?.name || result.reminder?.message?.substring(0, 50)}"`;
     }
   }
 };

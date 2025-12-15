@@ -280,6 +280,36 @@ export const aiActions = [
   
   // Discord Channel Management
   {
+    id: 'discord-create-channel',
+    keywords: ['create channel', 'make channel', 'new channel', 'add channel'],
+    plugin: 'server-admin',
+    description: 'Create a new Discord channel',
+    permission: PERMISSIONS.DISCORD_MANAGE_CHANNELS,
+    async execute(context) {
+      const { createChannel } = await import('./discord/channel-manager.js');
+      return await createChannel(context.guild, context.channelName, context.channelType || 'text', null, context);
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      return `✅ Created channel **#${result.channel?.name}**`;
+    }
+  },
+  {
+    id: 'discord-delete-channel',
+    keywords: ['delete channel', 'remove channel'],
+    plugin: 'server-admin',
+    description: 'Delete a Discord channel',
+    permission: PERMISSIONS.DISCORD_MANAGE_CHANNELS,
+    async execute(context) {
+      const { deleteChannel } = await import('./discord/channel-manager.js');
+      return await deleteChannel(context.guild, context.channelIdentifier, context);
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      return `🗑️ Deleted channel **#${result.deletedChannel?.name}**`;
+    }
+  },
+  {
     id: 'discord-lock-channel',
     keywords: ['lock channel', 'lock this channel'],
     plugin: 'server-admin',

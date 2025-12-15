@@ -113,6 +113,38 @@ const ACTION_CATEGORIES = {
     description: 'Lock or unlock a channel',
     examples: ['lock channel', 'unlock this channel', 'prevent messages']
   },
+  'discord-create-channel': {
+    description: 'Create a new Discord text or voice channel',
+    examples: ['create channel general', 'make a voice channel', 'new channel announcements', 'add channel gaming']
+  },
+  'discord-delete-channel': {
+    description: 'Delete a Discord channel',
+    examples: ['delete channel old-chat', 'remove channel test', 'delete this channel']
+  },
+  
+  // Network & Device Health
+  'network-insights': {
+    description: 'Generate AI-powered network analysis and insights',
+    examples: ['network insights', 'analyze my network', 'network health report', 'how is my network doing']
+  },
+  'device-health': {
+    description: 'Get device health and uptime reports',
+    examples: ['device health', 'show device uptime', 'which devices are unreliable', 'health report']
+  },
+  'shutdown-device': {
+    description: 'Shutdown or restart a remote device',
+    examples: ['shutdown my PC', 'restart the server', 'turn off computer', 'reboot gaming PC']
+  },
+  
+  // Reminder Management
+  'reminder-list': {
+    description: 'List your active reminders',
+    examples: ['list my reminders', 'show reminders', 'what reminders do I have', 'view my reminders']
+  },
+  'reminder-delete': {
+    description: 'Delete a reminder',
+    examples: ['delete reminder', 'remove reminder', 'cancel reminder']
+  },
   
   // User Profiles
   'profile-setup': {
@@ -267,7 +299,14 @@ function fallbackClassification(query) {
     { keywords: ['research', 'look up', 'tell me about'], action: 'research' },
     { keywords: ['home assistant', 'smart home', 'lights'], action: 'home-assistant' },
     { keywords: ['profile channel', 'introduce themselves', 'member profiles'], action: 'profile-setup' },
-    { keywords: ['my profile', 'what do you know about me', 'who am i'], action: 'profile-view' }
+    { keywords: ['my profile', 'what do you know about me', 'who am i'], action: 'profile-view' },
+    { keywords: ['create channel', 'make channel', 'new channel', 'add channel'], action: 'discord-create-channel' },
+    { keywords: ['delete channel', 'remove channel'], action: 'discord-delete-channel' },
+    { keywords: ['network insights', 'analyze network', 'network health', 'network report'], action: 'network-insights' },
+    { keywords: ['device health', 'health report', 'device uptime', 'unhealthy devices'], action: 'device-health' },
+    { keywords: ['shutdown', 'turn off', 'power off', 'restart', 'reboot'], action: 'shutdown-device' },
+    { keywords: ['list reminders', 'show reminders', 'my reminders', 'view reminders'], action: 'reminder-list' },
+    { keywords: ['delete reminder', 'remove reminder', 'cancel reminder'], action: 'reminder-delete' }
   ];
 
   for (const match of quickMatches) {
