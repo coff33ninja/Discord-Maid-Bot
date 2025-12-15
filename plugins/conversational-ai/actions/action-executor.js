@@ -869,25 +869,6 @@ const ACTIONS = {
     }
   },
 
-  // ============ REMINDERS ============
-  'reminder-set': {
-    keywords: ['remind me', 'set reminder', 'reminder for', 'remember to', "don't let me forget"],
-    plugin: 'smart-reminders',
-    description: 'Set a reminder',
-    async execute(context) {
-      // Reminders need slash commands for proper scheduling
-      return { 
-        requiresSlashCommand: true,
-        query: context.query
-      };
-    },
-    formatResult(result) {
-      return `⏰ To set a reminder, please use:\n\n` +
-        `\`/bot reminder set\`\n\n` +
-        `This allows you to set the exact time and message for your reminder.`;
-    }
-  },
-
   // ============ HOME ASSISTANT ============
   'homeassistant': {
     keywords: ['turn on light', 'turn off light', 'lights on', 'lights off', 'home assistant', 'smart home'],
@@ -917,11 +898,11 @@ const ACTIONS = {
     }
   },
 
-  // ============ REMINDER CREATION ============
+  // ============ REMINDER & AUTOMATION CREATION ============
   'reminder-create': {
-    keywords: ['remind me', 'remind us', 'set reminder', 'reminder in', 'reminder at', 'remind me every', "don't forget", 'wake me', 'alert me'],
+    keywords: ['remind me', 'remind us', 'set reminder', 'reminder in', 'reminder at', 'remind me every', "don't forget", 'wake me', 'alert me', 'at ', 'every day at', 'every morning', 'every night', 'every evening', 'schedule', 'automate', 'in 5', 'in 10', 'in 30'],
     plugin: 'smart-reminders',
-    description: 'Create a reminder via natural language',
+    description: 'Create a reminder or scheduled automation via natural language',
     async execute(context) {
       const { getPlugin } = await import('../../../src/core/plugin-system.js');
       
@@ -953,11 +934,32 @@ const ACTIONS = {
         return { error: 'Smart reminders plugin not available' };
       }
       
-      // Check for automation actions in the message
-      const actions = parseAutomationActions(parsed.message || '');
+      // Use AI-parsed actions if available, otherwise try to parse from message
+      let actions = parsed.actions || [];
+      if (actions.length === 0) {
+        actions = parseAutomationActions(parsed.message || '');
+      }
       
-      // Determine target user
+      // Convert AI action format to plugin format
+      const formattedActions = actions.map(action => {
+        if (action.type === 'wol' && action.device) {
+          return { type: 'wol', mac: action.device }; // Will be resolved later
+        }
+        if (action.type === 'homeassistant') {
+          return { 
+            type: 'homeassistant', 
+            service: action.action === 'turn on' ? 'light.turn_on' : 'light.turn_off',
+            entityId: action.entity 
+          };
+        }
+        return action;
+      });
+      
+      // Determine target
       const targetUserId = parsed.target?.userId || context.userId;
+      const isAutomation = parsed.type === 'automation' || 
+                          parsed.target?.type === 'automation' || 
+                          formattedActions.length > 0;
       
       const reminderData = {
         name: parsed.message?.substring(0, 30) || 'Reminder',
@@ -965,9 +967,10 @@ const ACTIONS = {
         userId: context.userId,
         targetUserId: targetUserId,
         channelId: context.channelId,
-        target: parsed.target?.type === 'user' ? 'user' : 
+        target: isAutomation ? 'automation' :
+                parsed.target?.type === 'user' ? 'user' : 
                 parsed.target?.type === 'channel' ? 'channel' : 'dm',
-        actions: actions.length > 0 ? actions : undefined
+        actions: formattedActions.length > 0 ? formattedActions : undefined
       };
       
       if (parsed.type === 'recurring') {
@@ -986,8 +989,9 @@ const ACTIONS = {
           time: parsed.time,
           message: parsed.message,
           targetUserId,
-          actions,
-          confidence: parsed.confidence
+          actions: formattedActions,
+          confidence: parsed.confidence,
+          isAutomation
         };
       } catch (error) {
         return { error: error.message };
@@ -1000,17 +1004,18 @@ const ACTIONS = {
           return `❓ ${result.clarification}`;
         }
         
-        return `⏰ I'd love to set a reminder! Here's what I can do:\n\n` +
+        return `⏰ I can help with reminders and automations! Here's what I can do:\n\n` +
           `**Basic Reminders:**\n` +
           `• "Remind me in 30 minutes to check the server"\n` +
           `• "Remind me at 6pm to call mom"\n` +
           `• "Remind me every hour to drink water"\n\n` +
           `**Remind Others:**\n` +
           `• "Remind @user in 1 hour about the meeting"\n\n` +
-          `**With Automations:**\n` +
-          `• "At 6am wake my PC and run a speed test"\n` +
-          `• "Every day at 8am scan the network"\n` +
-          `• "In 30 minutes turn on the lights"`;
+          `**Scheduled Automations:**\n` +
+          `• "At 6am wake my PC"\n` +
+          `• "Every morning scan the network"\n` +
+          `• "In 30 minutes turn on the lights"\n` +
+          `• "Every day at 8am run a speed test"`;
       }
       
       if (result.error) {
@@ -1027,8 +1032,11 @@ const ACTIONS = {
         timeStr = result.time?.value || 'scheduled';
       }
       
-      let response = `✅ **Reminder Set!**\n\n` +
-        `📝 **Message:** ${result.message}\n` +
+      // Different title for automations vs reminders
+      const title = result.isAutomation ? '⚙️ **Automation Scheduled!**' : '✅ **Reminder Set!**';
+      
+      let response = `${title}\n\n` +
+        `📝 **${result.isAutomation ? 'Task' : 'Message'}:** ${result.message}\n` +
         `⏰ **When:** ${timeStr}\n`;
       
       if (result.targetUserId && result.targetUserId !== result.reminder?.userId) {
@@ -1036,7 +1044,14 @@ const ACTIONS = {
       }
       
       if (result.actions && result.actions.length > 0) {
-        response += `⚡ **Actions:** ${result.actions.map(a => a.type).join(', ')}\n`;
+        const actionNames = result.actions.map(a => {
+          if (a.type === 'wol') return '⚡ Wake device';
+          if (a.type === 'homeassistant') return '🏠 Home Assistant';
+          if (a.type === 'scan') return '📡 Network scan';
+          if (a.type === 'speedtest') return '🚀 Speed test';
+          return a.type;
+        });
+        response += `🤖 **Actions:** ${actionNames.join(', ')}\n`;
       }
       
       response += `🆔 **ID:** ${result.reminder?.id || 'N/A'}`;
@@ -1050,123 +1065,20 @@ const ACTIONS = {
     }
   },
 
-  // ============ SCHEDULED AUTOMATION ============
+  // ============ SCHEDULED AUTOMATION (redirects to reminder-create) ============
   'scheduled-automation': {
-    keywords: ['at ', 'every day at', 'every morning', 'every night', 'schedule', 'automate'],
+    keywords: [], // Empty - reminder-create handles these keywords now
     plugin: 'smart-reminders',
-    description: 'Schedule automated actions',
+    description: 'Schedule automated actions (handled by reminder-create)',
     async execute(context) {
-      const { parseTimeExpression, TimeType } = await import('../utils/time-parser.js');
-      const { getPlugin } = await import('../../../src/core/plugin-system.js');
-      
-      const query = context.query || '';
-      
-      // Parse patterns like "at 6am wake my PC" or "every day at 8am scan network"
-      const patterns = [
-        /(?:at|every\s+day\s+at)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s+(.+)/i,
-        /every\s+(morning|night|hour|day)\s+(.+)/i,
-        /(in\s+\d+\s*(?:m|h|d|minutes?|hours?|days?))\s+(.+)/i
-      ];
-      
-      let timeStr = null;
-      let actionStr = null;
-      
-      for (const pattern of patterns) {
-        const match = query.match(pattern);
-        if (match) {
-          timeStr = match[1];
-          actionStr = match[2];
-          break;
-        }
-      }
-      
-      if (!timeStr || !actionStr) {
-        return { needsInfo: true };
-      }
-      
-      // Convert morning/night to times
-      if (timeStr === 'morning') timeStr = '8am';
-      if (timeStr === 'night') timeStr = '10pm';
-      
-      const time = parseTimeExpression(timeStr.startsWith('in ') ? timeStr : `at ${timeStr}`);
-      if (time.type === TimeType.INVALID) {
-        return { needsInfo: true, error: 'Could not parse time' };
-      }
-      
-      // Parse the actions from the action string
-      const actions = parseAutomationActions(actionStr);
-      
-      if (actions.length === 0) {
-        return { needsInfo: true, error: 'No valid actions found' };
-      }
-      
-      const reminderPlugin = getPlugin('smart-reminders');
-      if (!reminderPlugin?.addReminder) {
-        return { error: 'Smart reminders plugin not available' };
-      }
-      
-      const reminderData = {
-        name: `Automation: ${actions.map(a => a.type).join(' + ')}`,
-        message: actionStr,
-        userId: context.userId,
-        channelId: context.channelId,
-        target: 'automation',
-        type: query.includes('every') ? 'recurring' : 'time',
-        triggerTime: time.triggerTime,
-        interval: query.includes('every day') ? '1d' : (query.includes('every hour') ? '1h' : undefined),
-        actions
-      };
-      
-      try {
-        const reminder = await reminderPlugin.addReminder(reminderData);
-        return {
-          success: true,
-          reminder,
-          time,
-          actions,
-          isRecurring: reminderData.type === 'recurring'
-        };
-      } catch (error) {
-        return { error: error.message };
-      }
+      // Redirect to reminder-create which now handles automations
+      const reminderAction = ACTIONS['reminder-create'];
+      return await reminderAction.execute(context);
     },
     formatResult(result) {
-      if (result.needsInfo) {
-        return `⚡ **Schedule Automations:**\n\n` +
-          `**Wake devices:**\n` +
-          `• "At 6am wake my PC"\n` +
-          `• "Every day at 7am wake Kusanagi"\n\n` +
-          `**Network tasks:**\n` +
-          `• "Every hour scan the network"\n` +
-          `• "At 8am run a speed test"\n\n` +
-          `**Chained actions:**\n` +
-          `• "At 6am wake my PC then run a speed test"\n` +
-          `• "Every morning scan network and check speed"`;
-      }
-      
-      if (result.error) {
-        return `❌ Couldn't schedule automation: ${result.error}`;
-      }
-      
-      const timeStr = result.isRecurring 
-        ? `${result.reminder.interval || 'daily'}`
-        : new Date(result.time.triggerTime).toLocaleString();
-      
-      const actionList = result.actions.map(a => {
-        switch (a.type) {
-          case 'wol': return `⚡ Wake ${a.device || 'device'}`;
-          case 'scan': return `📡 Network scan`;
-          case 'speedtest': return `🚀 Speed test`;
-          case 'homeassistant': return `🏠 ${a.action || 'HA action'}`;
-          default: return `📌 ${a.type}`;
-        }
-      }).join('\n');
-      
-      return `✅ **Automation Scheduled!**\n\n` +
-        `⏰ **When:** ${timeStr}\n` +
-        `🔄 **Recurring:** ${result.isRecurring ? 'Yes' : 'No'}\n\n` +
-        `**Actions:**\n${actionList}\n\n` +
-        `🆔 **ID:** ${result.reminder.id}`;
+      // Use reminder-create's formatResult
+      const reminderAction = ACTIONS['reminder-create'];
+      return reminderAction.formatResult(result);
     }
   },
 

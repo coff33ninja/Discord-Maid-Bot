@@ -30,7 +30,7 @@ export async function parseReminderWithAI(input, context = {}) {
     const currentTime = now.toLocaleString();
     const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
     
-    const prompt = `You are a reminder parsing assistant. Parse the following reminder request and extract structured data.
+    const prompt = `You are a reminder and automation parsing assistant. Parse the following request and extract structured data.
 
 Current time: ${currentTime}
 Current day: ${currentDay}
@@ -40,8 +40,8 @@ User request: "${input}"
 Extract the following information and respond ONLY with valid JSON (no markdown, no explanation):
 {
   "understood": true/false,
-  "type": "time" | "recurring" | "presence" | "unknown",
-  "message": "the reminder message/what to remind about",
+  "type": "time" | "recurring" | "presence" | "automation" | "unknown",
+  "message": "the reminder message/what to remind about or automate",
   "time": {
     "type": "duration" | "clock" | "recurring" | "relative",
     "value": "the time value (e.g., '5m', '3pm', 'every hour', 'tomorrow')",
@@ -49,10 +49,16 @@ Extract the following information and respond ONLY with valid JSON (no markdown,
     "interval": null or interval string for recurring (e.g., "1h", "1d")
   },
   "target": {
-    "type": "self" | "user" | "channel" | "role",
+    "type": "self" | "user" | "channel" | "role" | "automation",
     "userId": null or mentioned user ID,
     "channelId": null or mentioned channel
   },
+  "actions": [
+    { "type": "wol", "device": "device name" },
+    { "type": "homeassistant", "action": "turn on/off", "entity": "lights/switch name" },
+    { "type": "scan" },
+    { "type": "speedtest" }
+  ],
   "confidence": 0.0 to 1.0,
   "clarification": null or "question to ask if unclear"
 }
@@ -63,15 +69,24 @@ Rules:
 3. "remind me every hour to X" → type: "recurring", time.type: "recurring", time.interval: "1h"
 4. "remind me tomorrow to X" → type: "time", time.type: "relative", time.value: "tomorrow"
 5. "remind @user to X" → target.type: "user"
-6. If the message is unclear, set understood: false and provide clarification question
-7. Extract the actual reminder message (what to remind about), not the time part
-8. For durations: convert to short form (5 minutes → 5m, 2 hours → 2h, 1 day → 1d)
+6. "at 6am wake my PC" → type: "automation", actions: [{ type: "wol", device: "PC" }]
+7. "every morning turn on the lights" → type: "recurring", actions: [{ type: "homeassistant", action: "turn on", entity: "lights" }]
+8. "in 30 minutes run a speed test" → type: "automation", actions: [{ type: "speedtest" }]
+9. "every day at 8am scan the network" → type: "recurring", actions: [{ type: "scan" }]
+10. If the message is unclear, set understood: false and provide clarification question
+11. Extract the actual reminder message (what to remind about), not the time part
+12. For durations: convert to short form (5 minutes → 5m, 2 hours → 2h, 1 day → 1d)
+13. If actions are detected, set target.type: "automation"
+14. "every morning" = 8am, "every night" = 10pm, "every evening" = 6pm
 
 Examples:
-- "remind me in 30 minutes to check the oven" → message: "check the oven", time.value: "30m"
-- "set a reminder for 6pm to call mom" → message: "call mom", time.value: "6pm"
-- "every day at 9am remind me to take medicine" → message: "take medicine", time.interval: "1d", time.value: "9am"
+- "remind me in 30 minutes to check the oven" → message: "check the oven", time.value: "30m", actions: []
+- "set a reminder for 6pm to call mom" → message: "call mom", time.value: "6pm", actions: []
+- "every day at 9am remind me to take medicine" → message: "take medicine", time.interval: "1d", actions: []
 - "don't let me forget to buy milk" → message: "buy milk", clarification: "When should I remind you?"
+- "at 6am wake my gaming PC" → message: "wake gaming PC", time.value: "6am", actions: [{ type: "wol", device: "gaming PC" }]
+- "every hour scan the network" → message: "scan network", time.interval: "1h", actions: [{ type: "scan" }]
+- "in 5 minutes turn off the bedroom lights" → message: "turn off bedroom lights", time.value: "5m", actions: [{ type: "homeassistant", action: "turn off", entity: "bedroom lights" }]
 
 JSON response:`;
 
