@@ -334,7 +334,10 @@ export class MessageHandler {
       const actionResult = await this.actionExecutor.processQuery(content, {
         message,
         channelId: message.channelId,
-        userId: message.author.id
+        userId: message.author.id,
+        username: message.author.username,
+        guild: message.guild,
+        member: message.member
       });
       
       // If action was executed successfully, show the result

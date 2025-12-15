@@ -1352,7 +1352,7 @@ const ACTIONS = {
     keywords: ['create profile channel', 'setup profile channel', 'profile channel', 'introduce themselves', 'member profiles', 'user profiles'],
     plugin: 'user-profiles',
     description: 'Create a profile setup channel for members',
-    permission: 'manage_channels',
+    permission: 'admin', // Requires bot admin
     async execute(context) {
       const { getPlugin } = await import('../../../src/core/plugin-system.js');
       const profilePlugin = getPlugin('user-profiles');
@@ -1363,7 +1363,7 @@ const ACTIONS = {
       
       // Need guild context
       if (!context.guild) {
-        return { needsGuild: true };
+        return { needsGuild: true, needsSlash: true };
       }
       
       try {
@@ -1374,8 +1374,8 @@ const ACTIONS = {
       }
     },
     formatResult(result) {
-      if (result.needsGuild) {
-        return `👤 To create a profile channel, use the slash command:\n\n\`/profile createchannel\``;
+      if (result.needsGuild || result.needsSlash) {
+        return `👤 To create a profile channel, use the slash command:\n\n\`/bot profile createchannel\``;
       }
       
       if (result.error) {
