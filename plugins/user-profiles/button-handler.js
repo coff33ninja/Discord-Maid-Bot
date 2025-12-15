@@ -13,7 +13,9 @@ import {
   buildSetupComplete,
   buildProfileEmbed,
   GENDER_OPTIONS,
-  PRONOUN_OPTIONS
+  PRONOUN_OPTIONS,
+  INTEREST_CATEGORIES,
+  INTEREST_CATEGORIES_2
 } from './profile-components.js';
 
 const logger = createLogger('profile-button-handler');
@@ -69,6 +71,21 @@ export async function handleProfileButton(interaction, plugin) {
           content: '✅ All done! I\'ll remember your preferences~',
           ephemeral: true
         });
+      
+      case 'profile_interests_page_1':
+        return await interaction.update(buildInterestsSelect(1));
+      
+      case 'profile_interests_page_2':
+        return await interaction.update(buildInterestsSelect(2));
+      
+      case 'profile_interests_done':
+        return await handleInterestsDone(interaction, plugin);
+      
+      case 'profile_edit_personality':
+        return await interaction.reply(buildPersonalitySelect());
+      
+      case 'profile_edit_interests':
+        return await interaction.reply(buildInterestsSelect(1));
       
       default:
         return false;
@@ -161,46 +178,12 @@ export async function handleProfileSelect(interaction, plugin) {
         }
         return true;
       
-      case 'profile_select_interests':
-        // Map values to readable labels
-        const interestLabels = values.map(v => {
-          const opt = [
-            { value: 'gaming', label: 'Gaming' },
-            { value: 'anime', label: 'Anime/Manga' },
-            { value: 'music', label: 'Music' },
-            { value: 'art', label: 'Art/Creative' },
-            { value: 'tech', label: 'Tech/Programming' },
-            { value: 'reading', label: 'Reading/Writing' },
-            { value: 'movies', label: 'Movies/TV' },
-            { value: 'sports', label: 'Sports/Fitness' },
-            { value: 'cooking', label: 'Cooking/Food' },
-            { value: 'travel', label: 'Travel' },
-            { value: 'pets', label: 'Pets/Animals' },
-            { value: 'science', label: 'Science' }
-          ].find(o => o.value === v);
-          return opt?.label || v;
-        });
-        
-        await plugin.updateProfile(userId, { interests: interestLabels });
-        
-        const interestState = wizardState.get(userId);
-        if (interestState?.step === 5) {
-          wizardState.delete(userId);
-          const profile = await plugin.getProfile(userId);
-          await interaction.update({
-            content: '✅ Interests saved!',
-            components: []
-          });
-          await interaction.followUp(buildSetupComplete(profile));
-        } else {
-          await interaction.reply({
-            content: `✅ Interests set to: **${interestLabels.join(', ')}**!`,
-            ephemeral: true
-          });
-        }
-        return true;
-      
       default:
+        // Handle paginated interest selects
+        if (customId.startsWith('profile_select_interests_p')) {
+          return await handleInterestSelect(interaction, plugin, values);
+        }
+        return false;
         return false;
     }
   } catch (error) {
@@ -304,6 +287,71 @@ async function handleViewProfile(interaction, plugin) {
     embeds: [embed],
     ephemeral: true
   });
+  
+  return true;
+}
+
+/**
+ * Handle interest selection from paginated menus
+ */
+async function handleInterestSelect(interaction, plugin, values) {
+  const userId = interaction.user.id;
+  
+  // Get all interest options for label lookup
+  const allInterests = [...INTEREST_CATEGORIES, ...INTEREST_CATEGORIES_2];
+  
+  // Map values to readable labels
+  const newLabels = values.map(v => {
+    const opt = allInterests.find(o => o.value === v);
+    return opt?.label?.replace(/^[^\s]+\s/, '') || v; // Remove emoji prefix
+  });
+  
+  // Get existing interests and merge
+  const profile = await plugin.getProfile(userId) || {};
+  const existingInterests = profile.interests || [];
+  const mergedInterests = [...new Set([...existingInterests, ...newLabels])];
+  
+  await plugin.updateProfile(userId, { interests: mergedInterests });
+  
+  // Check if in wizard mode
+  const state = wizardState.get(userId);
+  if (state?.step === 5) {
+    // Stay on interests page, let them add more or click Done
+    await interaction.update({
+      content: `✅ Added: **${newLabels.join(', ')}**\n\n🎯 Current interests: ${mergedInterests.join(', ')}\n\n_Select more or click Done_`,
+      components: interaction.message.components
+    });
+  } else {
+    await interaction.reply({
+      content: `✅ Added interests: **${newLabels.join(', ')}**\n\nTotal: ${mergedInterests.join(', ')}`,
+      ephemeral: true
+    });
+  }
+  
+  return true;
+}
+
+/**
+ * Handle interests done button
+ */
+async function handleInterestsDone(interaction, plugin) {
+  const userId = interaction.user.id;
+  const state = wizardState.get(userId);
+  
+  if (state?.step === 5) {
+    wizardState.delete(userId);
+    const profile = await plugin.getProfile(userId);
+    await interaction.update({
+      content: '✅ Interests saved!',
+      components: []
+    });
+    await interaction.followUp(buildSetupComplete(profile));
+  } else {
+    await interaction.update({
+      content: '✅ Interests updated!',
+      components: []
+    });
+  }
   
   return true;
 }

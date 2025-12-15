@@ -21,7 +21,7 @@ export const GENDER_OPTIONS = [
 ];
 
 /**
- * Pronoun options
+ * Pronoun options - Extended
  */
 export const PRONOUN_OPTIONS = [
   { label: 'he/him', value: 'he/him' },
@@ -29,35 +29,109 @@ export const PRONOUN_OPTIONS = [
   { label: 'they/them', value: 'they/them' },
   { label: 'he/they', value: 'he/they' },
   { label: 'she/they', value: 'she/they' },
+  { label: 'they/he', value: 'they/he' },
+  { label: 'they/she', value: 'they/she' },
+  { label: 'xe/xem', value: 'xe/xem' },
+  { label: 'ze/zir', value: 'ze/zir' },
+  { label: 'it/its', value: 'it/its' },
   { label: 'any pronouns', value: 'any' },
-  { label: 'Other (tell me in chat)', value: 'other' }
+  { label: 'ask me', value: 'ask' },
+  { label: 'no pronouns (use name)', value: 'name-only' }
 ];
 
 /**
- * Personality type options
+ * Personality type options - Extended with MBTI and more
  */
 export const PERSONALITY_OPTIONS = [
-  { label: '🌟 Extrovert', value: 'extrovert', description: 'Energized by social interaction' },
+  // Social energy
+  { label: '�  Extrovert', value: 'extrovert', description: 'Energized by social interaction' },
   { label: '🌙 Introvert', value: 'introvert', description: 'Energized by alone time' },
-  { label: '⚖️ Ambivert', value: 'ambivert', description: 'A mix of both' }
+  { label: '⚖️ Ambivert', value: 'ambivert', description: 'A mix of both' },
+  // MBTI Types
+  { label: '🧠 INTJ - Architect', value: 'INTJ', description: 'Strategic, independent thinker' },
+  { label: '🔬 INTP - Logician', value: 'INTP', description: 'Innovative, curious analyst' },
+  { label: '👑 ENTJ - Commander', value: 'ENTJ', description: 'Bold, strategic leader' },
+  { label: '💡 ENTP - Debater', value: 'ENTP', description: 'Smart, curious thinker' },
+  { label: '🛡️ INFJ - Advocate', value: 'INFJ', description: 'Quiet, mystical idealist' },
+  { label: '🎨 INFP - Mediator', value: 'INFP', description: 'Poetic, kind idealist' },
+  { label: '🎭 ENFJ - Protagonist', value: 'ENFJ', description: 'Charismatic, inspiring leader' },
+  { label: '🌈 ENFP - Campaigner', value: 'ENFP', description: 'Enthusiastic, creative spirit' },
+  { label: '🔧 ISTJ - Logistician', value: 'ISTJ', description: 'Practical, fact-minded' },
+  { label: '🤝 ISFJ - Defender', value: 'ISFJ', description: 'Dedicated, warm protector' },
+  { label: '📊 ESTJ - Executive', value: 'ESTJ', description: 'Excellent administrator' },
+  { label: '🎉 ESFJ - Consul', value: 'ESFJ', description: 'Caring, social, popular' },
+  { label: '🏔️ ISTP - Virtuoso', value: 'ISTP', description: 'Bold, practical experimenter' },
+  { label: '🎸 ISFP - Adventurer', value: 'ISFP', description: 'Flexible, charming artist' },
+  { label: '🚀 ESTP - Entrepreneur', value: 'ESTP', description: 'Smart, energetic perceiver' },
+  { label: '🎪 ESFP - Entertainer', value: 'ESFP', description: 'Spontaneous, energetic' }
 ];
 
 /**
- * Interest categories
+ * Interest categories - Extended
  */
 export const INTEREST_CATEGORIES = [
-  { label: '🎮 Gaming', value: 'gaming' },
-  { label: '🎬 Anime/Manga', value: 'anime' },
-  { label: '🎵 Music', value: 'music' },
-  { label: '🎨 Art/Creative', value: 'art' },
-  { label: '💻 Tech/Programming', value: 'tech' },
-  { label: '📚 Reading/Writing', value: 'reading' },
+  // Entertainment
+  { label: '� Gamming', value: 'gaming' },
+  { label: '� Animce/Manga', value: 'anime' },
+  { label: '� Music', value: 'music' },
   { label: '🎥 Movies/TV', value: 'movies' },
+  { label: '� Streanming/Content', value: 'streaming' },
+  { label: '�  Theater/Drama', value: 'theater' },
+  // Creative
+  { label: '� Artk/Drawing', value: 'art' },
+  { label: '📷 Photography', value: 'photography' },
+  { label: '✍️ Writing/Poetry', value: 'writing' },
+  { label: '🎹 Music Production', value: 'music-production' },
+  { label: '🎬 Video Editing', value: 'video-editing' },
+  { label: '🧵 Crafts/DIY', value: 'crafts' },
+  // Tech
+  { label: '💻 Programming', value: 'programming' },
+  { label: '🤖 AI/Machine Learning', value: 'ai' },
+  { label: '🔧 Hardware/Building PCs', value: 'hardware' },
+  { label: '🌐 Web Development', value: 'webdev' },
+  { label: '🎮 Game Development', value: 'gamedev' },
+  { label: '🔒 Cybersecurity', value: 'cybersecurity' },
+  { label: '🐧 Linux/Open Source', value: 'linux' },
+  // Knowledge
+  { label: '📚 Reading/Books', value: 'reading' },
+  { label: '🔬 Science', value: 'science' },
+  { label: '🧮 Mathematics', value: 'math' },
+  { label: '🌍 History', value: 'history' },
+  { label: '🧠 Psychology', value: 'psychology' },
+  { label: '🌌 Astronomy/Space', value: 'astronomy' },
+  { label: '🔮 Philosophy', value: 'philosophy' }
+];
+
+/**
+ * More interest categories (page 2)
+ */
+export const INTEREST_CATEGORIES_2 = [
+  // Lifestyle
   { label: '⚽ Sports/Fitness', value: 'sports' },
-  { label: '🍳 Cooking/Food', value: 'cooking' },
+  { label: '🏋️ Gym/Weightlifting', value: 'gym' },
+  { label: '🧘 Yoga/Meditation', value: 'yoga' },
+  { label: '🍳 Cooking/Baking', value: 'cooking' },
+  { label: '🍷 Food/Wine', value: 'foodie' },
   { label: '✈️ Travel', value: 'travel' },
+  { label: '🏕️ Outdoors/Hiking', value: 'outdoors' },
+  { label: '🚗 Cars/Automotive', value: 'cars' },
+  { label: '🏍️ Motorcycles', value: 'motorcycles' },
+  // Social
   { label: '🐾 Pets/Animals', value: 'pets' },
-  { label: '🔬 Science', value: 'science' }
+  { label: '🌱 Plants/Gardening', value: 'gardening' },
+  { label: '💄 Fashion/Beauty', value: 'fashion' },
+  { label: '🎲 Board Games/TTRPGs', value: 'boardgames' },
+  { label: '🃏 Card Games/TCG', value: 'cardgames' },
+  { label: '🎯 Esports', value: 'esports' },
+  { label: '📈 Investing/Finance', value: 'finance' },
+  { label: '🏠 Home Improvement', value: 'home' },
+  { label: '👶 Parenting', value: 'parenting' },
+  { label: '💼 Entrepreneurship', value: 'business' },
+  { label: '🎤 Podcasts', value: 'podcasts' },
+  { label: '📱 Social Media', value: 'social-media' },
+  { label: '🌿 Sustainability', value: 'sustainability' },
+  { label: '🎪 Cosplay', value: 'cosplay' },
+  { label: '🔊 DJing', value: 'djing' }
 ];
 
 /**
@@ -181,26 +255,48 @@ export function buildPersonalitySelect() {
 }
 
 /**
- * Build interests selection menu (multi-select)
+ * Build interests selection menu (multi-select with two pages)
+ * @param {number} page - Page number (1 or 2)
  * @returns {Object} Message options
  */
-export function buildInterestsSelect() {
+export function buildInterestsSelect(page = 1) {
+  const categories = page === 1 ? INTEREST_CATEGORIES : INTEREST_CATEGORIES_2;
+  const maxOptions = Math.min(categories.length, 25); // Discord limit
+  
   const row = new ActionRowBuilder()
     .addComponents(
       new StringSelectMenuBuilder()
-        .setCustomId('profile_select_interests')
-        .setPlaceholder('Select your interests (up to 5)')
-        .setMinValues(1)
-        .setMaxValues(5)
-        .addOptions(INTEREST_CATEGORIES.map(opt => ({
+        .setCustomId(`profile_select_interests_p${page}`)
+        .setPlaceholder(`Select interests (page ${page}/2)`)
+        .setMinValues(0)
+        .setMaxValues(Math.min(7, maxOptions))
+        .addOptions(categories.slice(0, maxOptions).map(opt => ({
           label: opt.label,
           value: opt.value
         })))
     );
 
+  const navRow = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId('profile_interests_page_1')
+        .setLabel('📄 Page 1: Entertainment/Tech')
+        .setStyle(page === 1 ? ButtonStyle.Primary : ButtonStyle.Secondary)
+        .setDisabled(page === 1),
+      new ButtonBuilder()
+        .setCustomId('profile_interests_page_2')
+        .setLabel('📄 Page 2: Lifestyle/Social')
+        .setStyle(page === 2 ? ButtonStyle.Primary : ButtonStyle.Secondary)
+        .setDisabled(page === 2),
+      new ButtonBuilder()
+        .setCustomId('profile_interests_done')
+        .setLabel('✅ Done')
+        .setStyle(ButtonStyle.Success)
+    );
+
   return {
-    content: '🎯 **What are you interested in?** (Select up to 5)',
-    components: [row],
+    content: `🎯 **What are you interested in?** (Page ${page}/2)\n_Select from this page, then switch pages or click Done_`,
+    components: [row, navRow],
     ephemeral: true
   };
 }
