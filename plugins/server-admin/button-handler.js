@@ -9,7 +9,7 @@
 import { createLogger } from '../../src/logging/logger.js';
 import { logAudit } from './audit-logger.js';
 import { executeCommand } from './command-executor.js';
-import { generateCommand, detectPlatform } from './command-generator.js';
+import { detectPlatform } from './command-generator.js';
 
 const logger = createLogger('server-admin:buttons');
 
