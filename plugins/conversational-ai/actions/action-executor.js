@@ -410,15 +410,24 @@ const ACTIONS = {
       
       // Try to extract device and new name
       // Patterns: "rename 192.168.0.100 to MyPC", "name device KUSANAGI as Gaming PC"
+      // Stop at common words like "and", "it", "its", "it's", "also", "with"
+      const stopWords = /(?:\s+(?:and|it|its|it's|also|with|,|\.)\s*.*)?$/i;
       const patterns = [
-        /rename\s+(\S+)\s+(?:to|as)\s+["']?(.+?)["']?$/i,
-        /name\s+(?:device\s+)?(\S+)\s+(?:to|as)\s+["']?(.+?)["']?$/i,
-        /call\s+(\S+)\s+["']?(.+?)["']?$/i,
-        /set\s+(?:device\s+)?name\s+(?:of\s+)?(\S+)\s+(?:to|as)\s+["']?(.+?)["']?$/i
+        /rename\s+(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-\s]+?)["']?(?:\s+(?:and|it|its|it's|also|with|,|\.)|$)/i,
+        /name\s+(?:device\s+)?(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-\s]+?)["']?(?:\s+(?:and|it|its|it's|also|with|,|\.)|$)/i,
+        /call\s+(\S+)\s+["']?([a-zA-Z0-9_\-\s]+?)["']?(?:\s+(?:and|it|its|it's|also|with|,|\.)|$)/i,
+        /set\s+(?:device\s+)?name\s+(?:of\s+)?(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-\s]+?)["']?(?:\s+(?:and|it|its|it's|also|with|,|\.)|$)/i
       ];
       
       let deviceId = null;
       let newName = null;
+      let deviceType = null;
+      
+      // Also try to extract device type (pc, server, phone, etc.)
+      const typeMatch = query.match(/(?:it'?s?\s+a\s+|type\s+is\s+)(\w+)/i);
+      if (typeMatch) {
+        deviceType = typeMatch[1].toLowerCase();
+      }
       
       for (const pattern of patterns) {
         const match = query.match(pattern);
@@ -445,17 +454,22 @@ const ACTIONS = {
         return { error: `Device "${deviceId}" not found`, notFound: true };
       }
       
-      // Update device
+      // Update device with name and optionally type
       const oldName = device.name || device.ip;
-      deviceOps.upsert({ ...device, name: newName });
+      const updateData = { ...device, name: newName };
+      if (deviceType) {
+        updateData.type = deviceType;
+      }
+      deviceOps.upsert(updateData);
       
-      return { success: true, oldName, newName, ip: device.ip };
+      return { success: true, oldName, newName, ip: device.ip, type: deviceType };
     },
     formatResult(result) {
       if (result.needsInfo) {
         return `📝 To rename a device, say:\n\n` +
           `"Rename 192.168.0.100 to MyPC"\n` +
-          `"Name device KUSANAGI as Gaming PC"\n\n` +
+          `"Name device KUSANAGI as Gaming PC"\n` +
+          `"Name 192.168.0.200 to Madara and it's a PC"\n\n` +
           `Or use \`/device config\` for more options.`;
       }
       
@@ -467,9 +481,15 @@ const ACTIONS = {
         return `❌ ${result.error}`;
       }
       
-      return `✅ **Device Renamed!**\n\n` +
+      let response = `✅ **Device Renamed!**\n\n` +
         `📱 **${result.oldName}** → **${result.newName}**\n` +
         `🌐 IP: ${result.ip}`;
+      
+      if (result.type) {
+        response += `\n🏷️ Type: ${result.type}`;
+      }
+      
+      return response;
     }
   },
 
