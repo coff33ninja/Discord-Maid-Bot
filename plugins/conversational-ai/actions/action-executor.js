@@ -298,6 +298,333 @@ const ACTIONS = {
         `• "Run a speed test"\n` +
         `• "Let's play trivia"`;
     }
+  },
+
+  // ============ GAMES ============
+  'game-list': {
+    keywords: ['what games', 'list games', 'available games', 'show games', 'games list'],
+    plugin: 'games',
+    description: 'List available games',
+    async execute() {
+      return {
+        games: [
+          { key: 'trivia', name: 'Trivia', emoji: '🧠' },
+          { key: 'hangman', name: 'Hangman', emoji: '🎯' },
+          { key: 'numguess', name: 'Number Guess', emoji: '🔢' },
+          { key: 'rps', name: 'Rock Paper Scissors', emoji: '✊' },
+          { key: 'tictactoe', name: 'Tic Tac Toe', emoji: '⭕' },
+          { key: 'connect4', name: 'Connect Four', emoji: '🔴' },
+          { key: 'riddle', name: 'Riddles', emoji: '🧩' },
+          { key: 'wordchain', name: 'Word Chain', emoji: '🔗' },
+          { key: '20questions', name: '20 Questions', emoji: '❓' },
+          { key: 'emojidecode', name: 'Emoji Decode', emoji: '😀' },
+          { key: 'wouldyourather', name: 'Would You Rather', emoji: '🤔' },
+          { key: 'mathblitz', name: 'Math Blitz', emoji: '🔢' },
+          { key: 'reaction', name: 'Reaction Race', emoji: '⚡' },
+          { key: 'mafia', name: 'Mafia', emoji: '🎭' }
+        ]
+      };
+    },
+    formatResult(result) {
+      let response = '**🎮 Available Games:**\n\n';
+      response += result.games.map(g => `${g.emoji} **${g.name}**`).join('\n');
+      response += '\n\n_Say "play [game name]" to start!_';
+      return response;
+    }
+  },
+
+  'game-play': {
+    keywords: ['play trivia', 'play hangman', 'play game', 'lets play', "let's play", 'start game', 'play rps', 'play riddle', 'play number'],
+    plugin: 'games',
+    description: 'Start a game',
+    async execute(context) {
+      const query = context.query?.toLowerCase() || '';
+      
+      // Detect which game
+      const gameMap = {
+        'trivia': ['trivia', 'quiz'],
+        'hangman': ['hangman', 'hang man'],
+        'numguess': ['number', 'guess number', 'number guess'],
+        'rps': ['rps', 'rock paper', 'rock-paper'],
+        'tictactoe': ['tic tac', 'tictactoe', 'tic-tac'],
+        'connect4': ['connect', 'connect 4', 'connect four'],
+        'riddle': ['riddle', 'riddles'],
+        'wordchain': ['word chain', 'wordchain'],
+        '20questions': ['20 questions', 'twenty questions'],
+        'emojidecode': ['emoji', 'decode'],
+        'wouldyourather': ['would you rather', 'wyr'],
+        'mathblitz': ['math', 'math blitz'],
+        'reaction': ['reaction', 'reaction race'],
+        'mafia': ['mafia']
+      };
+      
+      let selectedGame = null;
+      for (const [gameKey, keywords] of Object.entries(gameMap)) {
+        if (keywords.some(kw => query.includes(kw))) {
+          selectedGame = gameKey;
+          break;
+        }
+      }
+      
+      // Default to trivia if no specific game mentioned
+      if (!selectedGame && (query.includes('play') || query.includes('game'))) {
+        selectedGame = 'trivia';
+      }
+      
+      if (!selectedGame) {
+        return { needsSelection: true };
+      }
+      
+      return { 
+        game: selectedGame, 
+        message: context.message,
+        channelId: context.channelId,
+        requiresInteraction: true
+      };
+    },
+    formatResult(result) {
+      if (result.needsSelection) {
+        return `🎮 Which game would you like to play?\n\n` +
+          `Say "play trivia", "play hangman", "play riddles", etc.\n` +
+          `Or use \`/game list\` to see all games!`;
+      }
+      
+      if (result.requiresInteraction) {
+        return `🎮 To start **${result.game}**, please use the slash command:\n\n` +
+          `\`/game play game:${result.game}\`\n\n` +
+          `_Games require Discord interactions for buttons and responses._`;
+      }
+      
+      return `🎮 Starting ${result.game}...`;
+    }
+  },
+
+  // ============ DEVICE MANAGEMENT ============
+  'device-rename': {
+    keywords: ['rename device', 'name device', 'call device', 'set device name', 'change device name'],
+    plugin: 'device-management',
+    description: 'Rename a device',
+    async execute(context) {
+      const { deviceOps } = await import('../../../src/database/db.js');
+      const query = context.query || '';
+      
+      // Try to extract device and new name
+      // Patterns: "rename 192.168.0.100 to MyPC", "name device KUSANAGI as Gaming PC"
+      const patterns = [
+        /rename\s+(\S+)\s+(?:to|as)\s+["']?(.+?)["']?$/i,
+        /name\s+(?:device\s+)?(\S+)\s+(?:to|as)\s+["']?(.+?)["']?$/i,
+        /call\s+(\S+)\s+["']?(.+?)["']?$/i,
+        /set\s+(?:device\s+)?name\s+(?:of\s+)?(\S+)\s+(?:to|as)\s+["']?(.+?)["']?$/i
+      ];
+      
+      let deviceId = null;
+      let newName = null;
+      
+      for (const pattern of patterns) {
+        const match = query.match(pattern);
+        if (match) {
+          deviceId = match[1];
+          newName = match[2].trim();
+          break;
+        }
+      }
+      
+      if (!deviceId || !newName) {
+        return { needsInfo: true };
+      }
+      
+      // Find device
+      const devices = deviceOps.getAll();
+      const device = devices.find(d => 
+        d.ip === deviceId ||
+        d.mac?.toLowerCase() === deviceId.toLowerCase() ||
+        d.name?.toLowerCase() === deviceId.toLowerCase()
+      );
+      
+      if (!device) {
+        return { error: `Device "${deviceId}" not found`, notFound: true };
+      }
+      
+      // Update device
+      const oldName = device.name || device.ip;
+      deviceOps.upsert({ ...device, name: newName });
+      
+      return { success: true, oldName, newName, ip: device.ip };
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        return `📝 To rename a device, say:\n\n` +
+          `"Rename 192.168.0.100 to MyPC"\n` +
+          `"Name device KUSANAGI as Gaming PC"\n\n` +
+          `Or use \`/device config\` for more options.`;
+      }
+      
+      if (result.notFound) {
+        return `❌ ${result.error}\n\nUse "list devices" to see available devices.`;
+      }
+      
+      if (result.error) {
+        return `❌ ${result.error}`;
+      }
+      
+      return `✅ **Device Renamed!**\n\n` +
+        `📱 **${result.oldName}** → **${result.newName}**\n` +
+        `🌐 IP: ${result.ip}`;
+    }
+  },
+
+  'device-emoji': {
+    keywords: ['set emoji', 'device emoji', 'change emoji', 'add emoji'],
+    plugin: 'device-management',
+    description: 'Set device emoji',
+    async execute(context) {
+      const { deviceOps } = await import('../../../src/database/db.js');
+      const query = context.query || '';
+      
+      // Extract emoji and device
+      const emojiMatch = query.match(/(\p{Emoji})/u);
+      const deviceMatch = query.match(/(?:for|on|to)\s+(\S+)/i) || query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+      
+      if (!emojiMatch || !deviceMatch) {
+        return { needsInfo: true };
+      }
+      
+      const emoji = emojiMatch[1];
+      const deviceId = deviceMatch[1];
+      
+      const devices = deviceOps.getAll();
+      const device = devices.find(d => 
+        d.ip === deviceId ||
+        d.name?.toLowerCase() === deviceId.toLowerCase()
+      );
+      
+      if (!device) {
+        return { error: `Device "${deviceId}" not found`, notFound: true };
+      }
+      
+      deviceOps.upsert({ ...device, emoji });
+      
+      return { success: true, device: device.name || device.ip, emoji };
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        return `🎨 To set a device emoji, say:\n\n` +
+          `"Set emoji 🎮 for KUSANAGI"\n` +
+          `"Add emoji 💻 to 192.168.0.100"`;
+      }
+      
+      if (result.notFound) {
+        return `❌ ${result.error}`;
+      }
+      
+      return `✅ Set emoji ${result.emoji} for **${result.device}**`;
+    }
+  },
+
+  // ============ RESEARCH ============
+  'research': {
+    keywords: ['research', 'look up', 'find out about', 'learn about', 'tell me about', 'what is', 'who is', 'explain'],
+    plugin: 'research',
+    description: 'Research a topic',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const researchPlugin = getPlugin('research');
+      
+      if (!researchPlugin?.webResearch) {
+        throw new Error('Research plugin not available');
+      }
+      
+      // Extract topic from query
+      const query = context.query || '';
+      const topicPatterns = [
+        /research\s+(?:about\s+)?(.+)/i,
+        /look\s+up\s+(.+)/i,
+        /find\s+out\s+about\s+(.+)/i,
+        /learn\s+about\s+(.+)/i,
+        /tell\s+me\s+about\s+(.+)/i,
+        /what\s+is\s+(.+)/i,
+        /who\s+is\s+(.+)/i,
+        /explain\s+(.+)/i
+      ];
+      
+      let topic = null;
+      for (const pattern of topicPatterns) {
+        const match = query.match(pattern);
+        if (match) {
+          topic = match[1].trim().replace(/\?$/, '');
+          break;
+        }
+      }
+      
+      if (!topic) {
+        return { needsTopic: true };
+      }
+      
+      const result = await researchPlugin.webResearch(topic, context.userId);
+      return { topic, response: result.response, filename: result.filename };
+    },
+    formatResult(result) {
+      if (result.needsTopic) {
+        return `🔍 What would you like me to research?\n\n` +
+          `Say "Research [topic]" or "Tell me about [topic]"`;
+      }
+      
+      // Truncate if too long
+      let response = result.response;
+      if (response.length > 1800) {
+        response = response.substring(0, 1800) + '\n\n... _(truncated)_';
+      }
+      
+      return `**🔍 Research: ${result.topic}**\n\n${response}\n\n_📄 Saved as: ${result.filename}_`;
+    }
+  },
+
+  // ============ REMINDERS ============
+  'reminder-set': {
+    keywords: ['remind me', 'set reminder', 'reminder for', 'remember to', "don't let me forget"],
+    plugin: 'smart-reminders',
+    description: 'Set a reminder',
+    async execute(context) {
+      // Reminders need slash commands for proper scheduling
+      return { 
+        requiresSlashCommand: true,
+        query: context.query
+      };
+    },
+    formatResult(result) {
+      return `⏰ To set a reminder, please use:\n\n` +
+        `\`/bot reminder set\`\n\n` +
+        `This allows you to set the exact time and message for your reminder.`;
+    }
+  },
+
+  // ============ HOME ASSISTANT ============
+  'homeassistant': {
+    keywords: ['turn on light', 'turn off light', 'lights on', 'lights off', 'home assistant', 'smart home'],
+    plugin: 'integrations',
+    description: 'Control Home Assistant',
+    async execute(context) {
+      return { requiresSlashCommand: true };
+    },
+    formatResult() {
+      return `🏠 To control Home Assistant devices, use:\n\n` +
+        `\`/homeassistant\`\n\n` +
+        `This shows available devices and lets you control them.`;
+    }
+  },
+
+  // ============ PING ============
+  'ping': {
+    keywords: ['ping', 'latency', 'response time'],
+    plugin: 'core',
+    description: 'Check bot latency',
+    async execute(context) {
+      const client = context.client;
+      return { ping: client?.ws?.ping || 0 };
+    },
+    formatResult(result) {
+      return `🏓 **Pong!** Latency: ${result.ping}ms`;
+    }
   }
 };
 
