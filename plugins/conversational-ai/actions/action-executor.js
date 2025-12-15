@@ -380,11 +380,44 @@ const ACTIONS = {
         `**🚀 Speed Test:** Check your internet speed\n` +
         `**🎮 Games:** Play trivia, hangman, and more\n` +
         `**🔍 Research:** Look up topics\n` +
-        `**🏠 Smart Home:** Control Home Assistant devices\n\n` +
+        `**🏠 Smart Home:** Control Home Assistant devices\n` +
+        `**🖥️ Server Admin:** Check status, view logs, restart, deploy\n\n` +
         `Just ask me naturally! For example:\n` +
         `• "What devices are online?"\n` +
         `• "Run a speed test"\n` +
-        `• "Let's play trivia"`;
+        `• "Let's play trivia"\n` +
+        `• "Is the bot running?"\n` +
+        `• "Show server logs"`;
+    }
+  },
+
+  // Server Admin
+  'server-admin-help': {
+    keywords: ['do with the server', 'server admin', 'server commands', 'admin commands', 'server management', 'manage server'],
+    plugin: 'server-admin',
+    description: 'Show server admin capabilities',
+    async execute() {
+      return { showServerHelp: true };
+    },
+    formatResult() {
+      return `**🖥️ Server Admin Commands:**\n\n` +
+        `**Server Management:**\n` +
+        `• \`/admin server status\` - Check server status (CPU, memory, disk)\n` +
+        `• \`/admin server logs\` - View recent bot logs\n` +
+        `• \`/admin server restart\` - Restart the bot service\n` +
+        `• \`/admin server deploy\` - Deploy latest code from git\n` +
+        `• \`/admin server disk\` - Check disk space\n\n` +
+        `**Discord Moderation:**\n` +
+        `• \`/admin discord kick\` - Kick a member\n` +
+        `• \`/admin discord ban\` - Ban a member\n` +
+        `• \`/admin discord timeout\` - Timeout a member\n` +
+        `• \`/admin discord giverole\` - Give a role to a member\n` +
+        `• \`/admin discord lock\` - Lock a channel\n\n` +
+        `**SSH/Remote:**\n` +
+        `• \`/admin ssh add\` - Add SSH credentials\n` +
+        `• \`/admin ssh list\` - List configured servers\n` +
+        `• \`/admin ssh exec\` - Execute command on remote server\n\n` +
+        `Or just ask naturally: "Is the bot running?", "Show me the logs"`;
     }
   },
 

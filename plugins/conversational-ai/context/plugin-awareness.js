@@ -242,7 +242,18 @@ export async function suggestCommand(query) {
     { keywords: ['personality', 'change personality', 'be more'], command: '/ai personality', plugin: 'personality' },
     { keywords: ['help', 'commands', 'what can you do'], command: '/help', plugin: 'core' },
     { keywords: ['stats', 'statistics', 'status'], command: '/stats', plugin: 'core' },
-    { keywords: ['memory', 'remember', 'context', 'conversation'], command: '/memory view', plugin: 'conversational-ai' }
+    { keywords: ['memory', 'remember', 'context', 'conversation'], command: '/memory view', plugin: 'conversational-ai' },
+    // Server admin commands
+    { keywords: ['server status', 'bot running', 'is the bot', 'check server'], command: '/admin server status', plugin: 'server-admin' },
+    { keywords: ['server logs', 'view logs', 'show logs', 'bot logs'], command: '/admin server logs', plugin: 'server-admin' },
+    { keywords: ['restart bot', 'restart server', 'reboot bot'], command: '/admin server restart', plugin: 'server-admin' },
+    { keywords: ['deploy', 'update bot', 'git pull'], command: '/admin server deploy', plugin: 'server-admin' },
+    { keywords: ['disk space', 'disk usage', 'storage'], command: '/admin server disk', plugin: 'server-admin' },
+    { keywords: ['kick user', 'kick member'], command: '/admin discord kick', plugin: 'server-admin' },
+    { keywords: ['ban user', 'ban member'], command: '/admin discord ban', plugin: 'server-admin' },
+    { keywords: ['timeout user', 'mute user'], command: '/admin discord timeout', plugin: 'server-admin' },
+    { keywords: ['ssh', 'remote server', 'execute command'], command: '/admin ssh exec', plugin: 'server-admin' },
+    { keywords: ['do with the server', 'server admin', 'admin commands', 'server management'], command: '/admin server status', plugin: 'server-admin' }
   ];
   
   for (const suggestion of suggestions) {
