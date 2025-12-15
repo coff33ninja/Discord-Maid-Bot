@@ -1338,40 +1338,72 @@ export class ActionExecutor {
   /**
    * Detect if a message requests an action
    * @param {string} query - User's message
+   * @param {Object} context - Additional context
+   * @returns {Promise<Object|null>} Detected action or null
+   */
+  async detectAction(query, context = {}) {
+    if (!this.enabled || !query) return null;
+    
+    try {
+      // Use AI-based intent classification
+      const { classifyIntent, mapActionToExecutor } = await import('../utils/ai-intent-classifier.js');
+      
+      const classification = await classifyIntent(query, context);
+      
+      // If classified as conversation, return null (let normal chat handle it)
+      if (classification.action === 'conversation') {
+        return null;
+      }
+      
+      // Map the classified action to the executor action ID
+      const actionId = mapActionToExecutor(classification.action);
+      
+      // Find the action in ACTIONS or registered actions
+      let action = ACTIONS[actionId];
+      
+      // If not found in built-in actions, check registered actions
+      if (!action) {
+        try {
+          const { getAction } = await import('../context/action-registry.js');
+          action = getAction(actionId);
+        } catch (e) {
+          // Registry not available
+        }
+      }
+      
+      if (!action) {
+        // Action not found, but AI classified it - log for debugging
+        this.logger?.debug?.(`AI classified as ${actionId} but action not found`);
+        return null;
+      }
+      
+      return {
+        id: actionId,
+        action,
+        confidence: classification.confidence,
+        reason: classification.reason,
+        source: classification.source || 'ai'
+      };
+      
+    } catch (error) {
+      // If AI classification fails, fall back to keyword matching
+      this.logger?.warn?.(`AI classification failed, using fallback: ${error.message}`);
+      return this.detectActionFallback(query);
+    }
+  }
+
+  /**
+   * Fallback keyword-based action detection (used when AI is unavailable)
+   * @param {string} query - User's message
    * @returns {Object|null} Detected action or null
    */
-  detectAction(query) {
-    if (!this.enabled || !query) return null;
+  detectActionFallback(query) {
+    if (!query) return null;
     
     const lowerQuery = query.toLowerCase();
     
-    // Priority actions that should be checked first (more specific patterns)
-    // These take precedence when their keywords appear, even if other keywords also match
-    const priorityActions = ['reminder-create', 'reminder-set'];
-    
-    // Check priority actions first
-    for (const actionId of priorityActions) {
-      const action = ACTIONS[actionId];
-      if (!action) continue;
-      
-      for (const keyword of action.keywords) {
-        if (lowerQuery.includes(keyword)) {
-          return {
-            id: actionId,
-            action,
-            keyword,
-            confidence: this.calculateConfidence(lowerQuery, keyword),
-            source: 'builtin'
-          };
-        }
-      }
-    }
-    
-    // Then check all other built-in actions
+    // Check all built-in actions
     for (const [actionId, action] of Object.entries(ACTIONS)) {
-      // Skip priority actions (already checked)
-      if (priorityActions.includes(actionId)) continue;
-      
       for (const keyword of action.keywords) {
         if (lowerQuery.includes(keyword)) {
           return {
@@ -1379,20 +1411,21 @@ export class ActionExecutor {
             action,
             keyword,
             confidence: this.calculateConfidence(lowerQuery, keyword),
-            source: 'builtin'
+            source: 'fallback'
           };
         }
       }
     }
     
-    // Then check dynamically registered actions
+    // Check dynamically registered actions
     try {
       const { detectRegisteredAction } = require('../context/action-registry.js');
       const registered = detectRegisteredAction(query);
       if (registered) {
         return {
           ...registered,
-          confidence: this.calculateConfidence(lowerQuery, registered.keyword)
+          confidence: this.calculateConfidence(lowerQuery, registered.keyword),
+          source: 'fallback'
         };
       }
     } catch (e) {
@@ -1648,8 +1681,8 @@ export class ActionExecutor {
       return multiResult;
     }
     
-    // Single action detection
-    const detected = this.detectAction(query);
+    // Single action detection (now AI-powered)
+    const detected = await this.detectAction(query, context);
     
     if (!detected) return null;
     
