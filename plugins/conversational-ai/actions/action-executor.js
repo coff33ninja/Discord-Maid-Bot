@@ -2779,8 +2779,8 @@ Return ONLY the JSON, no other text.`;
     }
   },
 
-  // ============ NETWORK INSIGHTS ============
-  'network-insights': {
+  // ============ DISCORD RENAME CHANNEL ============
+  'ditwork-insights': {
     keywords: ['network insights', 'network analysis', 'analyze network', 'network report', 'network health'],
     plugin: 'network-insights',
     description: 'Generate AI-powered network insights and analysis',
@@ -3180,48 +3180,56 @@ Return ONLY the JSON, no other text.`;
   },
 
   'device-group-view': {
-    keywords: ['devices in group', 'show group', 'group devices'],
+    keywords: ['devices in group', 'show group', 'group devices', 'whats in group', 'list group'],
     plugin: 'device-management',
     description: 'View devices in a specific group',
     async execute(context) {
       const { deviceOps } = await import('../../../src/database/db.js');
-      const query = context.query?.toLowerCase() || '';
+      const query = context.query || '';
       
-      // Extract group name
-      const match = query.match(/(?:in\s+group|show\s+group|group)\s+["']?([a-zA-Z0-9_\-\s]+)["']?/i);
+      // Get all groups for AI context
+      const allGroups = deviceOps.getAllGroups() || [];
       
-      if (!match) {
-        return { needsGroup: true };
-      }
+      let groupName = null;
       
-      const groupName = match[1].trim();
-      const devices = deviceOps.getByGroup(groupName);
-      
-      if (!devices || devices.length === 0) {
-        return { notFound: true, groupName };
-      }
-      
-      return { success: true, groupName, devices };
-    },
-    formatResult(result) {
-      if (result.needsGroup) {
-        return `📁 Which group? Try: "Show group Gaming" or "Devices in group Servers"`;
-      }
-      
-      if (result.notFound) {
-        return `📁 No devices found in group "${result.groupName}"`;
-      }
-      
-      const list = result.devices.slice(0, 10).map(d => {
-        const status = d.online ? '🟢' : '🔴';
-        const emoji = d.emoji || '📱';
-        return `${status} ${emoji} ${d.name || d.ip}`;
-      }).join('\n');
-      
-      return `**📁 Group: ${result.groupName}**\n\n${list}` +
-        (result.devices.length > 10 ? `\n\n_...and ${result.devices.length - 10} more_` : '');
-    }
-  },
+      // Use AI to fuzzy match group name
+      if (allGroups.length > 0) {
+        try {
+          const { getPlugin } = await import('../../../src/core/plugin-system.js');
+          const aiPlugin = getPlugin('conversational-ai');
+          
+          if (aiPlugin) {
+            const prompt = `You are parsing a device group query. Match the requested group to available groups.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE GROUPS:
+${allGroups.map(g => `- "${g}"`).join('\n')}
+
+Return ONLY a JSON object:
+{
+  "groupName": "exact group name from the list that best matches",
+  "confidence": "high", "medium", or "low"
+}
+
+MATCHING RULES:
+- "show gaming group" → find group with "gaming" in name
+- "devices in servers" → find group with "server" in name
+- "what's in IoT" → find group with "iot" in name
+- Match case-insensitively
+- Partial matches are OK
+
+Return ONLY the JSON, no other text.`;
+
+            const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+              prompt,
+              options: { maxOutputTokens: 100, temperature: 0.1 }
+            });
+            
+            const responseText = result?.response?.text?.() || '';
+            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+            
+            if (jsonMa
 
   // ============ SCHEDULED TASKS ============
   'scheduled-tasks': {
