@@ -9,6 +9,7 @@
 
 import { createLogger } from '../../../src/logging/logger.js';
 import { ContextReconstructor } from '../context/context-reconstructor.js';
+import { formatPluginAwarenessForPrompt, suggestCommand } from '../context/plugin-awareness.js';
 
 const logger = createLogger('response-handler');
 
@@ -125,7 +126,7 @@ export class ResponseHandler {
    * @param {string} userMessage - User's message
    * @param {Object} context - Reconstructed context
    * @param {Object} personality - Personality config
-   * @param {Object} [extras] - Extra context (network, replyContext, etc.)
+   * @param {Object} [extras] - Extra context (network, replyContext, pluginAwareness, etc.)
    * @returns {string}
    */
   buildPrompt(userMessage, context, personality, extras = {}) {
@@ -134,6 +135,12 @@ export class ResponseHandler {
     // System prompt from personality
     parts.push(personality.prompt);
     parts.push('');
+    
+    // Add plugin awareness (what the bot can do)
+    if (extras.pluginAwareness) {
+      parts.push(extras.pluginAwareness);
+      parts.push('');
+    }
     
     // Add context from reconstructor
     const contextText = this.contextReconstructor.formatForPrompt(context);
@@ -159,11 +166,17 @@ export class ResponseHandler {
       parts.push('');
     }
     
+    // Add command suggestion if detected
+    if (extras.suggestedCommand) {
+      parts.push(`**Relevant Command Detected:** The user might want to use \`${extras.suggestedCommand.command}\``);
+      parts.push('');
+    }
+    
     // Current message
     parts.push(`**Current Message from ${extras.username || 'User'}:**`);
     parts.push(userMessage);
     parts.push('');
-    parts.push('Respond in character. Be concise but maintain your personality!');
+    parts.push('Respond in character. Be concise but maintain your personality! If the user is asking about something the bot can do, suggest the relevant command.');
     
     return parts.join('\n');
   }
@@ -187,17 +200,23 @@ export class ResponseHandler {
     const personalityKey = await this.getUserPersonality(userId);
     const personality = await this.getPersonality(personalityKey);
     
-    // 3. Build prompt with reply context
+    // 3. Get plugin awareness and command suggestions
+    const pluginAwareness = await formatPluginAwarenessForPrompt();
+    const suggestedCommand = await suggestCommand(content);
+    
+    // 4. Build prompt with all context
     const prompt = this.buildPrompt(content, context, personality, {
       networkContext,
       username,
-      replyContext
+      replyContext,
+      pluginAwareness,
+      suggestedCommand
     });
     
-    // 4. Generate response
+    // 5. Generate response
     const response = await this.generateFn(prompt);
     
-    // 5. Update short-term memory with user message (include reply reference)
+    // 6. Update short-term memory with user message (include reply reference)
     const userMessageContent = replyContext 
       ? `[Replying to ${replyContext.isBot ? 'Bot' : replyContext.authorUsername}] ${content}`
       : content;
@@ -210,7 +229,7 @@ export class ResponseHandler {
       isBot: false
     });
     
-    // 6. Update short-term memory with bot response
+    // 7. Update short-term memory with bot response
     this.shortTermMemory.addMessage(channelId, {
       userId: 'bot',
       username: 'Bot',
@@ -219,15 +238,18 @@ export class ResponseHandler {
       isBot: true
     });
     
-    // 7. Get stats
+    // 8. Get stats
     const stats = this.contextReconstructor.getStats(context);
+    
+    logger.debug(`Generated response with plugin awareness, suggested: ${suggestedCommand?.command || 'none'}`);
     
     return {
       response,
       context,
       stats,
       personalityKey,
-      hadReplyContext: !!replyContext
+      hadReplyContext: !!replyContext,
+      suggestedCommand
     };
   }
 
