@@ -24,5 +24,6 @@ export {
   getCapabilities,
   formatCapabilitiesForPrompt,
   detectRegisteredAction,
-  clearRegistry
+  clearRegistry,
+  checkActionPermission
 } from './action-registry.js';

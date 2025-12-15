@@ -35,12 +35,15 @@ const capabilityRegistry = new Map();
  * @param {Function} action.execute - Async function to execute
  * @param {Function} action.formatResult - Function to format result
  * @param {boolean} [action.needsTarget] - Whether action needs a target
+ * @param {string} [action.permission] - Required permission: 'everyone', 'moderator', 'admin'
+ * @param {boolean} [action.adminOnly] - Shorthand for permission: 'admin'
  * 
  * @example
  * registerAction('my-action', {
  *   keywords: ['do thing', 'make thing'],
  *   plugin: 'my-plugin',
  *   description: 'Does a thing',
+ *   permission: 'everyone', // or 'moderator', 'admin'
  *   async execute(context) { return { result: 'done' }; },
  *   formatResult(result) { return `Done: ${result.result}`; }
  * });
@@ -207,6 +210,57 @@ export function clearRegistry() {
   logger.debug('Cleared action and capability registries');
 }
 
+/**
+ * Check if a user has permission to execute an action
+ * @param {Object} action - Action definition
+ * @param {Object} context - Execution context with user info
+ * @returns {Object} Permission check result
+ */
+export async function checkActionPermission(action, context) {
+  const permission = action.permission || (action.adminOnly ? 'admin' : 'everyone');
+  
+  // Everyone can use 'everyone' actions
+  if (permission === 'everyone') {
+    return { allowed: true };
+  }
+  
+  // Get user's permissions
+  const userId = context.userId;
+  const member = context.member || context.message?.member;
+  
+  if (!member && !userId) {
+    return { allowed: false, reason: 'Could not determine user permissions' };
+  }
+  
+  // Check admin permission
+  if (permission === 'admin') {
+    // Check if user is bot owner or has admin permissions
+    const isOwner = process.env.BOT_OWNER_ID === userId;
+    const hasAdminPerm = member?.permissions?.has?.('Administrator');
+    
+    if (isOwner || hasAdminPerm) {
+      return { allowed: true };
+    }
+    return { allowed: false, reason: 'This action requires administrator permissions' };
+  }
+  
+  // Check moderator permission
+  if (permission === 'moderator') {
+    const isOwner = process.env.BOT_OWNER_ID === userId;
+    const hasModPerm = member?.permissions?.has?.('ManageMessages') || 
+                       member?.permissions?.has?.('ModerateMembers') ||
+                       member?.permissions?.has?.('Administrator');
+    
+    if (isOwner || hasModPerm) {
+      return { allowed: true };
+    }
+    return { allowed: false, reason: 'This action requires moderator permissions' };
+  }
+  
+  // Unknown permission level - deny by default
+  return { allowed: false, reason: 'Unknown permission level' };
+}
+
 export default {
   registerAction,
   unregisterAction,
@@ -217,5 +271,6 @@ export default {
   getCapabilities,
   formatCapabilitiesForPrompt,
   detectRegisteredAction,
-  clearRegistry
+  clearRegistry,
+  checkActionPermission
 };

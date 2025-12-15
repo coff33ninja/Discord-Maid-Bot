@@ -121,6 +121,7 @@ const ACTIONS = {
     keywords: ['wake', 'wol', 'turn on', 'power on', 'boot', 'start up', 'wake up'],
     plugin: 'network-management',
     description: 'Wake a device using Wake-on-LAN',
+    permission: 'wake_device', // Uses PERMISSIONS.WAKE_DEVICE
     needsTarget: true,
     async execute(context) {
       const { wakeDevice } = await import('../../network-management/commands.js');
@@ -204,6 +205,7 @@ const ACTIONS = {
     keywords: ['speed test', 'speedtest', 'internet speed', 'bandwidth', 'how fast', 'connection speed'],
     plugin: 'integrations',
     description: 'Run an internet speed test',
+    permission: 'run_speedtest', // Uses PERMISSIONS.RUN_SPEEDTEST
     async execute() {
       const { getPlugin } = await import('../../../src/core/plugin-system.js');
       const integrationsPlugin = getPlugin('integrations');
@@ -549,6 +551,7 @@ const ACTIONS = {
     keywords: ['research', 'look up', 'find out about', 'learn about', 'tell me about', 'what is', 'who is', 'explain'],
     plugin: 'research',
     description: 'Research a topic',
+    permission: 'run_research', // Uses PERMISSIONS.RUN_RESEARCH
     async execute(context) {
       const { getPlugin } = await import('../../../src/core/plugin-system.js');
       const researchPlugin = getPlugin('research');
@@ -739,6 +742,137 @@ export class ActionExecutor {
   }
 
   /**
+   * Check if user has permission to execute an action
+   * Uses the existing auth system from src/auth/auth.js
+   * 
+   * @param {Object} action - Action definition
+   * @param {Object} context - Execution context
+   * @returns {Promise<Object>} Permission check result
+   */
+  async checkPermission(action, context) {
+    // Get permission requirement from action
+    // Can be: 'everyone', 'viewer', 'operator', 'admin', or a specific PERMISSION constant
+    const permission = action.permission || (action.adminOnly ? 'admin' : 'everyone');
+    
+    // Everyone can use 'everyone' actions
+    if (permission === 'everyone') {
+      return { allowed: true };
+    }
+    
+    const userId = context.userId;
+    const member = context.member || context.message?.member;
+    
+    // Try to get user's role from the database (Discord user config)
+    let userRole = null;
+    try {
+      const { configOps } = await import('../../../src/database/db.js');
+      const discordUserConfig = configOps.get(`discord_user_${userId}`);
+      if (discordUserConfig) {
+        const config = JSON.parse(discordUserConfig);
+        userRole = config.role;
+      }
+    } catch (e) {
+      // Database not available
+    }
+    
+    // Import auth system
+    let ROLES, PERMISSIONS, hasPermission;
+    try {
+      const auth = await import('../../../src/auth/auth.js');
+      ROLES = auth.ROLES;
+      PERMISSIONS = auth.PERMISSIONS;
+      hasPermission = auth.hasPermission;
+    } catch (e) {
+      // Auth not available, fall back to Discord permissions
+      return this.checkDiscordPermission(permission, userId, member);
+    }
+    
+    // Check if permission is a specific PERMISSION constant
+    if (Object.values(PERMISSIONS).includes(permission)) {
+      // Use the auth system's hasPermission
+      if (userRole && hasPermission(userRole, permission)) {
+        return { allowed: true };
+      }
+      // Fall back to Discord admin check
+      const isOwner = process.env.BOT_OWNER_ID === userId;
+      const hasAdminPerm = member?.permissions?.has?.('Administrator');
+      if (isOwner || hasAdminPerm) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: `🔒 This action requires the "${permission}" permission.` };
+    }
+    
+    // Check role-based permissions
+    if (permission === 'admin' || permission === ROLES?.ADMIN) {
+      const isOwner = process.env.BOT_OWNER_ID === userId;
+      const hasAdminPerm = member?.permissions?.has?.('Administrator');
+      const isAdminRole = userRole === ROLES?.ADMIN;
+      
+      if (isOwner || hasAdminPerm || isAdminRole) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: '🔒 This action requires administrator permissions.' };
+    }
+    
+    if (permission === 'operator' || permission === ROLES?.OPERATOR) {
+      const isOwner = process.env.BOT_OWNER_ID === userId;
+      const hasAdminPerm = member?.permissions?.has?.('Administrator');
+      const isOperatorOrHigher = userRole === ROLES?.ADMIN || userRole === ROLES?.OPERATOR;
+      const hasModPerm = member?.permissions?.has?.('ManageMessages') || 
+                         member?.permissions?.has?.('ModerateMembers');
+      
+      if (isOwner || hasAdminPerm || isOperatorOrHigher || hasModPerm) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: '🔒 This action requires operator permissions.' };
+    }
+    
+    if (permission === 'viewer' || permission === ROLES?.VIEWER) {
+      // Viewer is the lowest role, most users should have this
+      const isOwner = process.env.BOT_OWNER_ID === userId;
+      const hasAnyRole = userRole !== null;
+      
+      if (isOwner || hasAnyRole) {
+        return { allowed: true };
+      }
+      // For viewer, we're lenient - allow if they're in the server
+      if (member) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: '🔒 This action requires viewer permissions.' };
+    }
+    
+    return { allowed: true };
+  }
+
+  /**
+   * Fallback Discord permission check
+   */
+  checkDiscordPermission(permission, userId, member) {
+    const isOwner = process.env.BOT_OWNER_ID === userId;
+    
+    if (permission === 'admin') {
+      const hasAdminPerm = member?.permissions?.has?.('Administrator');
+      if (isOwner || hasAdminPerm) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: '🔒 This action requires administrator permissions.' };
+    }
+    
+    if (permission === 'operator' || permission === 'moderator') {
+      const hasModPerm = member?.permissions?.has?.('ManageMessages') || 
+                         member?.permissions?.has?.('ModerateMembers') ||
+                         member?.permissions?.has?.('Administrator');
+      if (isOwner || hasModPerm) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: '🔒 This action requires moderator permissions.' };
+    }
+    
+    return { allowed: true };
+  }
+
+  /**
    * Execute an action
    * @param {string} actionId - Action identifier
    * @param {Object} context - Execution context
@@ -772,8 +906,18 @@ export class ActionExecutor {
       };
     }
 
+    // Check permissions
+    const permCheck = await this.checkPermission(action, context);
+    if (!permCheck.allowed) {
+      return {
+        success: false,
+        error: permCheck.reason || 'Permission denied',
+        permissionDenied: true
+      };
+    }
+
     try {
-      logger.info(`Executing action: ${actionId}`);
+      logger.info(`Executing action: ${actionId} (user: ${context.userId})`);
       
       const result = await action.execute({
         ...context,
