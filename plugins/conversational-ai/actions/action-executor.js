@@ -421,6 +421,95 @@ const ACTIONS = {
     }
   },
 
+  'server-status': {
+    keywords: ['server status', 'bot status', 'is the bot running', 'check server', 'system status', 'uptime'],
+    plugin: 'server-admin',
+    description: 'Check server/bot status',
+    permission: 'admin',
+    async execute(context) {
+      try {
+        const { execSync } = await import('child_process');
+        const os = await import('os');
+        
+        // Get system info
+        const uptime = os.uptime();
+        const hours = Math.floor(uptime / 3600);
+        const minutes = Math.floor((uptime % 3600) / 60);
+        
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        const usedMem = totalMem - freeMem;
+        const memPercent = ((usedMem / totalMem) * 100).toFixed(1);
+        
+        const cpus = os.cpus();
+        const loadAvg = os.loadavg()[0].toFixed(2);
+        
+        return {
+          success: true,
+          uptime: `${hours}h ${minutes}m`,
+          memory: {
+            used: (usedMem / 1024 / 1024 / 1024).toFixed(2),
+            total: (totalMem / 1024 / 1024 / 1024).toFixed(2),
+            percent: memPercent
+          },
+          cpu: {
+            cores: cpus.length,
+            load: loadAvg
+          },
+          platform: os.platform(),
+          hostname: os.hostname()
+        };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ Failed to get server status: ${result.error}`;
+      }
+      
+      return `**🖥️ Server Status**\n\n` +
+        `⏱️ **Uptime:** ${result.uptime}\n` +
+        `💾 **Memory:** ${result.memory.used}GB / ${result.memory.total}GB (${result.memory.percent}%)\n` +
+        `🔧 **CPU:** ${result.cpu.cores} cores, load: ${result.cpu.load}\n` +
+        `🖥️ **Host:** ${result.hostname} (${result.platform})`;
+    }
+  },
+
+  'server-logs': {
+    keywords: ['server logs', 'bot logs', 'show logs', 'view logs', 'read logs', 'recent logs'],
+    plugin: 'server-admin',
+    description: 'View recent bot logs',
+    permission: 'admin',
+    async execute(context) {
+      try {
+        const { exec } = await import('child_process');
+        const { promisify } = await import('util');
+        const execAsync = promisify(exec);
+        
+        // Try to get logs from journalctl (Linux) or from log file
+        let logs = '';
+        try {
+          const { stdout } = await execAsync('journalctl -u discord-maid-bot -n 20 --no-pager 2>/dev/null || tail -n 20 /var/log/discord-bot.log 2>/dev/null || echo "No logs available"');
+          logs = stdout;
+        } catch (e) {
+          logs = 'Could not retrieve logs. Use `/admin server logs` for full access.';
+        }
+        
+        return { success: true, logs: logs.substring(0, 1500) };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ Failed to get logs: ${result.error}`;
+      }
+      
+      return `**📜 Recent Logs**\n\n\`\`\`\n${result.logs}\n\`\`\`\n\n_Use \`/admin server logs\` for more options_`;
+    }
+  },
+
   // ============ GAMES ============
   'game-list': {
     keywords: ['what games', 'list games', 'available games', 'show games', 'games list'],
