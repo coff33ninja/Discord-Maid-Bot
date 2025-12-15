@@ -157,6 +157,26 @@ const ACTION_CATEGORIES = {
     description: 'View banned users',
     examples: ['ban list', 'who is banned', 'show bans', 'list banned users']
   },
+  'discord-move-channel': {
+    description: 'Move a channel to a category',
+    examples: ['move channel to category', 'put general in text channels', 'move channel']
+  },
+  'discord-create-role': {
+    description: 'Create a new server role',
+    examples: ['create role VIP', 'make a new role', 'add role Admin']
+  },
+  'discord-delete-role': {
+    description: 'Delete a server role',
+    examples: ['delete role VIP', 'remove role', 'destroy role']
+  },
+  'discord-set-server-name': {
+    description: 'Change the server name',
+    examples: ['rename server', 'change server name to', 'set server name']
+  },
+  'discord-set-server-description': {
+    description: 'Set the server description',
+    examples: ['set server description', 'change server description', 'server description to']
+  },
   
   // Network & Device Health
   'network-insights': {
@@ -442,6 +462,11 @@ function fallbackClassification(query) {
     { keywords: ['server info', 'guild info', 'server stats', 'about server'], action: 'discord-server-info' },
     { keywords: ['list roles', 'show roles', 'server roles', 'all roles'], action: 'discord-list-roles' },
     { keywords: ['ban list', 'banned users', 'show bans', 'who is banned'], action: 'discord-ban-list' },
+    { keywords: ['move channel', 'move to category', 'put channel in'], action: 'discord-move-channel' },
+    { keywords: ['create role', 'make role', 'new role', 'add role'], action: 'discord-create-role' },
+    { keywords: ['delete role', 'remove role', 'destroy role'], action: 'discord-delete-role' },
+    { keywords: ['rename server', 'change server name', 'set server name'], action: 'discord-set-server-name' },
+    { keywords: ['server description', 'set server description'], action: 'discord-set-server-description' },
     { keywords: ['network insights', 'analyze network', 'network health', 'network report'], action: 'network-insights' },
     { keywords: ['device health', 'health report', 'device uptime', 'unhealthy devices'], action: 'device-health' },
     { keywords: ['shutdown', 'turn off', 'power off', 'restart', 'reboot'], action: 'shutdown-device' },

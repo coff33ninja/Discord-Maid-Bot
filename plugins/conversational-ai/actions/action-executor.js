@@ -3258,6 +3258,342 @@ Duration parsing:
     }
   },
 
+  // ============ DISCORD MOVE CHANNEL ============
+  'discord-move-channel': {
+    keywords: ['move channel', 'move to category', 'change category', 'put channel in'],
+    plugin: 'server-admin',
+    description: 'Move a channel to a category',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      if (!context.guild) return { needsGuild: true };
+      
+      let channelName = null;
+      let categoryName = null;
+      
+      // Use AI to parse
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        const channels = context.guild.channels.cache.filter(c => c.type === 0 || c.type === 2).map(c => c.name);
+        const categories = context.guild.channels.cache.filter(c => c.type === 4).map(c => c.name);
+        
+        if (aiPlugin) {
+          const prompt = `Parse a channel move command.
+
+USER MESSAGE: "${query}"
+
+CHANNELS: ${channels.slice(0, 20).join(', ')}
+CATEGORIES: ${categories.join(', ')}
+
+Return ONLY JSON:
+{
+  "channelName": "channel to move",
+  "categoryName": "target category"
+}`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 100, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            channelName = parsed.channelName;
+            categoryName = parsed.categoryName;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for move channel:', error.message);
+      }
+      
+      if (!channelName || !categoryName) return { needsInfo: true };
+      
+      try {
+        const { findChannel, moveChannel } = await import('../../server-admin/discord/channel-manager.js');
+        const channel = findChannel(context.guild, channelName);
+        if (!channel) return { error: `Channel "${channelName}" not found` };
+        
+        const category = context.guild.channels.cache.find(c => 
+          c.type === 4 && c.name.toLowerCase().includes(categoryName.toLowerCase())
+        );
+        if (!category) return { error: `Category "${categoryName}" not found` };
+        
+        const result = await moveChannel(channel, category.id, { executorId: context.userId, executorName: context.username });
+        return { ...result, categoryName: category.name };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `📁 I can only move channels in a server.`;
+      if (result.needsInfo) return `📁 Usage: "Move channel general to category Text Channels"`;
+      if (result.error) return `❌ ${result.error}`;
+      return `📁 Moved **#${result.channel?.name}** to **${result.categoryName}**`;
+    }
+  },
+
+  // ============ DISCORD CREATE ROLE ============
+  'discord-create-role': {
+    keywords: ['create role', 'make role', 'new role', 'add role'],
+    plugin: 'server-admin',
+    description: 'Create a new server role',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      if (!context.guild) return { needsGuild: true };
+      
+      let roleName = null;
+      let roleColor = null;
+      
+      // Use AI to parse
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse a role creation command.
+
+USER MESSAGE: "${query}"
+
+Return ONLY JSON:
+{
+  "roleName": "name for the new role",
+  "color": "hex color like #FF0000 or color name like 'red', 'blue', 'green', or null"
+}
+
+Examples:
+- "create role VIP" → roleName: "VIP", color: null
+- "make a red role called Admin" → roleName: "Admin", color: "#FF0000"
+- "new role Moderator with blue color" → roleName: "Moderator", color: "#0000FF"`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 100, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            roleName = parsed.roleName;
+            roleColor = parsed.color;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for create role:', error.message);
+      }
+      
+      if (!roleName) return { needsInfo: true };
+      
+      try {
+        const roleOptions = { name: roleName, reason: `Created by ${context.username} via AI` };
+        if (roleColor) roleOptions.color = roleColor;
+        
+        const role = await context.guild.roles.create(roleOptions);
+        return { success: true, role: { name: role.name, color: role.hexColor, id: role.id } };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `🎭 I can only create roles in a server.`;
+      if (result.needsInfo) return `🎭 Usage: "Create role VIP" or "Create role Admin with red color"`;
+      if (result.error) return `❌ ${result.error}`;
+      return `🎭 Created role **${result.role?.name}**${result.role?.color !== '#000000' ? ` (${result.role?.color})` : ''}`;
+    }
+  },
+
+  // ============ DISCORD DELETE ROLE ============
+  'discord-delete-role': {
+    keywords: ['delete role', 'remove role', 'destroy role'],
+    plugin: 'server-admin',
+    description: 'Delete a server role',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      if (!context.guild) return { needsGuild: true };
+      
+      const roles = context.guild.roles.cache.filter(r => r.name !== '@everyone' && !r.managed);
+      let roleName = null;
+      
+      // Use AI to parse
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse a role deletion command.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE ROLES: ${roles.map(r => r.name).slice(0, 30).join(', ')}
+
+Return ONLY JSON:
+{
+  "roleName": "exact role name to delete from the list"
+}`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 100, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            roleName = parsed.roleName;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for delete role:', error.message);
+      }
+      
+      if (!roleName) return { needsInfo: true, roles: roles.map(r => r.name).slice(0, 15) };
+      
+      try {
+        const role = roles.find(r => r.name.toLowerCase() === roleName.toLowerCase());
+        if (!role) return { error: `Role "${roleName}" not found`, roles: roles.map(r => r.name).slice(0, 15) };
+        
+        const deletedName = role.name;
+        await role.delete(`Deleted by ${context.username} via AI`);
+        return { success: true, roleName: deletedName };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `🎭 I can only delete roles in a server.`;
+      if (result.needsInfo) {
+        let response = `🎭 Which role should I delete?`;
+        if (result.roles?.length > 0) response += `\n\n**Available roles:**\n${result.roles.map(r => `• ${r}`).join('\n')}`;
+        return response;
+      }
+      if (result.error) {
+        let response = `❌ ${result.error}`;
+        if (result.roles?.length > 0) response += `\n\n**Available roles:**\n${result.roles.map(r => `• ${r}`).join('\n')}`;
+        return response;
+      }
+      return `🗑️ Deleted role **${result.roleName}**`;
+    }
+  },
+
+  // ============ DISCORD SET SERVER NAME ============
+  'discord-set-server-name': {
+    keywords: ['rename server', 'change server name', 'set server name', 'server name'],
+    plugin: 'server-admin',
+    description: 'Change the server name',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      if (!context.guild) return { needsGuild: true };
+      
+      let newName = null;
+      
+      // Use AI to parse
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse a server rename command.
+
+USER MESSAGE: "${query}"
+CURRENT SERVER NAME: "${context.guild.name}"
+
+Return ONLY JSON:
+{
+  "newName": "the new server name"
+}`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 100, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            newName = parsed.newName;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for set server name:', error.message);
+      }
+      
+      if (!newName) return { needsInfo: true };
+      
+      try {
+        const oldName = context.guild.name;
+        await context.guild.setName(newName, `Changed by ${context.username} via AI`);
+        return { success: true, oldName, newName };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `🏠 I can only rename servers in a server.`;
+      if (result.needsInfo) return `🏠 Usage: "Rename server to My Awesome Server"`;
+      if (result.error) return `❌ ${result.error}`;
+      return `🏠 Renamed server **${result.oldName}** → **${result.newName}**`;
+    }
+  },
+
+  // ============ DISCORD SET SERVER DESCRIPTION ============
+  'discord-set-server-description': {
+    keywords: ['server description', 'set server description', 'change server description'],
+    plugin: 'server-admin',
+    description: 'Set the server description',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      if (!context.guild) return { needsGuild: true };
+      
+      let description = null;
+      
+      // Use AI to parse
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse a server description command.
+
+USER MESSAGE: "${query}"
+
+Return ONLY JSON:
+{
+  "description": "the server description to set (max 120 chars)"
+}`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 150, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            description = parsed.description;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for set server description:', error.message);
+      }
+      
+      if (!description) return { needsInfo: true };
+      
+      try {
+        await context.guild.setDescription(description, `Set by ${context.username} via AI`);
+        return { success: true, description };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `🏠 I can only set descriptions in a server.`;
+      if (result.needsInfo) return `🏠 Usage: "Set server description to Welcome to our community!"`;
+      if (result.error) return `❌ ${result.error}`;
+      return `🏠 Set server description: "${result.description}"`;
+    }
+  },
+
   // ============ NETWORK INSIGHTS ============
   'network-insights': {
     keywords: ['network insights', 'network analysis', 'analyze network', 'network report', 'network health'],
