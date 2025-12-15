@@ -2,191 +2,140 @@
  * Server Admin Slash Commands
  * 
  * Discord slash commands for server and Discord administration.
+ * This plugin handles the 'server' and 'discord' subcommand groups of /admin.
  * 
  * @module plugins/server-admin/commands
  */
 
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandSubcommandGroupBuilder, EmbedBuilder } from 'discord.js';
 import { createLogger } from '../../src/logging/logger.js';
 import { handleDiscordAdmin, formatResult } from './discord-admin.js';
 import { parseAdminIntent } from './nlp-parser.js';
 
 const logger = createLogger('server-admin:commands');
 
+// Inject into existing /admin command
+export const parentCommand = 'admin';
+
 /**
- * Slash command definitions
+ * Command group - server management
+ * Note: We export the first group as commandGroup for the plugin system
+ * The second group will be added via additionalGroups
  */
-export const commands = [
-  {
-    data: new SlashCommandBuilder()
-      .setName('admin')
-      .setDescription('Server and Discord administration commands')
-      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-      
-      // Server subcommand group
-      .addSubcommandGroup(group =>
-        group
-          .setName('server')
-          .setDescription('Linux/Windows/macOS server management')
-          .addSubcommand(sub =>
-            sub
-              .setName('status')
-              .setDescription('Check server and bot status')
-          )
-          .addSubcommand(sub =>
-            sub
-              .setName('logs')
-              .setDescription('View recent bot logs')
-              .addIntegerOption(opt =>
-                opt
-                  .setName('lines')
-                  .setDescription('Number of lines to show (default: 20)')
-                  .setMinValue(1)
-                  .setMaxValue(100)
-              )
-          )
-          .addSubcommand(sub =>
-            sub
-              .setName('restart')
-              .setDescription('Restart the bot service')
-          )
-          .addSubcommand(sub =>
-            sub
-              .setName('deploy')
-              .setDescription('Deploy latest code from git')
-          )
-          .addSubcommand(sub =>
-            sub
-              .setName('disk')
-              .setDescription('Check disk space usage')
-          )
+export const commandGroup = new SlashCommandSubcommandGroupBuilder()
+  .setName('server')
+  .setDescription('Linux/Windows/macOS server management')
+  .addSubcommand(sub =>
+    sub
+      .setName('status')
+      .setDescription('Check server and bot status')
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName('logs')
+      .setDescription('View recent bot logs')
+      .addIntegerOption(opt =>
+        opt
+          .setName('lines')
+          .setDescription('Number of lines to show (default: 20)')
+          .setMinValue(1)
+          .setMaxValue(100)
       )
-      
-      // Natural language subcommand
-      .addSubcommand(sub =>
-        sub
-          .setName('do')
-          .setDescription('Execute admin command using natural language')
-          .addStringOption(opt =>
-            opt
-              .setName('query')
-              .setDescription('What do you want to do? (e.g., "restart the bot", "lock this channel")')
-              .setRequired(true)
-          )
-      )
-      
-      // Discord subcommand group
-      .addSubcommandGroup(group =>
-        group
-          .setName('discord')
-          .setDescription('Discord server management')
-          .addSubcommand(sub =>
-            sub
-              .setName('info')
-              .setDescription('Show server information')
-          )
-          .addSubcommand(sub =>
-            sub
-              .setName('roles')
-              .setDescription('List all server roles')
-          )
-          .addSubcommand(sub =>
-            sub
-              .setName('channels')
-              .setDescription('List all server channels')
-          )
-          .addSubcommand(sub =>
-            sub
-              .setName('lock')
-              .setDescription('Lock the current channel')
-          )
-          .addSubcommand(sub =>
-            sub
-              .setName('unlock')
-              .setDescription('Unlock the current channel')
-          )
-          .addSubcommand(sub =>
-            sub
-              .setName('slowmode')
-              .setDescription('Set slowmode for current channel')
-              .addIntegerOption(opt =>
-                opt
-                  .setName('seconds')
-                  .setDescription('Slowmode duration in seconds (0 to disable)')
-                  .setRequired(true)
-                  .setMinValue(0)
-                  .setMaxValue(21600)
-              )
-          )
-      ),
-    
-    async execute(interaction) {
-      const group = interaction.options.getSubcommandGroup(false);
-      const subcommand = interaction.options.getSubcommand();
-      
-      logger.info(`Admin command: ${group || 'root'} ${subcommand}`);
-      
-      await interaction.deferReply({ ephemeral: true });
-      
-      try {
-        // Handle natural language command
-        if (subcommand === 'do') {
-          await handleNaturalLanguageCommand(interaction);
-        } else if (group === 'server') {
-          await handleServerCommand(interaction, subcommand);
-        } else if (group === 'discord') {
-          await handleDiscordCommand(interaction, subcommand);
-        }
-      } catch (error) {
-        logger.error(`Admin command error: ${error.message}`);
-        await interaction.editReply({ content: `❌ Error: ${error.message}` });
-      }
-    }
-  }
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName('restart')
+      .setDescription('Restart the bot service')
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName('deploy')
+      .setDescription('Deploy latest code from git')
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName('disk')
+      .setDescription('Check disk space usage')
+  );
+
+/**
+ * Additional command groups to inject
+ * The plugin system will also inject these
+ */
+export const additionalGroups = [
+  new SlashCommandSubcommandGroupBuilder()
+    .setName('discord')
+    .setDescription('Discord server management')
+    .addSubcommand(sub =>
+      sub
+        .setName('info')
+        .setDescription('Show server information')
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('roles')
+        .setDescription('List all server roles')
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('channels')
+        .setDescription('List all server channels')
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('lock')
+        .setDescription('Lock the current channel')
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('unlock')
+        .setDescription('Unlock the current channel')
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('slowmode')
+        .setDescription('Set slowmode for current channel')
+        .addIntegerOption(opt =>
+          opt
+            .setName('seconds')
+            .setDescription('Slowmode duration in seconds (0 to disable)')
+            .setRequired(true)
+            .setMinValue(0)
+            .setMaxValue(21600)
+        )
+    )
 ];
 
 /**
- * Handle natural language admin commands
+ * Handle admin commands for server-admin plugin
+ * @param {Object} interaction - Discord interaction
+ * @param {Object} plugin - Plugin instance (optional)
+ * @returns {Promise<boolean>} True if handled
  */
-async function handleNaturalLanguageCommand(interaction) {
-  const query = interaction.options.getString('query');
+export async function handleCommand(interaction, plugin) {
+  const group = interaction.options.getSubcommandGroup(false);
+  const sub = interaction.options.getSubcommand();
   
-  logger.info(`Natural language admin query: ${query}`);
-  
-  // Parse the natural language query
-  const intent = parseAdminIntent(query);
-  
-  if (intent.action === 'unknown') {
-    await interaction.editReply({
-      content: `❓ I didn't understand that command.\n\nTry something like:\n` +
-        `• "restart the bot"\n` +
-        `• "show server status"\n` +
-        `• "lock this channel"\n` +
-        `• "give @user the admin role"\n` +
-        `• "kick @user for spamming"`
-    });
-    return;
+  // Only handle server and discord subcommand groups
+  if (group !== 'server' && group !== 'discord') {
+    return false;
   }
-
-  const context = {
-    guild: interaction.guild,
-    channel: interaction.channel,
-    executorId: interaction.user.id,
-    executorName: interaction.user.username
-  };
-
-  // Route to appropriate handler based on intent type
-  if (intent.type === 'discord_roles' || intent.type === 'discord_channels' || 
-      intent.type === 'discord_members' || intent.type === 'discord_settings') {
-    const result = await handleDiscordAdmin({ action: intent.action, params: intent.params }, context);
-    await interaction.editReply({ content: formatResult(result, intent.action) });
-  } else {
-    // Server management commands
-    await interaction.editReply({
-      content: `🔧 **Detected Intent:** ${intent.action}\n` +
-        `**Confidence:** ${Math.round(intent.confidence * 100)}%\n\n` +
-        `_Server commands require confirmation. Please use the specific subcommand._`
-    });
+  
+  logger.info(`Admin command: ${group} ${sub}`);
+  
+  await interaction.deferReply({ ephemeral: true });
+  
+  try {
+    if (group === 'server') {
+      await handleServerCommand(interaction, sub);
+    } else if (group === 'discord') {
+      await handleDiscordCommand(interaction, sub);
+    }
+    return true;
+  } catch (error) {
+    logger.error(`Admin command error: ${error.message}`);
+    await interaction.editReply({ content: `❌ Error: ${error.message}` });
+    return true;
   }
 }
 
@@ -194,32 +143,39 @@ async function handleNaturalLanguageCommand(interaction) {
  * Handle server management commands
  */
 async function handleServerCommand(interaction, subcommand) {
-  const { getServerStats, viewLogs, checkDiskSpace } = await import('./command-executor.js');
+  const { executeCommand } = await import('./command-executor.js');
+  const { generateCommand, detectPlatform } = await import('./command-generator.js');
+  
+  const platform = detectPlatform();
   
   switch (subcommand) {
     case 'status': {
-      const result = await getServerStats();
-      if (result.error) {
-        await interaction.editReply({ content: `❌ ${result.error}` });
+      const cmd = generateCommand({ action: 'server_stats', params: {} }, platform);
+      const result = await executeCommand(cmd.command);
+      
+      if (!result.success) {
+        await interaction.editReply({ content: `❌ ${result.error || 'Failed to get server status'}` });
       } else {
-        await interaction.editReply({
-          content: `**📊 Server Status**\n\n` +
-            `🖥️ **CPU:** ${result.cpu || 'N/A'}\n` +
-            `💾 **Memory:** ${result.memory || 'N/A'}\n` +
-            `💿 **Disk:** ${result.disk || 'N/A'}\n` +
-            `⏱️ **Uptime:** ${result.uptime || 'N/A'}`
-        });
+        const embed = new EmbedBuilder()
+          .setColor('#667eea')
+          .setTitle('📊 Server Status')
+          .setDescription('```\n' + (result.output || 'No output').substring(0, 1000) + '\n```')
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
       }
       break;
     }
     
     case 'logs': {
       const lines = interaction.options.getInteger('lines') || 20;
-      const result = await viewLogs(lines);
-      if (result.error) {
-        await interaction.editReply({ content: `❌ ${result.error}` });
+      const cmd = generateCommand({ action: 'view_logs', params: { lines } }, platform);
+      const result = await executeCommand(cmd.command);
+      
+      if (!result.success) {
+        await interaction.editReply({ content: `❌ ${result.error || 'Failed to get logs'}` });
       } else {
-        const output = result.output?.substring(0, 1900) || 'No logs available';
+        const output = (result.output || 'No logs available').substring(0, 1800);
         await interaction.editReply({
           content: `**📜 Recent Logs (${lines} lines)**\n\`\`\`\n${output}\n\`\`\``
         });
@@ -228,27 +184,48 @@ async function handleServerCommand(interaction, subcommand) {
     }
     
     case 'restart': {
-      await interaction.editReply({
-        content: `⚠️ **Restart Bot?**\n\nThis will restart the bot service. Use natural language to confirm:\n> "yes, restart the bot"`
+      // Import approval manager for confirmation
+      const { createApprovalRequest } = await import('./approval-manager.js');
+      const cmd = generateCommand({ action: 'service_restart', params: {} }, platform);
+      
+      const approvalMessage = await createApprovalRequest(cmd, {
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        channel: interaction.channel
       });
+      
+      await interaction.editReply(approvalMessage);
       break;
     }
     
     case 'deploy': {
-      await interaction.editReply({
-        content: `⚠️ **Deploy Code?**\n\nThis will pull latest code and restart. Use natural language to confirm:\n> "yes, deploy the code"`
+      const { createApprovalRequest } = await import('./approval-manager.js');
+      const cmd = generateCommand({ action: 'deploy', params: {} }, platform);
+      
+      const approvalMessage = await createApprovalRequest(cmd, {
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        channel: interaction.channel
       });
+      
+      await interaction.editReply(approvalMessage);
       break;
     }
     
     case 'disk': {
-      const result = await checkDiskSpace();
-      if (result.error) {
-        await interaction.editReply({ content: `❌ ${result.error}` });
+      const cmd = generateCommand({ action: 'disk_check', params: {} }, platform);
+      const result = await executeCommand(cmd.command);
+      
+      if (!result.success) {
+        await interaction.editReply({ content: `❌ ${result.error || 'Failed to check disk space'}` });
       } else {
-        await interaction.editReply({
-          content: `**💿 Disk Usage**\n\`\`\`\n${result.output}\n\`\`\``
-        });
+        const embed = new EmbedBuilder()
+          .setColor('#667eea')
+          .setTitle('💿 Disk Usage')
+          .setDescription('```\n' + (result.output || 'No output').substring(0, 1000) + '\n```')
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
       }
       break;
     }
@@ -273,15 +250,24 @@ async function handleDiscordCommand(interaction, subcommand) {
         await interaction.editReply({ content: `❌ ${result.error}` });
       } else {
         const server = result.server;
-        await interaction.editReply({
-          content: `**🏠 Server Info: ${server.name}**\n\n` +
-            `👥 **Members:** ${server.memberCount}\n` +
-            `💬 **Channels:** ${server.channels.total} (${server.channels.text} text, ${server.channels.voice} voice)\n` +
-            `🎭 **Roles:** ${server.roleCount}\n` +
-            `😀 **Emojis:** ${server.emojiCount}\n` +
-            `🚀 **Boost Level:** ${server.boostLevel} (${server.boostCount} boosts)\n` +
-            `📅 **Created:** ${server.createdAt?.toLocaleDateString() || 'N/A'}`
-        });
+        const embed = new EmbedBuilder()
+          .setColor('#667eea')
+          .setTitle(`🏠 ${server.name}`)
+          .addFields(
+            { name: '👥 Members', value: `${server.memberCount}`, inline: true },
+            { name: '💬 Channels', value: `${server.channels?.total || 'N/A'}`, inline: true },
+            { name: '🎭 Roles', value: `${server.roleCount}`, inline: true },
+            { name: '😀 Emojis', value: `${server.emojiCount}`, inline: true },
+            { name: '🚀 Boost Level', value: `${server.boostLevel}`, inline: true },
+            { name: '💎 Boosts', value: `${server.boostCount}`, inline: true }
+          )
+          .setTimestamp();
+        
+        if (server.iconURL) {
+          embed.setThumbnail(server.iconURL);
+        }
+        
+        await interaction.editReply({ embeds: [embed] });
       }
       break;
     }
@@ -292,9 +278,17 @@ async function handleDiscordCommand(interaction, subcommand) {
         await interaction.editReply({ content: `❌ ${result.error}` });
       } else {
         const roleList = result.roles.slice(0, 20).map(r => `• ${r.name} (${r.memberCount} members)`).join('\n');
-        await interaction.editReply({
-          content: `**🎭 Server Roles (${result.totalCount})**\n\n${roleList}${result.totalCount > 20 ? '\n\n_...and more_' : ''}`
-        });
+        const embed = new EmbedBuilder()
+          .setColor('#667eea')
+          .setTitle(`🎭 Server Roles (${result.totalCount})`)
+          .setDescription(roleList || 'No roles found')
+          .setTimestamp();
+        
+        if (result.totalCount > 20) {
+          embed.setFooter({ text: `...and ${result.totalCount - 20} more` });
+        }
+        
+        await interaction.editReply({ embeds: [embed] });
       }
       break;
     }
@@ -305,9 +299,17 @@ async function handleDiscordCommand(interaction, subcommand) {
         await interaction.editReply({ content: `❌ ${result.error}` });
       } else {
         const channelList = result.channels.slice(0, 20).map(c => `• #${c.name} (${c.type})`).join('\n');
-        await interaction.editReply({
-          content: `**💬 Server Channels (${result.totalCount})**\n\n${channelList}${result.totalCount > 20 ? '\n\n_...and more_' : ''}`
-        });
+        const embed = new EmbedBuilder()
+          .setColor('#667eea')
+          .setTitle(`💬 Server Channels (${result.totalCount})`)
+          .setDescription(channelList || 'No channels found')
+          .setTimestamp();
+        
+        if (result.totalCount > 20) {
+          embed.setFooter({ text: `...and ${result.totalCount - 20} more` });
+        }
+        
+        await interaction.editReply({ embeds: [embed] });
       }
       break;
     }
@@ -333,4 +335,14 @@ async function handleDiscordCommand(interaction, subcommand) {
   }
 }
 
-export default commands;
+/**
+ * Handle autocomplete for admin commands
+ * @param {Object} interaction - Discord interaction
+ * @returns {Promise<void>}
+ */
+export async function handleAutocomplete(interaction) {
+  // No autocomplete needed for current commands
+  await interaction.respond([]);
+}
+
+export default { commandGroup, additionalGroups, handleCommand, handleAutocomplete, parentCommand };

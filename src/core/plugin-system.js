@@ -546,6 +546,7 @@ async function loadPluginCommands(pluginName) {
     
     pluginCommands.set(pluginName, {
       commandGroup: commandsModule.commandGroup,
+      additionalGroups: commandsModule.additionalGroups || [], // Support multiple command groups
       parentCommand: commandsModule.parentCommand !== undefined ? commandsModule.parentCommand : 'automation',
       handleCommand: commandsModule.handleCommand,
       handleAutocomplete: commandsModule.handleAutocomplete || null
@@ -562,13 +563,32 @@ async function loadPluginCommands(pluginName) {
 
 // Get all plugin commands (only those that inject commands, not handler-only plugins)
 export function getPluginCommands() {
-  return Array.from(pluginCommands.entries())
-    .filter(([, commands]) => commands.commandGroup !== null) // Skip handler-only plugins
-    .map(([pluginName, commands]) => ({
+  const result = [];
+  
+  for (const [pluginName, commands] of pluginCommands.entries()) {
+    // Skip handler-only plugins
+    if (commands.commandGroup === null) continue;
+    
+    // Add main command group
+    result.push({
       pluginName,
       parentCommand: commands.parentCommand,
       commandGroup: commands.commandGroup
-    }));
+    });
+    
+    // Add additional groups if any
+    if (commands.additionalGroups && commands.additionalGroups.length > 0) {
+      for (const additionalGroup of commands.additionalGroups) {
+        result.push({
+          pluginName,
+          parentCommand: commands.parentCommand,
+          commandGroup: additionalGroup
+        });
+      }
+    }
+  }
+  
+  return result;
 }
 
 // Get plugin command handler
@@ -609,9 +629,19 @@ export async function handlePluginAutocomplete(pluginName, interaction) {
 // Get plugin name by parent command and subcommand group
 export function getPluginCommandByGroup(parentCommand, subcommandGroup) {
   for (const [pluginName, commandData] of pluginCommands.entries()) {
-    if (commandData.parentCommand === parentCommand && 
-        commandData.commandGroup.name === subcommandGroup) {
-      return pluginName;
+    if (commandData.parentCommand === parentCommand) {
+      // Check main command group
+      if (commandData.commandGroup && commandData.commandGroup.name === subcommandGroup) {
+        return pluginName;
+      }
+      // Check additional groups
+      if (commandData.additionalGroups) {
+        for (const group of commandData.additionalGroups) {
+          if (group.name === subcommandGroup) {
+            return pluginName;
+          }
+        }
+      }
     }
   }
   return null;
