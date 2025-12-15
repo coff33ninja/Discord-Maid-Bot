@@ -55,7 +55,7 @@ function extractDeviceIdentifier(query) {
 const ACTIONS = {
   // Network actions
   'network-scan': {
-    keywords: ['scan', 'network scan', 'find devices', 'what devices', 'which devices', 'devices online', 'online devices'],
+    keywords: ['scan', 'network scan', 'find devices', 'what devices', 'which devices', 'devices online', 'online devices', 'show network', 'show devices', 'network devices'],
     plugin: 'network-management',
     description: 'Scan the network for devices',
     async execute(context) {
@@ -401,7 +401,7 @@ const ACTIONS = {
 
   // ============ DEVICE MANAGEMENT ============
   'device-rename': {
-    keywords: ['rename device', 'name device', 'call device', 'set device name', 'change device name'],
+    keywords: ['rename', 'name device', 'call device', 'set device name', 'change device name', ' is '],
     plugin: 'device-management',
     description: 'Rename a device',
     async execute(context) {
@@ -409,14 +409,17 @@ const ACTIONS = {
       const query = context.query || '';
       
       // Try to extract device and new name
-      // Patterns: "rename 192.168.0.100 to MyPC", "name device KUSANAGI as Gaming PC"
-      // Stop at common words like "and", "it", "its", "it's", "also", "with"
-      const stopWords = /(?:\s+(?:and|it|its|it's|also|with|,|\.)\s*.*)?$/i;
+      // Patterns: "rename 192.168.0.100 to MyPC", "192.168.0.100 is Kusanagi"
       const patterns = [
-        /rename\s+(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-\s]+?)["']?(?:\s+(?:and|it|its|it's|also|with|,|\.)|$)/i,
-        /name\s+(?:device\s+)?(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-\s]+?)["']?(?:\s+(?:and|it|its|it's|also|with|,|\.)|$)/i,
-        /call\s+(\S+)\s+["']?([a-zA-Z0-9_\-\s]+?)["']?(?:\s+(?:and|it|its|it's|also|with|,|\.)|$)/i,
-        /set\s+(?:device\s+)?name\s+(?:of\s+)?(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-\s]+?)["']?(?:\s+(?:and|it|its|it's|also|with|,|\.)|$)/i
+        // "rename X to Y" patterns
+        /rename\s+(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-]+)["']?/i,
+        /name\s+(?:device\s+)?(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-]+)["']?/i,
+        /call\s+(\S+)\s+["']?([a-zA-Z0-9_\-]+)["']?/i,
+        /set\s+(?:device\s+)?name\s+(?:of\s+)?(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-]+)["']?/i,
+        // "X is Y" pattern (e.g., "192.168.0.100 is Kusanagi")
+        /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+is\s+["']?([a-zA-Z0-9_\-]+)["']?/i,
+        // "device X is Y" pattern
+        /(?:device\s+)?(\S+)\s+is\s+(?:called\s+)?["']?([a-zA-Z0-9_\-]+)["']?/i
       ];
       
       let deviceId = null;
@@ -424,7 +427,7 @@ const ACTIONS = {
       let deviceType = null;
       
       // Also try to extract device type (pc, server, phone, etc.)
-      const typeMatch = query.match(/(?:it'?s?\s+a\s+|type\s+is\s+)(\w+)/i);
+      const typeMatch = query.match(/(?:it'?s?\s+a\s+|type\s+is\s+|is\s+a\s+)(\w+)/i);
       if (typeMatch) {
         deviceType = typeMatch[1].toLowerCase();
       }
