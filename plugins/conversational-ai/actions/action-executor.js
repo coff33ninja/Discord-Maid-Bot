@@ -677,6 +677,7 @@ export class ActionExecutor {
     
     const lowerQuery = query.toLowerCase();
     
+    // First check built-in actions
     for (const [actionId, action] of Object.entries(ACTIONS)) {
       for (const keyword of action.keywords) {
         if (lowerQuery.includes(keyword)) {
@@ -684,10 +685,25 @@ export class ActionExecutor {
             id: actionId,
             action,
             keyword,
-            confidence: this.calculateConfidence(lowerQuery, keyword)
+            confidence: this.calculateConfidence(lowerQuery, keyword),
+            source: 'builtin'
           };
         }
       }
+    }
+    
+    // Then check dynamically registered actions
+    try {
+      const { detectRegisteredAction } = require('../context/action-registry.js');
+      const registered = detectRegisteredAction(query);
+      if (registered) {
+        return {
+          ...registered,
+          confidence: this.calculateConfidence(lowerQuery, registered.keyword)
+        };
+      }
+    } catch (e) {
+      // Registry not available, skip
     }
     
     return null;
@@ -729,7 +745,19 @@ export class ActionExecutor {
    * @returns {Promise<Object>} Execution result
    */
   async execute(actionId, context = {}) {
-    const action = ACTIONS[actionId];
+    // Check built-in actions first
+    let action = ACTIONS[actionId];
+    
+    // If not found, check registry
+    if (!action) {
+      try {
+        const { getAction } = require('../context/action-registry.js');
+        action = getAction(actionId);
+      } catch (e) {
+        // Registry not available
+      }
+    }
+    
     if (!action) {
       return { success: false, error: 'Unknown action' };
     }

@@ -9,5 +9,20 @@ export {
   buildPluginAwareness, 
   formatPluginAwarenessForPrompt, 
   suggestCommand, 
-  clearCache as clearPluginCache 
+  clearCache as clearPluginCache,
+  getActionAwareness
 } from './plugin-awareness.js';
+
+// Action Registry - allows plugins to register their own actions
+export {
+  registerAction,
+  unregisterAction,
+  getActions,
+  getAction,
+  registerCapabilities,
+  unregisterCapabilities,
+  getCapabilities,
+  formatCapabilitiesForPrompt,
+  detectRegisteredAction,
+  clearRegistry
+} from './action-registry.js';

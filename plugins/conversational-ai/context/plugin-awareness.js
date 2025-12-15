@@ -195,6 +195,18 @@ export async function formatPluginAwarenessForPrompt() {
     parts.push('');
   }
   
+  // Add dynamically registered capabilities
+  try {
+    const { formatCapabilitiesForPrompt } = await import('./action-registry.js');
+    const dynamicCaps = formatCapabilitiesForPrompt();
+    if (dynamicCaps) {
+      parts.push(dynamicCaps);
+      parts.push('');
+    }
+  } catch (e) {
+    // Registry not available
+  }
+  
   // Slash commands for things that need interaction
   parts.push('**Slash Commands (for interactive features):**');
   parts.push('• Games: `/game play game:[name]` - Games need Discord buttons');
