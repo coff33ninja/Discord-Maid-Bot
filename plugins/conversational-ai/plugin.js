@@ -21,6 +21,9 @@ import { createLogger } from '../../src/logging/logger.js';
 import { ShortTermMemory } from './memory/short-term.js';
 import { MessageRouter } from './router/message-router.js';
 import { loadConfig } from './config.js';
+import { initializeHandler } from './commands.js';
+import { ResponseHandler } from './handlers/response-handler.js';
+import { MessageHandler } from './handlers/message-handler.js';
 
 export default class ConversationalAIPlugin extends Plugin {
   constructor() {
@@ -35,7 +38,10 @@ export default class ConversationalAIPlugin extends Plugin {
     // Components (initialized in onLoad)
     this.config = null;
     this.shortTermMemory = null;
+    this.semanticMemory = null;
     this.messageRouter = null;
+    this.responseHandler = null;
+    this.messageHandler = null;
     this.client = null;
   }
 
@@ -59,11 +65,36 @@ export default class ConversationalAIPlugin extends Plugin {
       mentionRequired: this.config.mentionRequired
     });
     
+    // Initialize response handler with context integration
+    initializeHandler(this);
+    
+    // Create response handler for message events
+    this.responseHandler = new ResponseHandler({
+      shortTermMemory: this.shortTermMemory,
+      semanticMemory: this.semanticMemory,
+      generateFn: async (prompt) => {
+        const { result } = await this.requestFromCore('gemini-generate', { prompt });
+        return result.response.text();
+      },
+      config: this.config
+    });
+    
+    // Create message handler (will be registered when client is set)
+    this.messageHandler = new MessageHandler({
+      plugin: this,
+      responseHandler: this.responseHandler
+    });
+    
     this.logger.info('✅ Conversational AI plugin loaded');
   }
 
   async onUnload() {
     this.logger.info('🧠 Unloading Conversational AI plugin...');
+    
+    // Unregister message handler
+    if (this.messageHandler && this.client) {
+      this.messageHandler.unregister(this.client);
+    }
     
     // Clear memory
     if (this.shortTermMemory) {
@@ -81,6 +112,12 @@ export default class ConversationalAIPlugin extends Plugin {
     this.client = client;
     if (client?.user?.id) {
       this.messageRouter.setBotId(client.user.id);
+      
+      // Register message handler
+      if (this.messageHandler) {
+        this.messageHandler.register(client);
+        this.logger.info('📨 Message event handler registered');
+      }
     }
   }
 
@@ -98,6 +135,14 @@ export default class ConversationalAIPlugin extends Plugin {
    */
   getMessageRouter() {
     return this.messageRouter;
+  }
+
+  /**
+   * Get semantic memory instance
+   * @returns {Object|null}
+   */
+  getSemanticMemory() {
+    return this.semanticMemory;
   }
 
   /**
@@ -157,5 +202,42 @@ export default class ConversationalAIPlugin extends Plugin {
   getMemoryStats() {
     if (!this.shortTermMemory) return { channelCount: 0, totalMessages: 0, totalTokens: 0 };
     return this.shortTermMemory.getStats();
+  }
+
+  /**
+   * Get response handler instance
+   * @returns {ResponseHandler|null}
+   */
+  getResponseHandler() {
+    return this.responseHandler;
+  }
+
+  /**
+   * Generate a response with context (public API for other plugins)
+   * @param {Object} options - Response options
+   * @param {string} options.channelId - Channel ID
+   * @param {string} options.userId - User ID
+   * @param {string} options.username - Username
+   * @param {string} options.content - Message content
+   * @returns {Promise<Object>} Response result
+   */
+  async generateResponse(options) {
+    if (!this.responseHandler) {
+      throw new Error('Response handler not initialized');
+    }
+    return this.responseHandler.generateResponse(options);
+  }
+
+  /**
+   * Track a message in memory without generating response
+   * @param {string} channelId - Channel ID
+   * @param {Object} message - Message data
+   */
+  trackMessage(channelId, message) {
+    if (this.responseHandler) {
+      this.responseHandler.trackMessage(channelId, message);
+    } else {
+      this.addToMemory(channelId, message);
+    }
   }
 }
