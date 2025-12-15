@@ -955,11 +955,24 @@ const ACTIONS = {
         return action;
       });
       
-      // Determine target
+      // Determine target - user reminders with actions should still notify the user
       const targetUserId = parsed.target?.userId || context.userId;
-      const isAutomation = parsed.type === 'automation' || 
-                          parsed.target?.type === 'automation' || 
-                          formattedActions.length > 0;
+      const hasTargetUser = parsed.target?.type === 'user' && parsed.target?.userId;
+      const hasActions = formattedActions.length > 0;
+      const isAutomationOnly = (parsed.type === 'automation' || parsed.target?.type === 'automation') && !hasTargetUser;
+      
+      // Determine the target type:
+      // - If there's a target user (even with actions), notify them
+      // - If automation-only (no target user), just run actions
+      // - Otherwise, DM the creator
+      let targetType;
+      if (hasTargetUser) {
+        targetType = 'user'; // Will notify the target user AND run actions if any
+      } else if (isAutomationOnly || (hasActions && !hasTargetUser)) {
+        targetType = 'automation'; // Just run actions, notify creator
+      } else {
+        targetType = 'dm';
+      }
       
       const reminderData = {
         name: parsed.message?.substring(0, 30) || 'Reminder',
@@ -967,10 +980,8 @@ const ACTIONS = {
         userId: context.userId,
         targetUserId: targetUserId,
         channelId: context.channelId,
-        target: isAutomation ? 'automation' :
-                parsed.target?.type === 'user' ? 'user' : 
-                parsed.target?.type === 'channel' ? 'channel' : 'dm',
-        actions: formattedActions.length > 0 ? formattedActions : undefined
+        target: targetType,
+        actions: hasActions ? formattedActions : undefined
       };
       
       if (parsed.type === 'recurring') {
@@ -989,9 +1000,10 @@ const ACTIONS = {
           time: parsed.time,
           message: parsed.message,
           targetUserId,
+          hasTargetUser,
           actions: formattedActions,
           confidence: parsed.confidence,
-          isAutomation
+          isAutomation: hasActions && !hasTargetUser
         };
       } catch (error) {
         return { error: error.message };
@@ -1032,14 +1044,23 @@ const ACTIONS = {
         timeStr = result.time?.value || 'scheduled';
       }
       
-      // Different title for automations vs reminders
-      const title = result.isAutomation ? '⚙️ **Automation Scheduled!**' : '✅ **Reminder Set!**';
+      // Different title based on type
+      let title;
+      if (result.hasTargetUser && result.actions?.length > 0) {
+        title = '👤⚙️ **Reminder + Action for User!**';
+      } else if (result.isAutomation) {
+        title = '⚙️ **Automation Scheduled!**';
+      } else if (result.hasTargetUser) {
+        title = '👤 **Reminder for User Set!**';
+      } else {
+        title = '✅ **Reminder Set!**';
+      }
       
       let response = `${title}\n\n` +
         `📝 **${result.isAutomation ? 'Task' : 'Message'}:** ${result.message}\n` +
         `⏰ **When:** ${timeStr}\n`;
       
-      if (result.targetUserId && result.targetUserId !== result.reminder?.userId) {
+      if (result.hasTargetUser || (result.targetUserId && result.targetUserId !== result.reminder?.userId)) {
         response += `👤 **For:** <@${result.targetUserId}>\n`;
       }
       
@@ -1049,6 +1070,7 @@ const ACTIONS = {
           if (a.type === 'homeassistant') return '🏠 Home Assistant';
           if (a.type === 'scan') return '📡 Network scan';
           if (a.type === 'speedtest') return '🚀 Speed test';
+          if (a.type === 'game') return '🎮 Start game';
           return a.type;
         });
         response += `🤖 **Actions:** ${actionNames.join(', ')}\n`;

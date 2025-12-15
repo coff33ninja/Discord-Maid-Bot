@@ -68,16 +68,19 @@ Rules:
 2. "remind me at 3pm to X" → type: "time", time.type: "clock", time.value: "3pm"
 3. "remind me every hour to X" → type: "recurring", time.type: "recurring", time.interval: "1h"
 4. "remind me tomorrow to X" → type: "time", time.type: "relative", time.value: "tomorrow"
-5. "remind @user to X" → target.type: "user"
-6. "at 6am wake my PC" → type: "automation", actions: [{ type: "wol", device: "PC" }]
-7. "every morning turn on the lights" → type: "recurring", actions: [{ type: "homeassistant", action: "turn on", entity: "lights" }]
-8. "in 30 minutes run a speed test" → type: "automation", actions: [{ type: "speedtest" }]
-9. "every day at 8am scan the network" → type: "recurring", actions: [{ type: "scan" }]
-10. If the message is unclear, set understood: false and provide clarification question
-11. Extract the actual reminder message (what to remind about), not the time part
-12. For durations: convert to short form (5 minutes → 5m, 2 hours → 2h, 1 day → 1d)
-13. If actions are detected, set target.type: "automation"
-14. "every morning" = 8am, "every night" = 10pm, "every evening" = 6pm
+5. "remind @user to X" → target.type: "user", extract userId from mention
+6. "remind @user in 1 hour to wake their PC" → target.type: "user", actions: [{ type: "wol" }]
+7. "at 6am wake my PC" → type: "automation", actions: [{ type: "wol", device: "PC" }]
+8. "every morning turn on the lights" → type: "recurring", actions: [{ type: "homeassistant", action: "turn on", entity: "lights" }]
+9. "in 30 minutes run a speed test" → type: "automation", actions: [{ type: "speedtest" }]
+10. "every day at 8am scan the network" → type: "recurring", actions: [{ type: "scan" }]
+11. "remind @user to start the game server" → target.type: "user", actions: [{ type: "game", action: "start" }]
+12. If the message is unclear, set understood: false and provide clarification question
+13. Extract the actual reminder message (what to remind about), not the time part
+14. For durations: convert to short form (5 minutes → 5m, 2 hours → 2h, 1 day → 1d)
+15. If actions are detected AND there's a target user, keep target.type: "user" but include actions
+16. "every morning" = 8am, "every night" = 10pm, "every evening" = 6pm
+17. Look for Discord user mentions in format <@123456789> and extract the ID
 
 Examples:
 - "remind me in 30 minutes to check the oven" → message: "check the oven", time.value: "30m", actions: []
@@ -87,6 +90,9 @@ Examples:
 - "at 6am wake my gaming PC" → message: "wake gaming PC", time.value: "6am", actions: [{ type: "wol", device: "gaming PC" }]
 - "every hour scan the network" → message: "scan network", time.interval: "1h", actions: [{ type: "scan" }]
 - "in 5 minutes turn off the bedroom lights" → message: "turn off bedroom lights", time.value: "5m", actions: [{ type: "homeassistant", action: "turn off", entity: "bedroom lights" }]
+- "remind <@123456789> in 1 hour to wake their PC" → message: "wake their PC", target.type: "user", target.userId: "123456789", actions: [{ type: "wol" }]
+- "remind @john at 6pm to start the game server" → message: "start the game server", target.type: "user", actions: [{ type: "game", action: "start" }]
+- "tell <@987654321> in 30 minutes to run a speed test" → message: "run a speed test", target.type: "user", target.userId: "987654321", actions: [{ type: "speedtest" }]
 
 JSON response:`;
 

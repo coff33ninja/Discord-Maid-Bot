@@ -61,11 +61,11 @@ export const commandGroup = new SlashCommandSubcommandGroupBuilder()
       .addBooleanOption(option =>
         option.setName('ai_variation')
           .setDescription('Use AI to vary recurring messages')))
-  // Create for someone else
+  // Create for someone else (with optional actions)
   .addSubcommand(subcommand =>
     subcommand
       .setName('for')
-      .setDescription('Create reminder for someone else')
+      .setDescription('Create reminder for someone else (with optional actions)')
       .addUserOption(option =>
         option.setName('user')
           .setDescription('Who to remind')
@@ -80,7 +80,25 @@ export const commandGroup = new SlashCommandSubcommandGroupBuilder()
           .setRequired(true))
       .addChannelOption(option =>
         option.setName('channel')
-          .setDescription('Send to channel (default: DM)')))
+          .setDescription('Send to channel (default: DM)'))
+      .addStringOption(option =>
+        option.setName('action')
+          .setDescription('Action to trigger with reminder')
+          .addChoices(
+            { name: '⚡ Wake-on-LAN - Wake a device', value: 'wol' },
+            { name: '🏠 Home Assistant - Control smart home', value: 'homeassistant' },
+            { name: '🎮 Start Game - Launch a game server', value: 'game' },
+            { name: '📡 Network Scan', value: 'scan' },
+            { name: '🚀 Speed Test', value: 'speedtest' }
+          ))
+      .addStringOption(option =>
+        option.setName('device')
+          .setDescription('Device for WOL action')
+          .setAutocomplete(true))
+      .addStringOption(option =>
+        option.setName('entity')
+          .setDescription('Home Assistant entity (e.g., light.bedroom)')
+          .setAutocomplete(true)))
   // List reminders
   .addSubcommand(subcommand =>
     subcommand
@@ -151,6 +169,35 @@ export async function handleAutocomplete(interaction, plugin) {
     const { getDeviceAutocomplete } = await import('../../src/utils/autocomplete-helpers.js');
     const choices = getDeviceAutocomplete(focusedOption.value);
     await interaction.respond(choices);
+  } else if (focusedOption.name === 'entity') {
+    // Home Assistant entity autocomplete
+    try {
+      const { getPlugin } = await import('../../src/core/plugin-system.js');
+      const integrationsPlugin = getPlugin('integrations');
+      
+      if (integrationsPlugin?.homeassistant) {
+        const entities = await integrationsPlugin.homeassistant.getEntities();
+        const focusedValue = focusedOption.value.toLowerCase();
+        
+        const filtered = entities
+          .filter(e => {
+            const name = e.attributes?.friendly_name?.toLowerCase() || '';
+            const id = e.entity_id.toLowerCase();
+            return !focusedValue || name.includes(focusedValue) || id.includes(focusedValue);
+          })
+          .slice(0, 25)
+          .map(e => ({
+            name: `${e.attributes?.friendly_name || e.entity_id} (${e.entity_id.split('.')[0]})`,
+            value: e.entity_id
+          }));
+        
+        await interaction.respond(filtered);
+        return;
+      }
+    } catch (error) {
+      // HA not available
+    }
+    await interaction.respond([]);
   } else if (focusedOption.name === 'reminder') {
     const reminders = await plugin.listReminders(interaction.user.id);
     const focusedValue = focusedOption.value.toLowerCase();
@@ -378,6 +425,9 @@ async function handleFor(interaction, plugin) {
   const message = interaction.options.getString('message');
   const when = interaction.options.getString('when');
   const channel = interaction.options.getChannel('channel');
+  const actionType = interaction.options.getString('action');
+  const deviceMac = interaction.options.getString('device');
+  const entityId = interaction.options.getString('entity');
   const name = `Reminder for ${targetUser.username}`;
   
   try {
@@ -394,27 +444,87 @@ async function handleFor(interaction, plugin) {
       return;
     }
     
+    // Build actions array if action type specified
+    const actions = [];
+    if (actionType) {
+      switch (actionType) {
+        case 'wol':
+          if (deviceMac) {
+            actions.push({ type: 'wol', mac: deviceMac });
+          } else {
+            await interaction.editReply({
+              content: '❌ Please specify a device for Wake-on-LAN action',
+              ephemeral: true
+            });
+            return;
+          }
+          break;
+        case 'homeassistant':
+          if (entityId) {
+            actions.push({ 
+              type: 'homeassistant', 
+              service: 'homeassistant.toggle',
+              entityId: entityId 
+            });
+          } else {
+            await interaction.editReply({
+              content: '❌ Please specify an entity for Home Assistant action',
+              ephemeral: true
+            });
+            return;
+          }
+          break;
+        case 'game':
+          actions.push({ type: 'game', action: 'start' });
+          break;
+        case 'scan':
+          actions.push({ type: 'scan' });
+          break;
+        case 'speedtest':
+          actions.push({ type: 'speedtest' });
+          break;
+      }
+    }
+    
+    const hasActions = actions.length > 0;
+    
     const reminder = await plugin.addReminder({
       name,
       message,
-      type: 'time',
-      target: channel ? 'channel' : 'user',
+      type: hasActions ? 'automation' : 'time',
+      target: hasActions ? 'automation' : (channel ? 'channel' : 'user'),
       userId: interaction.user.id,
       targetUserId: targetUser.id,
       channelId: channel?.id,
-      triggerTime
+      triggerTime,
+      actions: hasActions ? actions : undefined
     });
+    
+    // Build response fields
+    const fields = [
+      { name: 'For', value: `<@${targetUser.id}>`, inline: true },
+      { name: 'When', value: new Date(triggerTime).toLocaleString(), inline: true },
+      { name: 'Where', value: channel ? `<#${channel.id}>` : 'DM', inline: true },
+      { name: 'Message', value: message, inline: false }
+    ];
+    
+    if (hasActions) {
+      const actionNames = actions.map(a => {
+        if (a.type === 'wol') return `⚡ Wake device`;
+        if (a.type === 'homeassistant') return `🏠 ${entityId}`;
+        if (a.type === 'game') return `🎮 Start game`;
+        if (a.type === 'scan') return `📡 Network scan`;
+        if (a.type === 'speedtest') return `🚀 Speed test`;
+        return a.type;
+      });
+      fields.push({ name: 'Actions', value: actionNames.join(', '), inline: false });
+    }
     
     await interaction.editReply({
       embeds: [{
-        color: 0x00FF00,
-        title: '✅ Reminder Created',
-        fields: [
-          { name: 'For', value: `<@${targetUser.id}>`, inline: true },
-          { name: 'When', value: new Date(triggerTime).toLocaleString(), inline: true },
-          { name: 'Where', value: channel ? `<#${channel.id}>` : 'DM', inline: true },
-          { name: 'Message', value: message, inline: false }
-        ],
+        color: hasActions ? 0x9B59B6 : 0x00FF00,
+        title: hasActions ? '⚙️ Reminder + Action Created' : '✅ Reminder Created',
+        fields,
         footer: { text: `Created by ${interaction.user.username}` },
         timestamp: new Date()
       }]
