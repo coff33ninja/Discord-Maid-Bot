@@ -12,6 +12,7 @@ import { createLogger } from '../../../src/logging/logger.js';
 import { PrefixHandler } from '../router/prefix-handler.js';
 import { TriggerSystem } from '../triggers/trigger-system.js';
 import { ResponseFilter } from '../router/response-filter.js';
+import { ActionExecutor } from '../actions/action-executor.js';
 
 const logger = createLogger('message-handler');
 
@@ -41,6 +42,12 @@ export class MessageHandler {
       respondToReplies: config.respondToReplies,
       minConfidenceToRespond: config.minConfidenceToRespond,
       botId: plugin.client?.user?.id
+    });
+    
+    // Initialize action executor for performing bot actions
+    this.actionExecutor = new ActionExecutor({
+      enabled: true,
+      client: plugin.client
     });
     
     // Bind the handler
@@ -310,6 +317,35 @@ export class MessageHandler {
       // Show typing indicator
       await message.channel.sendTyping();
       
+      // First, check if this is an actionable request
+      const actionResult = await this.actionExecutor.processQuery(content, {
+        message,
+        channelId: message.channelId,
+        userId: message.author.id
+      });
+      
+      // If action was executed successfully, show the result
+      if (actionResult?.executed && actionResult?.success) {
+        logger.info(`Action executed: ${actionResult.actionId}`);
+        
+        const embed = new EmbedBuilder()
+          .setColor('#90EE90')
+          .setTitle(`✨ ${actionResult.description || 'Action Complete'}`)
+          .setDescription(actionResult.formatted)
+          .setFooter({ text: `Action: ${actionResult.actionId}` })
+          .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+        this.responseFilter.recordBotMessage(message.channelId);
+        return;
+      }
+      
+      // If action was detected but failed, include error context
+      let actionContext = null;
+      if (actionResult?.detected && !actionResult?.success) {
+        actionContext = `Note: I tried to ${actionResult.description || 'perform an action'} but encountered an issue: ${actionResult.error}`;
+      }
+      
       // Extract reply context if this is a reply to another message
       const replyContext = await this.extractReplyContext(message);
       
@@ -318,7 +354,7 @@ export class MessageHandler {
         channelId: message.channelId,
         userId: message.author.id,
         username: message.author.username,
-        content,
+        content: actionContext ? `${content}\n\n[${actionContext}]` : content,
         replyContext
       });
       
@@ -357,6 +393,9 @@ export class MessageHandler {
     if (client.user?.id) {
       this.responseFilter.setBotId(client.user.id);
     }
+    
+    // Set client for action executor
+    this.actionExecutor.setClient(client);
     
     client.on('messageCreate', this.handleMessage);
     logger.info('Message handler registered');
