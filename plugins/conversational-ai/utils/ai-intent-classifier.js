@@ -337,19 +337,27 @@ function fallbackClassification(query) {
  */
 export function mapActionToExecutor(classifiedAction) {
   const actionMap = {
+    // Server admin - map to actual action IDs in action-executor.js
     'server-status': 'server-status',
-    'server-logs': 'view-logs',
-    'server-restart': 'restart-bot',
-    'server-deploy': 'deploy-code',
+    'server-logs': 'server-logs',
+    'server-restart': 'server-restart',
+    'server-deploy': 'server-deploy',
     'server-admin-help': 'server-admin-help',
+    // Discord moderation
     'discord-kick': 'discord-kick',
     'discord-ban': 'discord-ban',
     'discord-timeout': 'discord-timeout',
-    'discord-role': 'discord-add-role',
-    'discord-lock': 'discord-lock-channel',
-    'ssh-command': 'ssh-exec',
+    'discord-role': 'discord-role',
+    'discord-lock': 'discord-lock',
+    'discord-create-channel': 'discord-create-channel',
+    'discord-delete-channel': 'discord-delete-channel',
+    // SSH
+    'ssh-command': 'ssh-command',
+    // Power management
     'shutdown-device': 'shutdown-device',
-    // Most actions map directly
+    // Home assistant
+    'home-assistant': 'homeassistant-control',
+    // Most actions map directly (same name in classifier and executor)
   };
 
   return actionMap[classifiedAction] || classifiedAction;
