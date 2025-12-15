@@ -212,30 +212,112 @@ const ACTIONS = {
     async execute(context) {
       const { wakeDevice } = await import('../../network-management/commands.js');
       const { deviceOps } = await import('../../../src/database/db.js');
+      const query = context.query || '';
       
-      // Extract device identifier from query
-      const deviceId = extractDeviceIdentifier(context.query || '');
+      // Get all devices with MAC addresses
+      const devices = deviceOps.getAll().filter(d => d.mac);
+      const availableDevices = devices.map(d => ({
+        name: d.name || d.ip,
+        ip: d.ip,
+        mac: d.mac,
+        type: d.type || 'unknown',
+        online: d.online
+      }));
       
-      if (!deviceId) {
+      // First try exact match with extractDeviceIdentifier
+      let deviceId = extractDeviceIdentifier(query);
+      let device = null;
+      
+      if (deviceId) {
+        device = devices.find(d => 
+          d.ip === deviceId ||
+          d.mac?.toLowerCase() === deviceId.toLowerCase() ||
+          d.name?.toLowerCase() === deviceId.toLowerCase()
+        );
+      }
+      
+      // If no exact match, use AI to fuzzy match device name
+      if (!device && query.length > 5) {
+        try {
+          const { getPlugin } = await import('../../../src/core/plugin-system.js');
+          const aiPlugin = getPlugin('conversational-ai');
+          
+          if (aiPlugin && availableDevices.length > 0) {
+            const prompt = `You are parsing a Wake-on-LAN command. Match the device the user wants to wake.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE DEVICES:
+${availableDevices.map(d => `- "${d.name}" (IP: ${d.ip}, Type: ${d.type}, ${d.online ? 'Online' : 'Offline'})`).join('\n')}
+
+Return ONLY a JSON object:
+{
+  "deviceName": "exact device name from the list that best matches",
+  "confidence": "high", "medium", or "low",
+  "reasoning": "brief explanation"
+}
+
+MATCHING RULES:
+- "wake my pc" or "wake the computer" → find device with type "pc" or "computer" or name containing "pc"
+- "wake gaming" or "gaming pc" → find device with "gaming" in name
+- "wake server" → find device with "server" in name or type
+- "turn on kusanagi" → find device named "kusanagi" (case insensitive)
+- Prefer offline devices (they need waking)
+- If multiple matches, prefer the one that's offline
+- If no good match, set confidence to "low"
+
+Return ONLY the JSON, no other text.`;
+
+            const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+              prompt,
+              options: { maxOutputTokens: 150, temperature: 0.1 }
+            });
+            
+            const responseText = result?.response?.text?.() || '';
+            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+            
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.deviceName && parsed.confidence !== 'low') {
+                // Find the device by the AI-matched name
+                device = devices.find(d => 
+                  (d.name || d.ip).toLowerCase() === parsed.deviceName.toLowerCase()
+                );
+                if (device) {
+                  logger.info(`AI matched wake device: "${parsed.deviceName}", confidence=${parsed.confidence}`);
+                }
+              } else if (parsed.confidence === 'low') {
+                // Return for clarification
+                return {
+                  needsSelection: true,
+                  devices: availableDevices.filter(d => !d.online).slice(0, 10),
+                  message: `I'm not sure which device you mean. ${parsed.reasoning || 'Please specify the device name.'}`,
+                  aiUncertain: true
+                };
+              }
+            }
+          }
+        } catch (error) {
+          logger.warn('AI parsing failed for wake device, using fallback:', error.message);
+        }
+      }
+      
+      if (!device && !deviceId) {
         // List available devices that can be woken
-        const devices = deviceOps.getAll().filter(d => d.mac && !d.online);
+        const offlineDevices = availableDevices.filter(d => !d.online);
         return { 
           needsSelection: true, 
-          devices: devices.slice(0, 10),
+          devices: offlineDevices.slice(0, 10),
           message: 'Which device would you like to wake?'
         };
       }
       
-      // Find device by IP, MAC, or name
-      const devices = deviceOps.getAll();
-      const device = devices.find(d => 
-        d.ip === deviceId ||
-        d.mac?.toLowerCase() === deviceId.toLowerCase() ||
-        d.name?.toLowerCase() === deviceId.toLowerCase()
-      );
-      
       if (!device) {
-        return { error: `Device "${deviceId}" not found`, notFound: true };
+        return { 
+          error: `Device "${deviceId}" not found`, 
+          notFound: true,
+          availableDevices: availableDevices.slice(0, 10)
+        };
       }
       
       if (!device.mac) {
@@ -251,7 +333,8 @@ const ACTIONS = {
           name: device.name || device.ip,
           ip: device.ip,
           mac: device.mac
-        }
+        },
+        aiParsed: true
       };
     },
     formatResult(result) {
@@ -260,14 +343,18 @@ const ACTIONS = {
         if (result.devices.length === 0) {
           response += '_No offline devices with MAC addresses found._';
         } else {
-          response += result.devices.map(d => `• ${d.name || d.ip} (${d.ip})`).join('\n');
+          response += result.devices.map(d => `• ${d.name} (${d.ip})`).join('\n');
         }
-        response += '\n\nTry: "Wake up [device name or IP]"';
+        response += '\n\nTry: "Wake up [device name]" or "Turn on my PC"';
         return response;
       }
       
       if (result.notFound) {
-        return `❌ ${result.error}\n\nTry "list devices" to see available devices.`;
+        let response = `❌ ${result.error}`;
+        if (result.availableDevices?.length > 0) {
+          response += `\n\n**Available devices:**\n${result.availableDevices.map(d => `• ${d.name}`).join('\n')}`;
+        }
+        return response;
       }
       
       if (result.noMac) {
@@ -1194,52 +1281,120 @@ Return ONLY the JSON, no other text.`;
 
   // ============ DEVICE MANAGEMENT ============
   'device-rename': {
-    keywords: ['rename', 'name device', 'call device', 'set device name', 'change device name', ' is '],
+    keywords: ['rename', 'name device', 'call device', 'set device name', 'change device name', ' is ', 'call it', 'name it'],
     plugin: 'device-management',
     description: 'Rename a device',
     async execute(context) {
       const { deviceOps } = await import('../../../src/database/db.js');
       const query = context.query || '';
       
-      // Try to extract device and new name
-      // Patterns: "rename 192.168.0.100 to MyPC", "192.168.0.100 is Kusanagi"
-      const patterns = [
-        // "rename X to Y" patterns
-        /rename\s+(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-]+)["']?/i,
-        /name\s+(?:device\s+)?(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-]+)["']?/i,
-        /call\s+(\S+)\s+["']?([a-zA-Z0-9_\-]+)["']?/i,
-        /set\s+(?:device\s+)?name\s+(?:of\s+)?(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-]+)["']?/i,
-        // "X is Y" pattern (e.g., "192.168.0.100 is Kusanagi")
-        /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+is\s+["']?([a-zA-Z0-9_\-]+)["']?/i,
-        // "device X is Y" pattern
-        /(?:device\s+)?(\S+)\s+is\s+(?:called\s+)?["']?([a-zA-Z0-9_\-]+)["']?/i
-      ];
+      // Get all devices for AI context
+      const devices = deviceOps.getAll();
+      const availableDevices = devices.map(d => ({
+        name: d.name || null,
+        ip: d.ip,
+        mac: d.mac,
+        type: d.type || 'unknown'
+      }));
       
       let deviceId = null;
       let newName = null;
       let deviceType = null;
+      let suggestedEmoji = null;
       
-      // Also try to extract device type (pc, server, phone, etc.)
-      const typeMatch = query.match(/(?:it'?s?\s+a\s+|type\s+is\s+|is\s+a\s+)(\w+)/i);
-      if (typeMatch) {
-        deviceType = typeMatch[1].toLowerCase();
+      // Use AI to parse the rename request
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `You are parsing a device rename command. Extract the device identifier and new name.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE DEVICES:
+${availableDevices.map(d => `- ${d.name ? `"${d.name}"` : '(unnamed)'} at ${d.ip} (Type: ${d.type})`).join('\n')}
+
+Return ONLY a JSON object:
+{
+  "deviceIdentifier": "IP address, MAC address, or current name of the device to rename",
+  "newName": "the new name for the device (clean, no special chars except hyphen/underscore)",
+  "deviceType": "pc", "server", "phone", "tablet", "router", "iot", or null if not mentioned,
+  "suggestedEmoji": "a single emoji that represents this device type, or null",
+  "confidence": "high", "medium", or "low"
+}
+
+PARSING RULES:
+- "rename 192.168.0.100 to Gaming PC" → deviceIdentifier: "192.168.0.100", newName: "Gaming-PC"
+- "call my server Kusanagi" → find device with type "server", newName: "Kusanagi"
+- "192.168.0.50 is my phone" → deviceIdentifier: "192.168.0.50", newName: "My-Phone", deviceType: "phone"
+- "name the router MainRouter" → find device with type "router", newName: "MainRouter"
+- Convert spaces to hyphens in names
+- If they mention a device type, set deviceType and suggestedEmoji:
+  - pc/computer → 💻
+  - server → 🖥️
+  - phone → 📱
+  - tablet → 📲
+  - router → 📡
+  - iot/smart → 🔌
+
+Return ONLY the JSON, no other text.`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt,
+            options: { maxOutputTokens: 200, temperature: 0.1 }
+          });
+          
+          const responseText = result?.response?.text?.() || '';
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.deviceIdentifier && parsed.newName) {
+              deviceId = parsed.deviceIdentifier;
+              newName = parsed.newName;
+              deviceType = parsed.deviceType;
+              suggestedEmoji = parsed.suggestedEmoji;
+              logger.info(`AI parsed device rename: "${deviceId}" → "${newName}", type=${deviceType}, emoji=${suggestedEmoji}`);
+            }
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for device rename, using regex fallback:', error.message);
       }
       
-      for (const pattern of patterns) {
-        const match = query.match(pattern);
-        if (match) {
-          deviceId = match[1];
-          newName = match[2].trim();
-          break;
+      // Fallback to regex if AI didn't work
+      if (!deviceId || !newName) {
+        const patterns = [
+          /rename\s+(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-\s]+)["']?/i,
+          /name\s+(?:device\s+)?(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-\s]+)["']?/i,
+          /call\s+(\S+)\s+["']?([a-zA-Z0-9_\-\s]+)["']?/i,
+          /set\s+(?:device\s+)?name\s+(?:of\s+)?(\S+)\s+(?:to|as)\s+["']?([a-zA-Z0-9_\-\s]+)["']?/i,
+          /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+is\s+["']?([a-zA-Z0-9_\-\s]+)["']?/i,
+          /(?:device\s+)?(\S+)\s+is\s+(?:called\s+)?["']?([a-zA-Z0-9_\-\s]+)["']?/i
+        ];
+        
+        for (const pattern of patterns) {
+          const match = query.match(pattern);
+          if (match) {
+            deviceId = match[1];
+            newName = match[2].trim().replace(/\s+/g, '-');
+            break;
+          }
+        }
+        
+        // Extract device type from query
+        const typeMatch = query.match(/(?:it'?s?\s+a\s+|type\s+is\s+|is\s+a\s+|my\s+)(\w+)/i);
+        if (typeMatch) {
+          deviceType = typeMatch[1].toLowerCase();
         }
       }
       
       if (!deviceId || !newName) {
-        return { needsInfo: true };
+        return { needsInfo: true, availableDevices: availableDevices.slice(0, 10) };
       }
       
       // Find device
-      const devices = deviceOps.getAll();
       const device = devices.find(d => 
         d.ip === deviceId ||
         d.mac?.toLowerCase() === deviceId.toLowerCase() ||
@@ -1247,30 +1402,48 @@ Return ONLY the JSON, no other text.`;
       );
       
       if (!device) {
-        return { error: `Device "${deviceId}" not found`, notFound: true };
+        return { error: `Device "${deviceId}" not found`, notFound: true, availableDevices: availableDevices.slice(0, 10) };
       }
       
-      // Update device with name and optionally type
+      // Update device with name and optionally type/emoji
       const oldName = device.name || device.ip;
       const updateData = { ...device, name: newName };
       if (deviceType) {
         updateData.type = deviceType;
       }
+      if (suggestedEmoji && !device.emoji) {
+        updateData.emoji = suggestedEmoji;
+      }
       deviceOps.upsert(updateData);
       
-      return { success: true, oldName, newName, ip: device.ip, type: deviceType };
+      return { 
+        success: true, 
+        oldName, 
+        newName, 
+        ip: device.ip, 
+        type: deviceType,
+        emoji: suggestedEmoji,
+        aiParsed: true
+      };
     },
     formatResult(result) {
       if (result.needsInfo) {
-        return `📝 To rename a device, say:\n\n` +
+        let response = `📝 To rename a device, say:\n\n` +
           `"Rename 192.168.0.100 to MyPC"\n` +
-          `"Name device KUSANAGI as Gaming PC"\n` +
-          `"Name 192.168.0.200 to Madara and it's a PC"\n\n` +
-          `Or use \`/device config\` for more options.`;
+          `"Call my server Kusanagi"\n` +
+          `"192.168.0.50 is my phone"`;
+        if (result.availableDevices?.length > 0) {
+          response += `\n\n**Available devices:**\n${result.availableDevices.map(d => `• ${d.name || d.ip} (${d.ip})`).join('\n')}`;
+        }
+        return response;
       }
       
       if (result.notFound) {
-        return `❌ ${result.error}\n\nUse "list devices" to see available devices.`;
+        let response = `❌ ${result.error}`;
+        if (result.availableDevices?.length > 0) {
+          response += `\n\n**Available devices:**\n${result.availableDevices.map(d => `• ${d.name || d.ip} (${d.ip})`).join('\n')}`;
+        }
+        return response;
       }
       
       if (result.error) {
@@ -1283,6 +1456,9 @@ Return ONLY the JSON, no other text.`;
       
       if (result.type) {
         response += `\n🏷️ Type: ${result.type}`;
+      }
+      if (result.emoji) {
+        response += `\n${result.emoji} Emoji set automatically`;
       }
       
       return response;
