@@ -511,6 +511,358 @@ const ACTIONS = {
     }
   },
 
+  'server-restart': {
+    keywords: ['restart bot', 'restart server', 'reboot bot', 'restart service'],
+    plugin: 'server-admin',
+    description: 'Restart the bot service',
+    permission: 'admin',
+    async execute(context) {
+      try {
+        const { exec } = await import('child_process');
+        const { promisify } = await import('util');
+        const execAsync = promisify(exec);
+        
+        // Send response first, then restart
+        setTimeout(async () => {
+          try {
+            await execAsync('sudo systemctl restart discord-maid-bot');
+          } catch (e) {
+            // Expected - bot will restart
+          }
+        }, 2000);
+        
+        return { success: true, restarting: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ Failed to restart: ${result.error}`;
+      }
+      return `🔄 **Restarting bot...**\n\nI'll be back in a few seconds!`;
+    }
+  },
+
+  'server-deploy': {
+    keywords: ['deploy', 'deploy code', 'update bot', 'git pull', 'deploy latest'],
+    plugin: 'server-admin',
+    description: 'Deploy latest code from git',
+    permission: 'admin',
+    async execute(context) {
+      try {
+        const { exec } = await import('child_process');
+        const { promisify } = await import('util');
+        const execAsync = promisify(exec);
+        
+        // Git pull
+        const { stdout: pullOutput } = await execAsync('cd /home/think/discord-maid-bot && git pull origin dev-plugin-first-refactor');
+        
+        // Check if there were changes
+        const hasChanges = !pullOutput.includes('Already up to date');
+        
+        if (hasChanges) {
+          // npm install if package.json changed
+          if (pullOutput.includes('package.json')) {
+            await execAsync('cd /home/think/discord-maid-bot && npm install');
+          }
+          
+          // Schedule restart
+          setTimeout(async () => {
+            try {
+              await execAsync('sudo systemctl restart discord-maid-bot');
+            } catch (e) {
+              // Expected
+            }
+          }, 2000);
+          
+          return { success: true, deployed: true, output: pullOutput.substring(0, 500) };
+        }
+        
+        return { success: true, deployed: false, message: 'Already up to date' };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) {
+        return `❌ Deploy failed: ${result.error}`;
+      }
+      
+      if (!result.deployed) {
+        return `✅ **Already up to date**\n\nNo new changes to deploy.`;
+      }
+      
+      return `🚀 **Deploying...**\n\n\`\`\`\n${result.output}\n\`\`\`\n\nRestarting bot...`;
+    }
+  },
+
+  // ============ DISCORD MODERATION ============
+  'discord-kick': {
+    keywords: ['kick', 'kick user', 'kick member', 'remove member'],
+    plugin: 'server-admin',
+    description: 'Kick a member from the server',
+    permission: 'admin',
+    async execute(context) {
+      // Extract user mention from query
+      const userMatch = context.query?.match(/<@!?(\d+)>/);
+      
+      if (!userMatch) {
+        return { needsUser: true };
+      }
+      
+      if (!context.guild) {
+        return { needsGuild: true };
+      }
+      
+      try {
+        const member = await context.guild.members.fetch(userMatch[1]);
+        if (!member) {
+          return { error: 'Member not found' };
+        }
+        
+        await member.kick(`Kicked by ${context.username || 'admin'} via AI`);
+        return { success: true, member: member.user.tag };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsUser) {
+        return `👢 Who should I kick? Mention the user: "Kick @username"`;
+      }
+      if (result.needsGuild) {
+        return `👢 I can only kick members in a server.`;
+      }
+      if (result.error) {
+        return `❌ Failed to kick: ${result.error}`;
+      }
+      return `👢 **Kicked** ${result.member}`;
+    }
+  },
+
+  'discord-ban': {
+    keywords: ['ban', 'ban user', 'ban member', 'permanently ban'],
+    plugin: 'server-admin',
+    description: 'Ban a member from the server',
+    permission: 'admin',
+    async execute(context) {
+      const userMatch = context.query?.match(/<@!?(\d+)>/);
+      
+      if (!userMatch) {
+        return { needsUser: true };
+      }
+      
+      if (!context.guild) {
+        return { needsGuild: true };
+      }
+      
+      try {
+        const user = await context.client.users.fetch(userMatch[1]);
+        await context.guild.members.ban(user, { reason: `Banned by ${context.username || 'admin'} via AI` });
+        return { success: true, user: user.tag };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsUser) {
+        return `🔨 Who should I ban? Mention the user: "Ban @username"`;
+      }
+      if (result.needsGuild) {
+        return `🔨 I can only ban members in a server.`;
+      }
+      if (result.error) {
+        return `❌ Failed to ban: ${result.error}`;
+      }
+      return `🔨 **Banned** ${result.user}`;
+    }
+  },
+
+  'discord-timeout': {
+    keywords: ['timeout', 'mute', 'silence', 'timeout user'],
+    plugin: 'server-admin',
+    description: 'Timeout a member',
+    permission: 'admin',
+    async execute(context) {
+      const userMatch = context.query?.match(/<@!?(\d+)>/);
+      const durationMatch = context.query?.match(/(\d+)\s*(m|min|minute|h|hour|d|day)/i);
+      
+      if (!userMatch) {
+        return { needsUser: true };
+      }
+      
+      if (!context.guild) {
+        return { needsGuild: true };
+      }
+      
+      // Default 10 minutes
+      let durationMs = 10 * 60 * 1000;
+      let durationStr = '10 minutes';
+      
+      if (durationMatch) {
+        const value = parseInt(durationMatch[1]);
+        const unit = durationMatch[2].toLowerCase();
+        
+        if (unit.startsWith('h')) {
+          durationMs = value * 60 * 60 * 1000;
+          durationStr = `${value} hour(s)`;
+        } else if (unit.startsWith('d')) {
+          durationMs = value * 24 * 60 * 60 * 1000;
+          durationStr = `${value} day(s)`;
+        } else {
+          durationMs = value * 60 * 1000;
+          durationStr = `${value} minute(s)`;
+        }
+      }
+      
+      try {
+        const member = await context.guild.members.fetch(userMatch[1]);
+        await member.timeout(durationMs, `Timed out by ${context.username || 'admin'} via AI`);
+        return { success: true, member: member.user.tag, duration: durationStr };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsUser) {
+        return `⏰ Who should I timeout? "Timeout @user for 10 minutes"`;
+      }
+      if (result.needsGuild) {
+        return `⏰ I can only timeout members in a server.`;
+      }
+      if (result.error) {
+        return `❌ Failed to timeout: ${result.error}`;
+      }
+      return `⏰ **Timed out** ${result.member} for ${result.duration}`;
+    }
+  },
+
+  'discord-role': {
+    keywords: ['give role', 'add role', 'assign role', 'remove role', 'take role'],
+    plugin: 'server-admin',
+    description: 'Give or remove a role from a member',
+    permission: 'admin',
+    async execute(context) {
+      const userMatch = context.query?.match(/<@!?(\d+)>/);
+      const roleMatch = context.query?.match(/<@&(\d+)>/) || context.query?.match(/role\s+["']?([^"']+)["']?/i);
+      const isRemove = context.query?.toLowerCase().includes('remove') || context.query?.toLowerCase().includes('take');
+      
+      if (!userMatch) {
+        return { needsUser: true };
+      }
+      
+      if (!roleMatch) {
+        return { needsRole: true };
+      }
+      
+      if (!context.guild) {
+        return { needsGuild: true };
+      }
+      
+      try {
+        const member = await context.guild.members.fetch(userMatch[1]);
+        let role;
+        
+        // Try to find role by ID or name
+        if (roleMatch[1].match(/^\d+$/)) {
+          role = context.guild.roles.cache.get(roleMatch[1]);
+        } else {
+          role = context.guild.roles.cache.find(r => r.name.toLowerCase() === roleMatch[1].toLowerCase());
+        }
+        
+        if (!role) {
+          return { error: `Role "${roleMatch[1]}" not found` };
+        }
+        
+        if (isRemove) {
+          await member.roles.remove(role);
+          return { success: true, action: 'removed', member: member.user.tag, role: role.name };
+        } else {
+          await member.roles.add(role);
+          return { success: true, action: 'added', member: member.user.tag, role: role.name };
+        }
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsUser) {
+        return `🎭 Who should I give the role to? "Give @user the Admin role"`;
+      }
+      if (result.needsRole) {
+        return `🎭 Which role? "Give @user the Admin role"`;
+      }
+      if (result.needsGuild) {
+        return `🎭 I can only manage roles in a server.`;
+      }
+      if (result.error) {
+        return `❌ Failed: ${result.error}`;
+      }
+      return `🎭 **${result.action === 'added' ? 'Added' : 'Removed'}** role **${result.role}** ${result.action === 'added' ? 'to' : 'from'} ${result.member}`;
+    }
+  },
+
+  'discord-lock': {
+    keywords: ['lock channel', 'unlock channel', 'lock this', 'unlock this'],
+    plugin: 'server-admin',
+    description: 'Lock or unlock a channel',
+    permission: 'admin',
+    async execute(context) {
+      if (!context.guild || !context.channel) {
+        return { needsGuild: true };
+      }
+      
+      const isUnlock = context.query?.toLowerCase().includes('unlock');
+      
+      try {
+        const { lockChannel, unlockChannel } = await import('../../server-admin/discord/channel-manager.js');
+        
+        if (isUnlock) {
+          const result = await unlockChannel(context.channel, {
+            executorId: context.userId,
+            executorName: context.username
+          });
+          return { ...result, action: 'unlocked' };
+        } else {
+          const result = await lockChannel(context.channel, {
+            executorId: context.userId,
+            executorName: context.username
+          });
+          return { ...result, action: 'locked' };
+        }
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) {
+        return `🔒 I can only lock/unlock channels in a server.`;
+      }
+      if (result.error) {
+        return `❌ Failed: ${result.error}`;
+      }
+      const emoji = result.action === 'locked' ? '🔒' : '🔓';
+      return `${emoji} Channel **${result.action}**`;
+    }
+  },
+
+  'ssh-command': {
+    keywords: ['ssh', 'run command', 'execute command', 'remote command', 'run on server'],
+    plugin: 'server-admin',
+    description: 'Execute a command on a remote server via SSH',
+    permission: 'admin',
+    async execute(context) {
+      // This is dangerous - just suggest using the slash command
+      return { requiresSlash: true };
+    },
+    formatResult(result) {
+      return `🔐 For security, SSH commands must be run via slash command:\n\n` +
+        `\`/admin ssh exec server:[name] command:[cmd]\`\n\n` +
+        `First add a server with \`/admin ssh add\``;
+    }
+  },
+
   // ============ GAMES ============
   'game-list': {
     keywords: ['what games', 'list games', 'available games', 'show games', 'games list'],
