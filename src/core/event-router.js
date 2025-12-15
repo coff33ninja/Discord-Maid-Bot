@@ -11,7 +11,7 @@ export class EventRouter {
   }
 
   /**
-   * Route interaction events (slash commands, autocomplete, etc.)
+   * Route interaction events (slash commands, autocomplete, buttons, etc.)
    */
   async routeInteraction(interaction) {
     try {
@@ -27,11 +27,53 @@ export class EventRouter {
         return;
       }
 
+      // Handle button interactions
+      if (interaction.isButton()) {
+        await this.handleButton(interaction);
+        return;
+      }
+
       // Other interaction types can be added here
     } catch (error) {
       this.logger.error('Error routing interaction:', error);
       await this.handleInteractionError(interaction, error);
     }
+  }
+
+  /**
+   * Handle button interactions
+   * Routes to appropriate plugin based on customId prefix
+   */
+  async handleButton(interaction) {
+    const customId = interaction.customId;
+    
+    // Route server-admin approval buttons
+    if (customId.startsWith('server_admin_')) {
+      try {
+        const { handleButtonInteraction } = await import('../../plugins/server-admin/button-handler.js');
+        await handleButtonInteraction(interaction);
+      } catch (error) {
+        this.logger.error('Server admin button error:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
+        }
+      }
+      return;
+    }
+    
+    // Route game buttons (trivia, etc.)
+    if (customId.startsWith('trivia_') || customId.startsWith('game_')) {
+      try {
+        const { handleGameButton } = await import('../../plugins/games/button-handler.js');
+        await handleGameButton(interaction);
+      } catch (error) {
+        this.logger.debug('Game button handler not available or error:', error.message);
+      }
+      return;
+    }
+    
+    // Unknown button - log and ignore
+    this.logger.debug(`Unhandled button interaction: ${customId}`);
   }
 
   /**
