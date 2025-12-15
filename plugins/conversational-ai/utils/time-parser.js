@@ -135,16 +135,17 @@ export function parseTimeExpression(input) {
   if (recurringMatch) {
     const intervalStr = recurringMatch[1];
     
-    // Handle "every day", "every hour", etc.
+    // Handle "every day", "every hour", "every week", "every month"
     const wordIntervals = {
       'second': '1s',
       'minute': '1m',
       'hour': '1h',
       'day': '1d',
-      'week': '1w'
+      'week': '1w',
+      'month': '1M'
     };
     
-    const wordMatch = intervalStr.match(/^(second|minute|hour|day|week)s?$/);
+    const wordMatch = intervalStr.match(/^(second|minute|hour|day|week|month)s?$/);
     if (wordMatch) {
       const interval = wordIntervals[wordMatch[1]];
       const ms = parseDuration(interval);
@@ -156,7 +157,45 @@ export function parseTimeExpression(input) {
       };
     }
     
-    // Handle "every 30m", "every 2 hours"
+    // Handle day-specific: "every monday", "every monday at 9am"
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayMatch = intervalStr.match(/^(sunday|monday|tuesday|wednesday|thursday|friday|saturday)(?:\s+at\s+(.+))?$/i);
+    if (dayMatch) {
+      const dayName = dayMatch[1].toLowerCase();
+      const dayIndex = dayNames.indexOf(dayName);
+      const timeStr = dayMatch[2];
+      
+      // Calculate next occurrence of this day
+      const now = new Date();
+      const currentDay = now.getDay();
+      let daysUntil = dayIndex - currentDay;
+      if (daysUntil <= 0) daysUntil += 7; // Next week if today or past
+      
+      const nextOccurrence = new Date(now);
+      nextOccurrence.setDate(now.getDate() + daysUntil);
+      
+      // Set time if specified
+      if (timeStr) {
+        const clockTime = parseClockTime(timeStr);
+        if (clockTime) {
+          nextOccurrence.setHours(clockTime.getHours(), clockTime.getMinutes(), 0, 0);
+        }
+      } else {
+        nextOccurrence.setHours(9, 0, 0, 0); // Default to 9am
+      }
+      
+      return {
+        type: TimeType.RECURRING,
+        interval: '1w',
+        intervalMs: 7 * 24 * 60 * 60 * 1000,
+        dayOfWeek: dayIndex,
+        dayName,
+        triggerTime: nextOccurrence.getTime(),
+        original: input
+      };
+    }
+    
+    // Handle "every 30m", "every 2 hours", "every 2 weeks"
     const ms = parseDuration(intervalStr);
     if (ms) {
       return {
@@ -238,15 +277,19 @@ export function extractTimeFromSentence(sentence) {
   // Patterns to extract time expressions
   const patterns = [
     // "remind me in X to Y" or "remind me in X Y"
-    /remind\s+me\s+(in\s+\d+\s*(?:seconds?|minutes?|hours?|days?|weeks?))\s+(?:to\s+)?(.+)/i,
+    /remind\s+me\s+(in\s+\d+\s*(?:seconds?|minutes?|hours?|days?|weeks?|months?))\s+(?:to\s+)?(.+)/i,
     // "remind me at X to Y"
     /remind\s+me\s+(at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s+(?:to\s+)?(.+)/i,
-    // "remind me every X to Y"
-    /remind\s+me\s+(every\s+(?:\d+\s*)?(?:seconds?|minutes?|hours?|days?|weeks?))\s+(?:to\s+)?(.+)/i,
+    // "remind me every X to Y" (includes weeks/months)
+    /remind\s+me\s+(every\s+(?:\d+\s*)?(?:seconds?|minutes?|hours?|days?|weeks?|months?))\s+(?:to\s+)?(.+)/i,
+    // "remind me every [day] to Y" (e.g., "every monday to check server")
+    /remind\s+me\s+(every\s+(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)(?:\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?)\s+(?:to\s+)?(.+)/i,
     // "set reminder for X: Y" or "set reminder in X: Y"
-    /set\s+(?:a\s+)?reminder\s+(?:for|in)\s+(\d+\s*(?:m|h|d|min|hour|day)\w*)\s*[:\s]+(.+)/i,
+    /set\s+(?:a\s+)?reminder\s+(?:for|in)\s+(\d+\s*(?:m|h|d|w|min|hour|day|week)\w*)\s*[:\s]+(.+)/i,
     // "in X remind me to Y"
-    /(in\s+\d+\s*(?:seconds?|minutes?|hours?|days?|weeks?))\s+remind\s+me\s+(?:to\s+)?(.+)/i
+    /(in\s+\d+\s*(?:seconds?|minutes?|hours?|days?|weeks?|months?))\s+remind\s+me\s+(?:to\s+)?(.+)/i,
+    // "every [day] at [time] remind me to Y"
+    /(every\s+(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)(?:\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?)\s+remind\s+me\s+(?:to\s+)?(.+)/i
   ];
   
   for (const pattern of patterns) {
