@@ -62,11 +62,11 @@ function canManageChannels(guild) {
  * @param {string} name - Channel name
  * @param {string} type - 'text' or 'voice'
  * @param {string} categoryId - Optional category ID
- * @param {Object} context - Execution context
+ * @param {Object} context - Execution context (includes topic for text channels)
  * @returns {Object} Result with success, channel, error
  */
 export async function createChannel(guild, name, type = 'text', categoryId = null, context = {}) {
-  logger.info(`Creating ${type} channel "${name}"`);
+  logger.info(`Creating ${type} channel "${name}"${context.topic ? ` with topic: "${context.topic}"` : ''}`);
   
   if (!guild) {
     return { success: false, error: 'Guild not provided' };
@@ -103,6 +103,11 @@ export async function createChannel(guild, name, type = 'text', categoryId = nul
       reason: `Created by ${context.executorName || 'system'} via server admin`
     };
 
+    // Add topic for text channels (set during creation)
+    if (context.topic && channelType === ChannelType.GuildText) {
+      options.topic = context.topic;
+    }
+
     // Add to category if specified
     if (categoryId) {
       const category = guild.channels.cache.get(categoryId);
@@ -119,12 +124,12 @@ export async function createChannel(guild, name, type = 'text', categoryId = nul
       type: 'discord_channel',
       intent: 'channel_create',
       command: `Create ${type} channel ${trimmedName}`,
-      target: { channelId: newChannel.id, channelName: newChannel.name },
+      target: { channelId: newChannel.id, channelName: newChannel.name, topic: context.topic || null },
       guildId: guild.id,
       success: true
     });
 
-    logger.info(`Successfully created channel "${newChannel.name}" (${newChannel.id})`);
+    logger.info(`Successfully created channel "${newChannel.name}" (${newChannel.id})${context.topic ? ` with topic` : ''}`);
     
     return {
       success: true,
@@ -132,7 +137,8 @@ export async function createChannel(guild, name, type = 'text', categoryId = nul
         id: newChannel.id, 
         name: newChannel.name, 
         type: type,
-        parentId: newChannel.parentId
+        parentId: newChannel.parentId,
+        topic: context.topic || null
       },
       message: `Created ${type} channel #${newChannel.name}`
     };
