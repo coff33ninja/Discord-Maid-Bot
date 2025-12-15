@@ -1,7 +1,28 @@
 import { SlashCommandSubcommandGroupBuilder, PermissionFlagsBits } from 'discord.js';
 import { createLogger } from '../../src/logging/logger.js';
+import { getUserRole } from '../../src/core/permission-manager.js';
 
 const logger = createLogger('user-profiles-commands');
+
+/**
+ * Check if user is a bot admin
+ * @param {string} userId - Discord user ID
+ * @param {Object} member - Discord guild member (optional)
+ * @returns {boolean}
+ */
+function isAdmin(userId, member = null) {
+  // Check bot owner
+  if (process.env.BOT_OWNER_ID === userId) return true;
+  
+  // Check database role
+  const role = getUserRole(userId);
+  if (role === 'admin') return true;
+  
+  // Check Discord admin permission
+  if (member?.permissions?.has?.(PermissionFlagsBits.Administrator)) return true;
+  
+  return false;
+}
 
 /**
  * User Profile Commands
@@ -92,10 +113,20 @@ export async function handleCommand(interaction, plugin) {
 
 async function handleView(interaction, plugin) {
   const targetUser = interaction.options.getUser('user') || interaction.user;
+  const isViewingSelf = targetUser.id === interaction.user.id;
+  
+  // Only admins can view other users' profiles
+  if (!isViewingSelf && !isAdmin(interaction.user.id, interaction.member)) {
+    return interaction.reply({
+      content: "❌ You can only view your own profile. Admins can view other users' profiles.",
+      ephemeral: true
+    });
+  }
+  
   const profile = await plugin.getProfile(targetUser.id);
   
   if (!profile) {
-    if (targetUser.id === interaction.user.id) {
+    if (isViewingSelf) {
       return interaction.reply({
         content: "You haven't set up your profile yet! Use `/bot profile setup` or `/bot profile edit` to get started~",
         ephemeral: true
@@ -126,7 +157,7 @@ async function handleView(interaction, plugin) {
     embed.fields.push({ name: '� Personnality', value: profile.personality, inline: true });
   }
   if (profile.timezone) {
-    embed.fields.push({ name: '� Titmezone', value: profile.timezone, inline: true });
+    embed.fields.push({ name: '� Timezone', value: profile.timezone, inline: true });
   }
   if (profile.interests?.length) {
     embed.fields.push({ name: '🎯 Interests', value: profile.interests.join(', '), inline: false });
@@ -139,7 +170,7 @@ async function handleView(interaction, plugin) {
     embed.description = '_No profile information set yet_';
   }
   
-  return interaction.reply({ embeds: [embed], ephemeral: targetUser.id === interaction.user.id });
+  return interaction.reply({ embeds: [embed], ephemeral: isViewingSelf });
 }
 
 async function handleEdit(interaction, plugin) {
@@ -204,8 +235,22 @@ async function handleSetup(interaction, plugin) {
 
 async function handleDelete(interaction, plugin) {
   const { configOps } = await import('../../src/database/db.js');
-  configOps.delete(`user_profile_${interaction.user.id}`);
-  plugin.endSetup(interaction.user.id);
+  
+  // Users can only delete their own profile
+  const userId = interaction.user.id;
+  
+  const profile = await plugin.getProfile(userId);
+  if (!profile) {
+    return interaction.reply({
+      content: "You don't have a profile to delete.",
+      ephemeral: true
+    });
+  }
+  
+  configOps.delete(`user_profile_${userId}`);
+  plugin.endSetup(userId);
+  
+  logger.info(`User ${interaction.user.username} (${userId}) deleted their profile`);
   
   return interaction.reply({
     embeds: [{
@@ -219,10 +264,10 @@ async function handleDelete(interaction, plugin) {
 }
 
 async function handleCreateChannel(interaction, plugin) {
-  // Check admin permission
-  if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+  // Check bot admin permission (not just Discord permission)
+  if (!isAdmin(interaction.user.id, interaction.member)) {
     return interaction.reply({
-      content: '❌ You need the "Manage Channels" permission to create a profile channel.',
+      content: '❌ Only bot admins can create profile channels.',
       ephemeral: true
     });
   }
