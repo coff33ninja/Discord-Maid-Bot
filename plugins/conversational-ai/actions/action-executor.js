@@ -1466,50 +1466,153 @@ Return ONLY the JSON, no other text.`;
   },
 
   'device-emoji': {
-    keywords: ['set emoji', 'device emoji', 'change emoji', 'add emoji'],
+    keywords: ['set emoji', 'device emoji', 'change emoji', 'add emoji', 'give emoji'],
     plugin: 'device-management',
     description: 'Set device emoji',
     async execute(context) {
       const { deviceOps } = await import('../../../src/database/db.js');
       const query = context.query || '';
       
-      // Extract emoji and device
-      const emojiMatch = query.match(/(\p{Emoji})/u);
-      const deviceMatch = query.match(/(?:for|on|to)\s+(\S+)/i) || query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+      const devices = deviceOps.getAll();
+      const availableDevices = devices.map(d => ({
+        name: d.name || null,
+        ip: d.ip,
+        type: d.type || 'unknown',
+        currentEmoji: d.emoji || null
+      }));
       
-      if (!emojiMatch || !deviceMatch) {
-        return { needsInfo: true };
+      let emoji = null;
+      let deviceId = null;
+      
+      // First try to extract emoji directly from query
+      const emojiMatch = query.match(/(\p{Emoji})/u);
+      if (emojiMatch) {
+        emoji = emojiMatch[1];
       }
       
-      const emoji = emojiMatch[1];
-      const deviceId = deviceMatch[1];
+      // Use AI to parse the request and suggest emoji if not provided
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `You are parsing a device emoji assignment command.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE DEVICES:
+${availableDevices.map(d => `- "${d.name || d.ip}" (Type: ${d.type}, Current emoji: ${d.currentEmoji || 'none'})`).join('\n')}
+
+Return ONLY a JSON object:
+{
+  "deviceIdentifier": "the device name or IP from the list",
+  "emoji": "the emoji to set (from user message or suggest based on device type)",
+  "confidence": "high", "medium", or "low"
+}
+
+RULES:
+- If user provides an emoji, use that
+- If no emoji provided, suggest based on device type:
+  - pc/computer/desktop → 💻
+  - laptop → 💻
+  - server → 🖥️
+  - phone/mobile → 📱
+  - tablet/ipad → 📲
+  - router/gateway → 📡
+  - tv/television → 📺
+  - gaming/playstation/xbox → 🎮
+  - printer → 🖨️
+  - camera/security → 📷
+  - speaker/audio → 🔊
+  - iot/smart/sensor → 🔌
+  - nas/storage → 💾
+- Match device names fuzzy (e.g., "my pc" → device with type "pc" or name containing "pc")
+
+Return ONLY the JSON, no other text.`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt,
+            options: { maxOutputTokens: 150, temperature: 0.1 }
+          });
+          
+          const responseText = result?.response?.text?.() || '';
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.deviceIdentifier) {
+              deviceId = parsed.deviceIdentifier;
+            }
+            if (parsed.emoji && !emoji) {
+              emoji = parsed.emoji;
+            }
+            logger.info(`AI parsed device emoji: device="${deviceId}", emoji="${emoji}"`);
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for device emoji, using regex fallback:', error.message);
+      }
       
-      const devices = deviceOps.getAll();
-      const device = devices.find(d => 
+      // Fallback to regex if AI didn't work
+      if (!deviceId) {
+        const deviceMatch = query.match(/(?:for|on|to)\s+(\S+)/i) || query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+        if (deviceMatch) {
+          deviceId = deviceMatch[1];
+        }
+      }
+      
+      if (!emoji || !deviceId) {
+        return { needsInfo: true, availableDevices: availableDevices.slice(0, 10) };
+      }
+      
+      // Find device with fuzzy matching
+      let device = devices.find(d => 
         d.ip === deviceId ||
         d.name?.toLowerCase() === deviceId.toLowerCase()
       );
       
+      // Try partial match if exact match fails
       if (!device) {
-        return { error: `Device "${deviceId}" not found`, notFound: true };
+        device = devices.find(d => 
+          d.name?.toLowerCase().includes(deviceId.toLowerCase()) ||
+          deviceId.toLowerCase().includes(d.name?.toLowerCase() || '')
+        );
       }
       
+      if (!device) {
+        return { error: `Device "${deviceId}" not found`, notFound: true, availableDevices: availableDevices.slice(0, 10) };
+      }
+      
+      const oldEmoji = device.emoji;
       deviceOps.upsert({ ...device, emoji });
       
-      return { success: true, device: device.name || device.ip, emoji };
+      return { success: true, device: device.name || device.ip, emoji, oldEmoji, aiParsed: true };
     },
     formatResult(result) {
       if (result.needsInfo) {
-        return `🎨 To set a device emoji, say:\n\n` +
+        let response = `🎨 To set a device emoji, say:\n\n` +
           `"Set emoji 🎮 for KUSANAGI"\n` +
-          `"Add emoji 💻 to 192.168.0.100"`;
+          `"Give my PC an emoji"\n` +
+          `"Add emoji to the server"`;
+        if (result.availableDevices?.length > 0) {
+          response += `\n\n**Available devices:**\n${result.availableDevices.map(d => `• ${d.currentEmoji || '📱'} ${d.name || d.ip}`).join('\n')}`;
+        }
+        return response;
       }
       
       if (result.notFound) {
-        return `❌ ${result.error}`;
+        let response = `❌ ${result.error}`;
+        if (result.availableDevices?.length > 0) {
+          response += `\n\n**Available devices:**\n${result.availableDevices.map(d => `• ${d.name || d.ip}`).join('\n')}`;
+        }
+        return response;
       }
       
-      return `✅ Set emoji ${result.emoji} for **${result.device}**`;
+      let response = `✅ Set emoji ${result.emoji} for **${result.device}**`;
+      if (result.oldEmoji) {
+        response += ` (was ${result.oldEmoji})`;
+      }
+      return response;
     }
   },
 
@@ -1948,12 +2051,13 @@ Return ONLY the JSON, no other text.`;
 
   // ============ HOME ASSISTANT CONTROL ============
   'homeassistant-control': {
-    keywords: ['turn on the', 'turn off the', 'switch on', 'switch off', 'lights on', 'lights off', 'set brightness', 'activate scene', 'what lights'],
+    keywords: ['turn on the', 'turn off the', 'switch on', 'switch off', 'lights on', 'lights off', 'set brightness', 'activate scene', 'what lights', 'dim the', 'brighten'],
     plugin: 'integrations',
     description: 'Control Home Assistant devices',
     async execute(context) {
       const { getPlugin } = await import('../../../src/core/plugin-system.js');
-      const query = context.query?.toLowerCase() || '';
+      const query = context.query || '';
+      const lowerQuery = query.toLowerCase();
       
       const integrationsPlugin = getPlugin('integrations');
       if (!integrationsPlugin?.homeassistant) {
@@ -1962,122 +2066,234 @@ Return ONLY the JSON, no other text.`;
       
       const ha = integrationsPlugin.homeassistant;
       
-      // Parse the command
-      // "turn on/off [device]"
-      const toggleMatch = query.match(/turn\s+(on|off)\s+(?:the\s+)?(.+)/i);
-      if (toggleMatch) {
-        const action = toggleMatch[1];
-        const deviceName = toggleMatch[2].trim();
+      // Get entities for AI context
+      let entities = [];
+      try {
+        entities = await ha.getEntities();
+      } catch (error) {
+        return { error: `Failed to connect to Home Assistant: ${error.message}` };
+      }
+      
+      // "what lights are on" - handle this first (no AI needed)
+      if (lowerQuery.includes('what lights') || lowerQuery.includes('which lights')) {
+        const lights = entities.filter(e => 
+          e.entity_id.startsWith('light.') && e.state === 'on'
+        );
         
-        try {
-          const entities = await ha.getEntities();
-          const entity = entities.find(e => 
-            e.attributes?.friendly_name?.toLowerCase().includes(deviceName) ||
-            e.entity_id.toLowerCase().includes(deviceName.replace(/\s+/g, '_'))
-          );
+        return {
+          success: true,
+          action: 'query',
+          lights: lights.map(l => ({
+            name: l.attributes?.friendly_name || l.entity_id,
+            brightness: l.attributes?.brightness ? Math.round(l.attributes.brightness / 255 * 100) : null
+          }))
+        };
+      }
+      
+      // Use AI to parse the smart home command
+      let parsedCommand = null;
+      try {
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          // Get available entities for context (limit to controllable ones)
+          const controllableEntities = entities
+            .filter(e => ['light', 'switch', 'fan', 'cover', 'scene', 'script', 'climate'].some(d => e.entity_id.startsWith(d + '.')))
+            .slice(0, 50)
+            .map(e => ({
+              id: e.entity_id,
+              name: e.attributes?.friendly_name || e.entity_id,
+              state: e.state,
+              domain: e.entity_id.split('.')[0]
+            }));
           
+          const prompt = `You are parsing a smart home control command for Home Assistant.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE ENTITIES:
+${controllableEntities.map(e => `- ${e.name} (${e.id}) [${e.domain}] - ${e.state}`).join('\n')}
+
+Return ONLY a JSON object:
+{
+  "action": "turn_on", "turn_off", "toggle", "set_brightness", "activate_scene", or "unknown",
+  "entityId": "the exact entity_id from the list",
+  "entityName": "the friendly name",
+  "brightness": number 0-100 if setting brightness (null otherwise),
+  "confidence": "high", "medium", or "low"
+}
+
+PARSING RULES:
+- "turn on living room" → find light/switch with "living room" in name
+- "lights off in bedroom" → find bedroom light, action: "turn_off"
+- "dim the kitchen to 30%" → action: "set_brightness", brightness: 30
+- "brighten the office" → action: "set_brightness", brightness: 100
+- "activate movie mode" → find scene with "movie" in name
+- "turn off all lights" → entityId: "all" (special case)
+- Match entity names fuzzy (ignore case, partial match OK)
+- For scenes, action should be "activate_scene"
+
+Return ONLY the JSON, no other text.`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt,
+            options: { maxOutputTokens: 200, temperature: 0.1 }
+          });
+          
+          const responseText = result?.response?.text?.() || '';
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          
+          if (jsonMatch) {
+            parsedCommand = JSON.parse(jsonMatch[0]);
+            logger.info(`AI parsed HA command: action=${parsedCommand.action}, entity=${parsedCommand.entityId}`);
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for Home Assistant, using regex fallback:', error.message);
+      }
+      
+      // Execute based on AI parsing or fall back to regex
+      if (parsedCommand && parsedCommand.action !== 'unknown' && parsedCommand.confidence !== 'low') {
+        try {
+          // Handle "all lights" special case
+          if (parsedCommand.entityId === 'all' && parsedCommand.action.includes('turn')) {
+            const service = parsedCommand.action === 'turn_on' ? 'turn_on' : 'turn_off';
+            await ha.callService('light', service, { entity_id: 'all' });
+            return {
+              success: true,
+              action: parsedCommand.action === 'turn_on' ? 'on' : 'off',
+              device: 'all lights',
+              aiParsed: true
+            };
+          }
+          
+          // Find the entity
+          const entity = entities.find(e => e.entity_id === parsedCommand.entityId);
           if (!entity) {
-            return { error: `Device "${deviceName}" not found`, notFound: true, query: deviceName };
+            return { error: `Entity "${parsedCommand.entityName || parsedCommand.entityId}" not found`, notFound: true };
           }
           
           const domain = entity.entity_id.split('.')[0];
-          const service = action === 'on' ? 'turn_on' : 'turn_off';
           
+          if (parsedCommand.action === 'set_brightness' && parsedCommand.brightness !== null) {
+            await ha.callService('light', 'turn_on', {
+              entity_id: entity.entity_id,
+              brightness_pct: parsedCommand.brightness
+            });
+            return {
+              success: true,
+              action: 'brightness',
+              device: entity.attributes?.friendly_name || entity.entity_id,
+              brightness: parsedCommand.brightness,
+              aiParsed: true
+            };
+          }
+          
+          if (parsedCommand.action === 'activate_scene') {
+            await ha.callService('scene', 'turn_on', { entity_id: entity.entity_id });
+            return {
+              success: true,
+              action: 'scene',
+              scene: entity.attributes?.friendly_name || entity.entity_id,
+              aiParsed: true
+            };
+          }
+          
+          // Standard turn on/off
+          const service = parsedCommand.action === 'turn_on' ? 'turn_on' : 'turn_off';
           await ha.callService(domain, service, { entity_id: entity.entity_id });
           
           return {
             success: true,
-            action,
+            action: parsedCommand.action === 'turn_on' ? 'on' : 'off',
             device: entity.attributes?.friendly_name || entity.entity_id,
-            entityId: entity.entity_id
+            entityId: entity.entity_id,
+            aiParsed: true
           };
         } catch (error) {
           return { error: error.message };
         }
       }
       
+      // Fallback to regex parsing
+      const toggleMatch = lowerQuery.match(/turn\s+(on|off)\s+(?:the\s+)?(.+)/i);
+      if (toggleMatch) {
+        const action = toggleMatch[1];
+        const deviceName = toggleMatch[2].trim();
+        
+        const entity = entities.find(e => 
+          e.attributes?.friendly_name?.toLowerCase().includes(deviceName) ||
+          e.entity_id.toLowerCase().includes(deviceName.replace(/\s+/g, '_'))
+        );
+        
+        if (!entity) {
+          return { error: `Device "${deviceName}" not found`, notFound: true, query: deviceName };
+        }
+        
+        const domain = entity.entity_id.split('.')[0];
+        const service = action === 'on' ? 'turn_on' : 'turn_off';
+        
+        await ha.callService(domain, service, { entity_id: entity.entity_id });
+        
+        return {
+          success: true,
+          action,
+          device: entity.attributes?.friendly_name || entity.entity_id,
+          entityId: entity.entity_id
+        };
+      }
+      
       // "set [light] to [X]%"
-      const brightnessMatch = query.match(/set\s+(.+?)\s+(?:to\s+)?(\d+)\s*%/i);
+      const brightnessMatch = lowerQuery.match(/set\s+(.+?)\s+(?:to\s+)?(\d+)\s*%/i);
       if (brightnessMatch) {
         const deviceName = brightnessMatch[1].trim();
         const brightness = Math.min(100, Math.max(0, parseInt(brightnessMatch[2])));
         
-        try {
-          const entities = await ha.getEntities();
-          const entity = entities.find(e => 
-            e.entity_id.startsWith('light.') &&
-            (e.attributes?.friendly_name?.toLowerCase().includes(deviceName) ||
-             e.entity_id.toLowerCase().includes(deviceName.replace(/\s+/g, '_')))
-          );
-          
-          if (!entity) {
-            return { error: `Light "${deviceName}" not found`, notFound: true };
-          }
-          
-          await ha.callService('light', 'turn_on', {
-            entity_id: entity.entity_id,
-            brightness_pct: brightness
-          });
-          
-          return {
-            success: true,
-            action: 'brightness',
-            device: entity.attributes?.friendly_name || entity.entity_id,
-            brightness
-          };
-        } catch (error) {
-          return { error: error.message };
+        const entity = entities.find(e => 
+          e.entity_id.startsWith('light.') &&
+          (e.attributes?.friendly_name?.toLowerCase().includes(deviceName) ||
+           e.entity_id.toLowerCase().includes(deviceName.replace(/\s+/g, '_')))
+        );
+        
+        if (!entity) {
+          return { error: `Light "${deviceName}" not found`, notFound: true };
         }
-      }
-      
-      // "what lights are on"
-      if (query.includes('what lights') || query.includes('which lights')) {
-        try {
-          const entities = await ha.getEntities();
-          const lights = entities.filter(e => 
-            e.entity_id.startsWith('light.') && e.state === 'on'
-          );
-          
-          return {
-            success: true,
-            action: 'query',
-            lights: lights.map(l => ({
-              name: l.attributes?.friendly_name || l.entity_id,
-              brightness: l.attributes?.brightness ? Math.round(l.attributes.brightness / 255 * 100) : null
-            }))
-          };
-        } catch (error) {
-          return { error: error.message };
-        }
+        
+        await ha.callService('light', 'turn_on', {
+          entity_id: entity.entity_id,
+          brightness_pct: brightness
+        });
+        
+        return {
+          success: true,
+          action: 'brightness',
+          device: entity.attributes?.friendly_name || entity.entity_id,
+          brightness
+        };
       }
       
       // "activate [scene]"
-      const sceneMatch = query.match(/activate\s+(?:scene\s+)?(.+)/i);
+      const sceneMatch = lowerQuery.match(/activate\s+(?:scene\s+)?(.+)/i);
       if (sceneMatch) {
         const sceneName = sceneMatch[1].trim();
         
-        try {
-          const entities = await ha.getEntities();
-          const scene = entities.find(e => 
-            e.entity_id.startsWith('scene.') &&
-            (e.attributes?.friendly_name?.toLowerCase().includes(sceneName) ||
-             e.entity_id.toLowerCase().includes(sceneName.replace(/\s+/g, '_')))
-          );
-          
-          if (!scene) {
-            return { error: `Scene "${sceneName}" not found`, notFound: true };
-          }
-          
-          await ha.callService('scene', 'turn_on', { entity_id: scene.entity_id });
-          
-          return {
-            success: true,
-            action: 'scene',
-            scene: scene.attributes?.friendly_name || scene.entity_id
-          };
-        } catch (error) {
-          return { error: error.message };
+        const scene = entities.find(e => 
+          e.entity_id.startsWith('scene.') &&
+          (e.attributes?.friendly_name?.toLowerCase().includes(sceneName) ||
+           e.entity_id.toLowerCase().includes(sceneName.replace(/\s+/g, '_')))
+        );
+        
+        if (!scene) {
+          return { error: `Scene "${sceneName}" not found`, notFound: true };
         }
+        
+        await ha.callService('scene', 'turn_on', { entity_id: scene.entity_id });
+        
+        return {
+          success: true,
+          action: 'scene',
+          scene: scene.attributes?.friendly_name || scene.entity_id
+        };
       }
       
       return { needsInfo: true };
@@ -2095,7 +2311,7 @@ Return ONLY the JSON, no other text.`;
         return `🏠 I can control your smart home! Try:\n\n` +
           `• "Turn on the living room lights"\n` +
           `• "Turn off the bedroom fan"\n` +
-          `• "Set kitchen lights to 50%"\n` +
+          `• "Dim the kitchen to 30%"\n` +
           `• "What lights are on?"\n` +
           `• "Activate movie scene"`;
       }
@@ -2641,36 +2857,121 @@ Return ONLY the JSON, no other text.`;
 
   // ============ SHUTDOWN/RESTART DEVICE ============
   'shutdown-device': {
-    keywords: ['shutdown', 'turn off', 'power off', 'restart', 'reboot'],
+    keywords: ['shutdown', 'turn off', 'power off', 'restart', 'reboot', 'shut down'],
     plugin: 'power-management',
     description: 'Shutdown or restart a remote device',
     permission: 'admin',
     async execute(context) {
       const { getPlugin } = await import('../../../src/core/plugin-system.js');
       const { deviceOps } = await import('../../../src/database/db.js');
-      const query = context.query?.toLowerCase() || '';
+      const query = context.query || '';
+      const lowerQuery = query.toLowerCase();
       
-      // Determine action type
-      const isRestart = query.includes('restart') || query.includes('reboot');
-      const action = isRestart ? 'restart' : 'shutdown';
+      // Get all devices for AI context
+      const devices = deviceOps.getAll();
+      const availableDevices = devices.map(d => ({
+        name: d.name || null,
+        ip: d.ip,
+        type: d.type || 'unknown',
+        online: d.online
+      }));
       
-      // Extract device identifier
-      const deviceId = extractDeviceIdentifier(query);
+      let deviceId = null;
+      let action = lowerQuery.includes('restart') || lowerQuery.includes('reboot') ? 'restart' : 'shutdown';
       
-      if (!deviceId) {
-        return { needsDevice: true, action };
+      // First try exact match
+      deviceId = extractDeviceIdentifier(query);
+      
+      // If no exact match, use AI to fuzzy match
+      if (!deviceId && query.length > 5) {
+        try {
+          const { getPlugin: getAIPlugin } = await import('../../../src/core/plugin-system.js');
+          const aiPlugin = getAIPlugin('conversational-ai');
+          
+          if (aiPlugin && availableDevices.length > 0) {
+            const prompt = `You are parsing a device shutdown/restart command.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE DEVICES:
+${availableDevices.map(d => `- "${d.name || d.ip}" (IP: ${d.ip}, Type: ${d.type}, ${d.online ? 'Online' : 'Offline'})`).join('\n')}
+
+Return ONLY a JSON object:
+{
+  "deviceIdentifier": "exact device name or IP from the list",
+  "action": "shutdown" or "restart",
+  "confidence": "high", "medium", or "low"
+}
+
+MATCHING RULES:
+- "shutdown my pc" → find device with type "pc" or name containing "pc"
+- "restart the server" → find device with "server" in name or type, action: "restart"
+- "turn off gaming" → find device with "gaming" in name, action: "shutdown"
+- "reboot kusanagi" → find device named "kusanagi", action: "restart"
+- Prefer online devices (they can be shut down)
+- "shutdown", "turn off", "power off" → action: "shutdown"
+- "restart", "reboot" → action: "restart"
+
+Return ONLY the JSON, no other text.`;
+
+            const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+              prompt,
+              options: { maxOutputTokens: 150, temperature: 0.1 }
+            });
+            
+            const responseText = result?.response?.text?.() || '';
+            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+            
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.deviceIdentifier && parsed.confidence !== 'low') {
+                deviceId = parsed.deviceIdentifier;
+                if (parsed.action) action = parsed.action;
+                logger.info(`AI matched shutdown device: "${deviceId}", action=${action}`);
+              } else if (parsed.confidence === 'low') {
+                return {
+                  needsDevice: true,
+                  action,
+                  availableDevices: availableDevices.filter(d => d.online).slice(0, 10),
+                  aiUncertain: true
+                };
+              }
+            }
+          }
+        } catch (error) {
+          logger.warn('AI parsing failed for shutdown device:', error.message);
+        }
       }
       
-      // Find device
-      const devices = deviceOps.getAll();
-      const device = devices.find(d => 
+      if (!deviceId) {
+        return { 
+          needsDevice: true, 
+          action,
+          availableDevices: availableDevices.filter(d => d.online).slice(0, 10)
+        };
+      }
+      
+      // Find device with fuzzy matching
+      let device = devices.find(d => 
         d.ip === deviceId ||
         d.mac?.toLowerCase() === deviceId.toLowerCase() ||
         d.name?.toLowerCase() === deviceId.toLowerCase()
       );
       
+      // Try partial match
       if (!device) {
-        return { error: `Device "${deviceId}" not found`, notFound: true };
+        device = devices.find(d => 
+          d.name?.toLowerCase().includes(deviceId.toLowerCase()) ||
+          deviceId.toLowerCase().includes(d.name?.toLowerCase() || '')
+        );
+      }
+      
+      if (!device) {
+        return { 
+          error: `Device "${deviceId}" not found`, 
+          notFound: true,
+          availableDevices: availableDevices.slice(0, 10)
+        };
       }
       
       const powerPlugin = getPlugin('power-management');
@@ -2680,19 +2981,27 @@ Return ONLY the JSON, no other text.`;
       
       try {
         await powerPlugin.powerControlDevice(device.mac, action);
-        return { success: true, device: device.name || device.ip, action };
+        return { success: true, device: device.name || device.ip, action, aiParsed: true };
       } catch (error) {
-        return { error: error.message, device: device.name || device.ip };
+        return { error: error.message, device: device.name || device.ip, action };
       }
     },
     formatResult(result) {
       if (result.needsDevice) {
-        return `⚡ Which device would you like to ${result.action}?\n\n` +
-          `Try: "${result.action} my PC" or "${result.action} 192.168.0.100"`;
+        let response = `⚡ Which device would you like to ${result.action}?\n\n` +
+          `Try: "${result.action} my PC" or "${result.action} the server"`;
+        if (result.availableDevices?.length > 0) {
+          response += `\n\n**Online devices:**\n${result.availableDevices.map(d => `• ${d.name || d.ip}`).join('\n')}`;
+        }
+        return response;
       }
       
       if (result.notFound) {
-        return `❌ ${result.error}\n\nUse "list devices" to see available devices.`;
+        let response = `❌ ${result.error}`;
+        if (result.availableDevices?.length > 0) {
+          response += `\n\n**Available devices:**\n${result.availableDevices.map(d => `• ${d.name || d.ip}`).join('\n')}`;
+        }
+        return response;
       }
       
       if (result.error) {
