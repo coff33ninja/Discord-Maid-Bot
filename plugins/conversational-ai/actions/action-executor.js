@@ -69,18 +69,25 @@ const ACTIONS = {
       const online = result.devices?.filter(d => d.online) || [];
       const offline = result.devices?.filter(d => !d.online) || [];
       
+      // Helper to format device: "Name (IP)" if named, otherwise just IP
+      const formatDevice = (d) => {
+        const label = d.name ? `${d.name} (${d.ip})` : d.ip;
+        const type = d.type ? ` [${d.type}]` : '';
+        return `• ${label}${type}`;
+      };
+      
       let response = `I found **${result.count || result.devices?.length || 0}** devices on the network.\n\n`;
       
       if (online.length > 0) {
-        response += `**🟢 Online (${online.length}):**\n`;
-        response += online.slice(0, 10).map(d => `• ${d.name || d.ip}${d.type ? ` (${d.type})` : ''}`).join('\n');
+        response += `**�  Online (${online.length}):**\n`;
+        response += online.slice(0, 10).map(formatDevice).join('\n');
         if (online.length > 10) response += `\n...and ${online.length - 10} more`;
         response += '\n\n';
       }
       
       if (offline.length > 0) {
         response += `**🔴 Offline (${offline.length}):**\n`;
-        response += offline.slice(0, 5).map(d => `• ${d.name || d.ip}`).join('\n');
+        response += offline.slice(0, 5).map(formatDevice).join('\n');
         if (offline.length > 5) response += `\n...and ${offline.length - 5} more`;
       }
       
@@ -105,11 +112,25 @@ const ACTIONS = {
       const online = result.devices.filter(d => d.online);
       const offline = result.devices.filter(d => !d.online);
       
+      // Helper to format device: "Name (IP)" if named, otherwise just IP
+      const formatDevice = (d) => {
+        const emoji = d.emoji || '📱';
+        const label = d.name ? `${d.name} (${d.ip})` : d.ip;
+        return `• ${emoji} ${label}`;
+      };
+      
       let response = `Found **${result.count}** devices total.\n\n`;
       response += `**🟢 Online:** ${online.length} | **🔴 Offline:** ${offline.length}\n\n`;
       
       if (online.length > 0) {
-        response += online.slice(0, 8).map(d => `• ${d.emoji || '📱'} ${d.name || d.ip}`).join('\n');
+        response += online.slice(0, 8).map(formatDevice).join('\n');
+        if (online.length > 8) response += `\n...and ${online.length - 8} more`;
+      }
+      
+      if (offline.length > 0) {
+        response += `\n\n**Offline:**\n`;
+        response += offline.slice(0, 5).map(formatDevice).join('\n');
+        if (offline.length > 5) response += `\n...and ${offline.length - 5} more`;
       }
       
       return response;
@@ -946,11 +967,19 @@ export class ActionExecutor {
 
   /**
    * Process a user query and execute if action detected
+   * Supports multiple actions in a single query (e.g., "rename X to A and Y to B")
    * @param {string} query - User's message
    * @param {Object} context - Additional context
    * @returns {Promise<Object|null>} Action result or null if no action
    */
   async processQuery(query, context = {}) {
+    // First, check for multiple actions (compound commands)
+    const multiResult = await this.processMultipleActions(query, context);
+    if (multiResult) {
+      return multiResult;
+    }
+    
+    // Single action detection
     const detected = this.detectAction(query);
     
     if (!detected) return null;
@@ -975,6 +1004,183 @@ export class ActionExecutor {
       executed: result.success,
       ...result
     };
+  }
+
+  /**
+   * Process multiple actions in a single query
+   * Handles patterns like "rename X to A and Y to B"
+   * @param {string} query - User's message
+   * @param {Object} context - Additional context
+   * @returns {Promise<Object|null>} Combined result or null
+   */
+  async processMultipleActions(query, context = {}) {
+    const results = [];
+    
+    // Check for multiple device renames
+    // Pattern: "rename X to A and Y to B" or "X is A and Y is B"
+    const renamePatterns = [
+      // "rename 192.168.0.100 to Kusanagi and 192.168.0.200 to Madara"
+      /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+(?:to|is)\s+([a-zA-Z0-9_\-]+)/gi,
+      // "name device X to A"
+      /(?:rename|name)\s+(\S+)\s+(?:to|as)\s+([a-zA-Z0-9_\-]+)/gi
+    ];
+    
+    const renames = [];
+    for (const pattern of renamePatterns) {
+      let match;
+      while ((match = pattern.exec(query)) !== null) {
+        renames.push({ deviceId: match[1], newName: match[2] });
+      }
+    }
+    
+    // If we found multiple renames, execute them all
+    if (renames.length > 1) {
+      const { deviceOps } = await import('../../../src/database/db.js');
+      const devices = deviceOps.getAll();
+      
+      for (const rename of renames) {
+        const device = devices.find(d => 
+          d.ip === rename.deviceId ||
+          d.mac?.toLowerCase() === rename.deviceId.toLowerCase() ||
+          d.name?.toLowerCase() === rename.deviceId.toLowerCase()
+        );
+        
+        if (device) {
+          const oldName = device.name || device.ip;
+          deviceOps.upsert({ ...device, name: rename.newName });
+          results.push({
+            success: true,
+            oldName,
+            newName: rename.newName,
+            ip: device.ip
+          });
+        } else {
+          results.push({
+            success: false,
+            deviceId: rename.deviceId,
+            newName: rename.newName,
+            error: 'Device not found'
+          });
+        }
+      }
+      
+      if (results.length > 0) {
+        // Format combined results
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.filter(r => !r.success).length;
+        
+        let formatted = `**📝 Batch Rename Complete**\n\n`;
+        
+        for (const r of results) {
+          if (r.success) {
+            formatted += `✅ **${r.oldName}** → **${r.newName}** (${r.ip})\n`;
+          } else {
+            formatted += `❌ **${r.deviceId}** → ${r.newName}: ${r.error}\n`;
+          }
+        }
+        
+        formatted += `\n_${successCount} succeeded, ${failCount} failed_`;
+        
+        return {
+          detected: true,
+          executed: successCount > 0,
+          success: successCount > 0,
+          actionId: 'batch-rename',
+          results,
+          formatted,
+          description: `Renamed ${successCount} device(s)`
+        };
+      }
+    }
+    
+    // Check for multiple wake commands
+    // Pattern: "wake X and Y" or "turn on X and Y"
+    const wakePattern = /(?:wake|turn on|power on|boot)\s+(.+?)(?:\s+and\s+|\s*,\s*)/gi;
+    const wakeTargets = [];
+    let wakeMatch;
+    
+    // Simple check for "and" in wake commands
+    if (/(?:wake|turn on|power on).+\s+and\s+/i.test(query)) {
+      const targets = query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[a-zA-Z0-9_\-]+)/g);
+      if (targets && targets.length > 1) {
+        // Filter out command words
+        const filtered = targets.filter(t => 
+          !['wake', 'turn', 'on', 'power', 'boot', 'up', 'and', 'the', 'device'].includes(t.toLowerCase())
+        );
+        
+        if (filtered.length > 1) {
+          const { wakeDevice } = await import('../../network-management/commands.js');
+          const { deviceOps } = await import('../../../src/database/db.js');
+          const devices = deviceOps.getAll();
+          
+          for (const target of filtered) {
+            const device = devices.find(d => 
+              d.ip === target ||
+              d.name?.toLowerCase() === target.toLowerCase()
+            );
+            
+            if (device && device.mac) {
+              try {
+                await wakeDevice(device.mac);
+                results.push({
+                  success: true,
+                  device: device.name || device.ip,
+                  ip: device.ip,
+                  mac: device.mac
+                });
+              } catch (e) {
+                results.push({
+                  success: false,
+                  device: target,
+                  error: e.message
+                });
+              }
+            } else if (device && !device.mac) {
+              results.push({
+                success: false,
+                device: device.name || device.ip,
+                error: 'No MAC address'
+              });
+            } else {
+              results.push({
+                success: false,
+                device: target,
+                error: 'Device not found'
+              });
+            }
+          }
+          
+          if (results.length > 0) {
+            const successCount = results.filter(r => r.success).length;
+            const failCount = results.filter(r => !r.success).length;
+            
+            let formatted = `**⚡ Batch Wake-on-LAN**\n\n`;
+            
+            for (const r of results) {
+              if (r.success) {
+                formatted += `✅ **${r.device}** - WOL sent\n`;
+              } else {
+                formatted += `❌ **${r.device}**: ${r.error}\n`;
+              }
+            }
+            
+            formatted += `\n_${successCount} packets sent, ${failCount} failed_`;
+            
+            return {
+              detected: true,
+              executed: successCount > 0,
+              success: successCount > 0,
+              actionId: 'batch-wake',
+              results,
+              formatted,
+              description: `Woke ${successCount} device(s)`
+            };
+          }
+        }
+      }
+    }
+    
+    return null;
   }
 }
 
