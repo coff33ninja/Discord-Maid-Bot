@@ -33,6 +33,12 @@ export class EventRouter {
         return;
       }
 
+      // Handle select menu interactions
+      if (interaction.isStringSelectMenu()) {
+        await this.handleSelectMenu(interaction);
+        return;
+      }
+
       // Other interaction types can be added here
     } catch (error) {
       this.logger.error('Error routing interaction:', error);
@@ -72,8 +78,51 @@ export class EventRouter {
       return;
     }
     
+    // Route profile buttons
+    if (customId.startsWith('profile_')) {
+      try {
+        const { getPlugin } = await import('./plugin-system.js');
+        const profilePlugin = getPlugin('user-profiles');
+        const { handleProfileButton } = await import('../../plugins/user-profiles/button-handler.js');
+        await handleProfileButton(interaction, profilePlugin);
+      } catch (error) {
+        this.logger.error('Profile button handler error:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
+        }
+      }
+      return;
+    }
+    
     // Unknown button - log and ignore
     this.logger.debug(`Unhandled button interaction: ${customId}`);
+  }
+
+  /**
+   * Handle select menu interactions
+   * Routes to appropriate plugin based on customId prefix
+   */
+  async handleSelectMenu(interaction) {
+    const customId = interaction.customId;
+    
+    // Route profile select menus
+    if (customId.startsWith('profile_select_')) {
+      try {
+        const { getPlugin } = await import('./plugin-system.js');
+        const profilePlugin = getPlugin('user-profiles');
+        const { handleProfileSelect } = await import('../../plugins/user-profiles/button-handler.js');
+        await handleProfileSelect(interaction, profilePlugin);
+      } catch (error) {
+        this.logger.error('Profile select handler error:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
+        }
+      }
+      return;
+    }
+    
+    // Unknown select menu - log and ignore
+    this.logger.debug(`Unhandled select menu interaction: ${customId}`);
   }
 
   /**

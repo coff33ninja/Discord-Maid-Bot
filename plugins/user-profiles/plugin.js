@@ -160,27 +160,9 @@ export default class UserProfilesPlugin extends Plugin {
     
     const channel = await guild.channels.create(channelOptions);
     
-    // Send welcome message
-    await channel.send({
-      embeds: [{
-        color: 0x9B59B6,
-        title: '👤 Profile Setup Channel',
-        description: `Welcome! This channel is for setting up your profile with me~\n\n` +
-          `**How to use:**\n` +
-          `• Just chat naturally! Tell me about yourself\n` +
-          `• I'll ask questions to learn more about you\n` +
-          `• Or use \`/profile edit\` for quick setup\n\n` +
-          `**What I can learn:**\n` +
-          `• Your preferred name\n` +
-          `• Gender & pronouns\n` +
-          `• Personality type\n` +
-          `• Interests & hobbies\n` +
-          `• Timezone\n` +
-          `• A short bio\n\n` +
-          `_This helps me personalize my responses to you!_`,
-        footer: { text: 'Your data is stored securely and only used by this bot' }
-      }]
-    });
+    // Send interactive welcome message with buttons
+    const { buildWelcomeMessage } = await import('./profile-components.js');
+    await channel.send(buildWelcomeMessage());
     
     // Store channel ID in config
     const { configOps } = await import('../../src/database/db.js');
