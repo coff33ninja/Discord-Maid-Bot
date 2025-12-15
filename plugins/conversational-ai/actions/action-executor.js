@@ -685,8 +685,8 @@ const ACTIONS = {
     description: 'Timeout a member',
     permission: 'admin',
     async execute(context) {
-      const userMatch = context.query?.match(/<@!?(\d+)>/);
-      const durationMatch = context.query?.match(/(\d+)\s*(m|min|minute|h|hour|d|day)/i);
+      const query = context.query || '';
+      const userMatch = query.match(/<@!?(\d+)>/);
       
       if (!userMatch) {
         return { needsUser: true };
@@ -696,30 +696,93 @@ const ACTIONS = {
         return { needsGuild: true };
       }
       
-      // Default 10 minutes
-      let durationMs = 10 * 60 * 1000;
+      // Use AI to parse duration and reason from natural language
+      let durationMs = 10 * 60 * 1000; // Default 10 minutes
       let durationStr = '10 minutes';
+      let reason = 'No reason provided';
       
-      if (durationMatch) {
-        const value = parseInt(durationMatch[1]);
-        const unit = durationMatch[2].toLowerCase();
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
         
-        if (unit.startsWith('h')) {
-          durationMs = value * 60 * 60 * 1000;
-          durationStr = `${value} hour(s)`;
-        } else if (unit.startsWith('d')) {
-          durationMs = value * 24 * 60 * 60 * 1000;
-          durationStr = `${value} day(s)`;
-        } else {
-          durationMs = value * 60 * 1000;
-          durationStr = `${value} minute(s)`;
+        if (aiPlugin) {
+          const prompt = `You are parsing a Discord timeout/mute command. Extract the duration and reason from this message:
+
+USER MESSAGE: "${query}"
+
+Return ONLY a JSON object:
+{
+  "durationMinutes": number (in minutes, max 40320 which is 28 days),
+  "durationText": "human readable duration like '30 minutes' or '2 hours'",
+  "reason": "brief reason for the timeout, or 'Violated server rules' if not specified"
+}
+
+DURATION PARSING RULES:
+- "a bit" or "briefly" = 10 minutes
+- "a while" = 30 minutes
+- "an hour" or "for a hour" = 60 minutes
+- "rest of the day" = calculate hours until midnight (assume 8 hours if unsure)
+- "until tomorrow" = 24 hours
+- "a day" = 1440 minutes (24 hours)
+- "a week" = 10080 minutes
+- Explicit times like "30 minutes", "2 hours", "1 day" = convert to minutes
+- If no duration mentioned, default to 10 minutes
+
+REASON PARSING:
+- Look for words like "for", "because", "due to" followed by the reason
+- "being toxic" → "Toxic behavior"
+- "spamming" → "Spamming"
+- "being rude" → "Rude behavior"
+- If no clear reason, use "Violated server rules"
+
+Return ONLY the JSON, no other text.`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt,
+            options: { maxOutputTokens: 150, temperature: 0.1 }
+          });
+          
+          const responseText = result?.response?.text?.() || '';
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.durationMinutes && parsed.durationMinutes > 0) {
+              // Cap at 28 days (Discord max)
+              const cappedMinutes = Math.min(parsed.durationMinutes, 40320);
+              durationMs = cappedMinutes * 60 * 1000;
+              durationStr = parsed.durationText || `${cappedMinutes} minutes`;
+            }
+            if (parsed.reason) {
+              reason = parsed.reason;
+            }
+            logger.info(`AI parsed timeout: duration=${durationStr}, reason="${reason}"`);
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for timeout, using defaults:', error.message);
+        // Fall back to regex parsing
+        const durationMatch = query.match(/(\d+)\s*(m|min|minute|h|hour|d|day)/i);
+        if (durationMatch) {
+          const value = parseInt(durationMatch[1]);
+          const unit = durationMatch[2].toLowerCase();
+          if (unit.startsWith('h')) {
+            durationMs = value * 60 * 60 * 1000;
+            durationStr = `${value} hour(s)`;
+          } else if (unit.startsWith('d')) {
+            durationMs = value * 24 * 60 * 60 * 1000;
+            durationStr = `${value} day(s)`;
+          } else {
+            durationMs = value * 60 * 1000;
+            durationStr = `${value} minute(s)`;
+          }
         }
       }
       
       try {
         const member = await context.guild.members.fetch(userMatch[1]);
-        await member.timeout(durationMs, `Timed out by ${context.username || 'admin'} via AI`);
-        return { success: true, member: member.user.tag, duration: durationStr };
+        await member.timeout(durationMs, `${reason} (by ${context.username || 'admin'} via AI)`);
+        return { success: true, member: member.user.tag, duration: durationStr, reason, aiParsed: true };
       } catch (error) {
         return { error: error.message };
       }
@@ -734,53 +797,141 @@ const ACTIONS = {
       if (result.error) {
         return `❌ Failed to timeout: ${result.error}`;
       }
-      return `⏰ **Timed out** ${result.member} for ${result.duration}`;
+      let response = `⏰ **Timed out** ${result.member} for ${result.duration}`;
+      if (result.reason && result.reason !== 'No reason provided') {
+        response += `\n📝 **Reason:** ${result.reason}`;
+      }
+      return response;
     }
   },
 
   'discord-role': {
-    keywords: ['give role', 'add role', 'assign role', 'remove role', 'take role'],
+    keywords: ['give role', 'add role', 'assign role', 'remove role', 'take role', 'make them', 'promote', 'demote'],
     plugin: 'server-admin',
     description: 'Give or remove a role from a member',
     permission: 'admin',
     async execute(context) {
-      const userMatch = context.query?.match(/<@!?(\d+)>/);
-      const roleMatch = context.query?.match(/<@&(\d+)>/) || context.query?.match(/role\s+["']?([^"']+)["']?/i);
-      const isRemove = context.query?.toLowerCase().includes('remove') || context.query?.toLowerCase().includes('take');
+      const query = context.query || '';
+      const userMatch = query.match(/<@!?(\d+)>/);
+      const roleMentionMatch = query.match(/<@&(\d+)>/);
       
       if (!userMatch) {
         return { needsUser: true };
-      }
-      
-      if (!roleMatch) {
-        return { needsRole: true };
       }
       
       if (!context.guild) {
         return { needsGuild: true };
       }
       
+      // Get available roles for AI context
+      const availableRoles = context.guild.roles.cache
+        .filter(r => r.name !== '@everyone' && !r.managed)
+        .map(r => r.name)
+        .slice(0, 30); // Limit for prompt size
+      
+      let roleName = null;
+      let isRemove = false;
+      
+      // If role is mentioned directly, use that
+      if (roleMentionMatch) {
+        const role = context.guild.roles.cache.get(roleMentionMatch[1]);
+        if (role) roleName = role.name;
+        isRemove = query.toLowerCase().includes('remove') || query.toLowerCase().includes('take');
+      } else {
+        // Use AI to parse role name with fuzzy matching
+        try {
+          const { getPlugin } = await import('../../../src/core/plugin-system.js');
+          const aiPlugin = getPlugin('conversational-ai');
+          
+          if (aiPlugin) {
+            const prompt = `You are parsing a Discord role management command. Match the requested role to available roles.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE ROLES IN THIS SERVER:
+${availableRoles.map(r => `- ${r}`).join('\n')}
+
+Return ONLY a JSON object:
+{
+  "action": "add" or "remove",
+  "roleName": "exact role name from the available list that best matches what the user wants",
+  "confidence": "high", "medium", or "low"
+}
+
+MATCHING RULES:
+- "make them admin" or "give admin" → find role containing "admin" (e.g., "Admin", "Administrator")
+- "make them mod" or "moderator" → find role containing "mod" (e.g., "Moderator", "Mod")
+- "give vip" → find role containing "vip" (e.g., "VIP", "VIP Member")
+- "promote to staff" → find role containing "staff"
+- "demote" or "remove" → action should be "remove"
+- Match case-insensitively
+- If multiple matches, pick the most likely one
+- If no good match, set confidence to "low" and pick closest match
+
+Return ONLY the JSON, no other text.`;
+
+            const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+              prompt,
+              options: { maxOutputTokens: 150, temperature: 0.1 }
+            });
+            
+            const responseText = result?.response?.text?.() || '';
+            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+            
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.roleName) {
+                roleName = parsed.roleName;
+                isRemove = parsed.action === 'remove';
+                logger.info(`AI parsed role: "${roleName}", action=${parsed.action}, confidence=${parsed.confidence}`);
+              }
+            }
+          }
+        } catch (error) {
+          logger.warn('AI parsing failed for role, using regex fallback:', error.message);
+        }
+        
+        // Fallback to regex if AI didn't work
+        if (!roleName) {
+          const roleMatch = query.match(/(?:role|the)\s+["']?([^"']+?)["']?(?:\s+to|\s+from|$)/i) ||
+                           query.match(/(?:give|add|assign|remove|take)\s+(?:them\s+)?(?:the\s+)?["']?([^"'@]+?)["']?(?:\s+role)?/i);
+          if (roleMatch && roleMatch[1]) {
+            roleName = roleMatch[1].trim();
+          }
+          isRemove = query.toLowerCase().includes('remove') || 
+                     query.toLowerCase().includes('take') || 
+                     query.toLowerCase().includes('demote');
+        }
+      }
+      
+      if (!roleName) {
+        return { needsRole: true, availableRoles: availableRoles.slice(0, 10) };
+      }
+      
       try {
         const member = await context.guild.members.fetch(userMatch[1]);
-        let role;
         
-        // Try to find role by ID or name
-        if (roleMatch[1].match(/^\d+$/)) {
-          role = context.guild.roles.cache.get(roleMatch[1]);
-        } else {
-          role = context.guild.roles.cache.find(r => r.name.toLowerCase() === roleMatch[1].toLowerCase());
+        // Find role with fuzzy matching
+        let role = context.guild.roles.cache.find(r => r.name.toLowerCase() === roleName.toLowerCase());
+        
+        // If exact match not found, try partial match
+        if (!role) {
+          role = context.guild.roles.cache.find(r => 
+            r.name.toLowerCase().includes(roleName.toLowerCase()) ||
+            roleName.toLowerCase().includes(r.name.toLowerCase())
+          );
         }
         
         if (!role) {
-          return { error: `Role "${roleMatch[1]}" not found` };
+          return { error: `Role "${roleName}" not found`, availableRoles: availableRoles.slice(0, 10) };
         }
         
         if (isRemove) {
           await member.roles.remove(role);
-          return { success: true, action: 'removed', member: member.user.tag, role: role.name };
+          return { success: true, action: 'removed', member: member.user.tag, role: role.name, aiParsed: true };
         } else {
           await member.roles.add(role);
-          return { success: true, action: 'added', member: member.user.tag, role: role.name };
+          return { success: true, action: 'added', member: member.user.tag, role: role.name, aiParsed: true };
         }
       } catch (error) {
         return { error: error.message };
@@ -791,13 +942,21 @@ const ACTIONS = {
         return `🎭 Who should I give the role to? "Give @user the Admin role"`;
       }
       if (result.needsRole) {
-        return `🎭 Which role? "Give @user the Admin role"`;
+        let response = `🎭 Which role? "Give @user the Admin role"`;
+        if (result.availableRoles?.length > 0) {
+          response += `\n\n**Available roles:** ${result.availableRoles.join(', ')}`;
+        }
+        return response;
       }
       if (result.needsGuild) {
         return `🎭 I can only manage roles in a server.`;
       }
       if (result.error) {
-        return `❌ Failed: ${result.error}`;
+        let response = `❌ Failed: ${result.error}`;
+        if (result.availableRoles?.length > 0) {
+          response += `\n\n**Available roles:** ${result.availableRoles.join(', ')}`;
+        }
+        return response;
       }
       return `🎭 **${result.action === 'added' ? 'Added' : 'Removed'}** role **${result.role}** ${result.action === 'added' ? 'to' : 'from'} ${result.member}`;
     }
@@ -2064,29 +2223,107 @@ Return ONLY the JSON, no other text.`;
 
   // ============ DISCORD DELETE CHANNEL ============
   'discord-delete-channel': {
-    keywords: ['delete channel', 'remove channel', 'delete this channel'],
+    keywords: ['delete channel', 'remove channel', 'delete this channel', 'get rid of channel'],
     plugin: 'server-admin',
     description: 'Delete a Discord channel',
     permission: 'admin',
     async execute(context) {
-      const query = context.query?.toLowerCase() || '';
+      const query = context.query || '';
+      const lowerQuery = query.toLowerCase();
       
       if (!context.guild) {
         return { needsGuild: true };
       }
       
-      // Parse channel name from query
-      const patterns = [
-        /delete\s+(?:the\s+)?channel\s+(?:#)?["']?([a-zA-Z0-9_\-]+)["']?/i,
-        /remove\s+(?:the\s+)?channel\s+(?:#)?["']?([a-zA-Z0-9_\-]+)["']?/i
-      ];
+      // Check for "this channel" first
+      if (lowerQuery.includes('this channel') && context.channel) {
+        try {
+          const { deleteChannel } = await import('../../server-admin/discord/channel-manager.js');
+          const result = await deleteChannel(context.guild, context.channel.name, {
+            executorId: context.userId,
+            executorName: context.username || 'User'
+          });
+          return result;
+        } catch (error) {
+          return { error: error.message };
+        }
+      }
+      
+      // Get available channels for AI context
+      const availableChannels = context.guild.channels.cache
+        .filter(c => c.type === 0 || c.type === 2) // Text and voice channels
+        .map(c => ({ name: c.name, type: c.type === 2 ? 'voice' : 'text' }))
+        .slice(0, 30);
       
       let channelName = null;
+      let matchedChannel = null;
       
-      // Check for "this channel"
-      if (query.includes('this channel') && context.channel) {
-        channelName = context.channel.name || context.channelId;
-      } else {
+      // Use AI to parse and match channel name
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `You are parsing a Discord channel deletion request. Match the requested channel to available channels.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE CHANNELS IN THIS SERVER:
+${availableChannels.map(c => `- #${c.name} (${c.type})`).join('\n')}
+
+Return ONLY a JSON object:
+{
+  "channelName": "exact channel name from the available list that best matches",
+  "confidence": "high", "medium", or "low",
+  "reasoning": "brief explanation of why this channel was matched"
+}
+
+MATCHING RULES:
+- "delete the bot testing channel" → find channel with "bot" and "test" in name
+- "remove old-chat" → find channel named "old-chat"
+- "get rid of the gaming channel" → find channel with "gaming" in name
+- Match case-insensitively and handle hyphens/underscores
+- If user says a partial name, find the best match
+- If ambiguous or no good match, set confidence to "low"
+
+Return ONLY the JSON, no other text.`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt,
+            options: { maxOutputTokens: 150, temperature: 0.1 }
+          });
+          
+          const responseText = result?.response?.text?.() || '';
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.channelName && parsed.confidence !== 'low') {
+              channelName = parsed.channelName;
+              logger.info(`AI parsed channel deletion: "${channelName}", confidence=${parsed.confidence}`);
+            } else if (parsed.confidence === 'low') {
+              // Return for confirmation if low confidence
+              return { 
+                needsConfirmation: true, 
+                suggestedChannel: parsed.channelName,
+                reasoning: parsed.reasoning,
+                availableChannels: availableChannels.slice(0, 10)
+              };
+            }
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for channel deletion, using regex fallback:', error.message);
+      }
+      
+      // Fallback to regex if AI didn't work
+      if (!channelName) {
+        const patterns = [
+          /delete\s+(?:the\s+)?(?:channel\s+)?(?:#)?["']?([a-zA-Z0-9_\-]+)["']?/i,
+          /remove\s+(?:the\s+)?(?:channel\s+)?(?:#)?["']?([a-zA-Z0-9_\-]+)["']?/i,
+          /get\s+rid\s+of\s+(?:the\s+)?(?:channel\s+)?(?:#)?["']?([a-zA-Z0-9_\-]+)["']?/i
+        ];
+        
         for (const pattern of patterns) {
           const match = query.match(pattern);
           if (match && match[1]) {
@@ -2097,7 +2334,7 @@ Return ONLY the JSON, no other text.`;
       }
       
       if (!channelName) {
-        return { needsName: true };
+        return { needsName: true, availableChannels: availableChannels.slice(0, 10) };
       }
       
       try {
@@ -2107,7 +2344,7 @@ Return ONLY the JSON, no other text.`;
           executorName: context.username || 'User'
         });
         
-        return result;
+        return { ...result, aiParsed: true };
       } catch (error) {
         return { error: error.message };
       }
@@ -2117,9 +2354,25 @@ Return ONLY the JSON, no other text.`;
         return `📢 I can only delete channels in a server.`;
       }
       
+      if (result.needsConfirmation) {
+        let response = `🤔 I'm not sure which channel you mean.`;
+        if (result.suggestedChannel) {
+          response += ` Did you mean **#${result.suggestedChannel}**?`;
+        }
+        if (result.availableChannels?.length > 0) {
+          response += `\n\n**Available channels:**\n${result.availableChannels.map(c => `• #${c.name}`).join('\n')}`;
+        }
+        response += `\n\nTry: "Delete channel [exact-name]" or "Delete this channel"`;
+        return response;
+      }
+      
       if (result.needsName) {
-        return `📢 Which channel should I delete?\n\n` +
-          `Try: "Delete channel old-chat" or "Delete this channel"`;
+        let response = `📢 Which channel should I delete?`;
+        if (result.availableChannels?.length > 0) {
+          response += `\n\n**Available channels:**\n${result.availableChannels.map(c => `• #${c.name}`).join('\n')}`;
+        }
+        response += `\n\nTry: "Delete channel old-chat" or "Delete this channel"`;
+        return response;
       }
       
       if (result.error) {
