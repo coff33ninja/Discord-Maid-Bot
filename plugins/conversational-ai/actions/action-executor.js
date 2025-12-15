@@ -8,9 +8,41 @@
  */
 
 import { createLogger } from '../../../src/logging/logger.js';
-import { EmbedBuilder } from 'discord.js';
 
 const logger = createLogger('action-executor');
+
+/**
+ * Extract device identifier from a query (IP, MAC, or name)
+ * @param {string} query - User's message
+ * @returns {string|null} Device identifier or null
+ */
+function extractDeviceIdentifier(query) {
+  // Match IP address
+  const ipMatch = query.match(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/);
+  if (ipMatch) return ipMatch[1];
+  
+  // Match MAC address (various formats)
+  const macMatch = query.match(/\b([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b/);
+  if (macMatch) return macMatch[0];
+  
+  // Try to extract device name after keywords
+  const namePatterns = [
+    /wake\s+(?:up\s+)?(?:device\s+)?["']?([a-zA-Z0-9_-]+)["']?/i,
+    /turn\s+on\s+["']?([a-zA-Z0-9_-]+)["']?/i,
+    /power\s+on\s+["']?([a-zA-Z0-9_-]+)["']?/i,
+    /start\s+["']?([a-zA-Z0-9_-]+)["']?/i,
+    /boot\s+(?:up\s+)?["']?([a-zA-Z0-9_-]+)["']?/i
+  ];
+  
+  for (const pattern of namePatterns) {
+    const match = query.match(pattern);
+    if (match && match[1] && !['the', 'my', 'a', 'device', 'pc', 'computer'].includes(match[1].toLowerCase())) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
 
 /**
  * Action definitions with their execution logic
@@ -81,6 +113,89 @@ const ACTIONS = {
       }
       
       return response;
+    }
+  },
+
+  // Wake-on-LAN
+  'wake-device': {
+    keywords: ['wake', 'wol', 'turn on', 'power on', 'boot', 'start up', 'wake up'],
+    plugin: 'network-management',
+    description: 'Wake a device using Wake-on-LAN',
+    needsTarget: true,
+    async execute(context) {
+      const { wakeDevice } = await import('../../network-management/commands.js');
+      const { deviceOps } = await import('../../../src/database/db.js');
+      
+      // Extract device identifier from query
+      const deviceId = extractDeviceIdentifier(context.query || '');
+      
+      if (!deviceId) {
+        // List available devices that can be woken
+        const devices = deviceOps.getAll().filter(d => d.mac && !d.online);
+        return { 
+          needsSelection: true, 
+          devices: devices.slice(0, 10),
+          message: 'Which device would you like to wake?'
+        };
+      }
+      
+      // Find device by IP, MAC, or name
+      const devices = deviceOps.getAll();
+      const device = devices.find(d => 
+        d.ip === deviceId ||
+        d.mac?.toLowerCase() === deviceId.toLowerCase() ||
+        d.name?.toLowerCase() === deviceId.toLowerCase()
+      );
+      
+      if (!device) {
+        return { error: `Device "${deviceId}" not found`, notFound: true };
+      }
+      
+      if (!device.mac) {
+        return { error: `Device "${device.name || device.ip}" has no MAC address`, noMac: true };
+      }
+      
+      // Send WOL packet
+      await wakeDevice(device.mac);
+      
+      return {
+        success: true,
+        device: {
+          name: device.name || device.ip,
+          ip: device.ip,
+          mac: device.mac
+        }
+      };
+    },
+    formatResult(result) {
+      if (result.needsSelection) {
+        let response = `${result.message}\n\n**Available devices:**\n`;
+        if (result.devices.length === 0) {
+          response += '_No offline devices with MAC addresses found._';
+        } else {
+          response += result.devices.map(d => `• ${d.name || d.ip} (${d.ip})`).join('\n');
+        }
+        response += '\n\nTry: "Wake up [device name or IP]"';
+        return response;
+      }
+      
+      if (result.notFound) {
+        return `❌ ${result.error}\n\nTry "list devices" to see available devices.`;
+      }
+      
+      if (result.noMac) {
+        return `❌ ${result.error}\n\nWake-on-LAN requires a MAC address.`;
+      }
+      
+      if (result.error) {
+        return `❌ Failed to wake device: ${result.error}`;
+      }
+      
+      return `⚡ **Wake-on-LAN packet sent!**\n\n` +
+        `📱 **Device:** ${result.device.name}\n` +
+        `🌐 **IP:** ${result.device.ip}\n` +
+        `🔗 **MAC:** ${result.device.mac}\n\n` +
+        `_The device should wake up in a few seconds..._`;
     }
   },
 
