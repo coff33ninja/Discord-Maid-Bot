@@ -53,6 +53,8 @@ export async function rewriteReminderMessage(originalMessage, options = {}) {
   const {
     senderName = 'Someone',
     targetName = null,
+    targetUserId = null,
+    senderUserId = null,
     isForOther = false,
     includePersonality = true,
     messageType = 'reminder' // 'reminder', 'notification', 'alert'
@@ -63,6 +65,24 @@ export async function rewriteReminderMessage(originalMessage, options = {}) {
     
     const personality = includePersonality ? await getCurrentPersonality() : null;
     
+    // Get profile info for sender and target
+    let senderProfile = null;
+    let targetProfile = null;
+    try {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const profilePlugin = getPlugin('user-profiles');
+      if (profilePlugin) {
+        if (senderUserId) {
+          senderProfile = await profilePlugin.getProfileForContext(senderUserId);
+        }
+        if (targetUserId) {
+          targetProfile = await profilePlugin.getProfileForContext(targetUserId);
+        }
+      }
+    } catch (e) {
+      // Profile plugin not available
+    }
+    
     const personalityContext = personality ? `
 Bot Personality:
 - Name: ${personality.name}
@@ -71,18 +91,35 @@ Bot Personality:
 - Quirks: ${personality.quirks?.join(', ') || 'none'}
 ` : '';
 
+    const senderContext = senderProfile ? `
+Sender Info:
+- Name: ${senderProfile.name || senderName}
+- Gender: ${senderProfile.gender || 'unknown'}
+- Pronouns: ${senderProfile.pronouns || 'they/them'} (use ${senderProfile.pronounSubject}/${senderProfile.pronounObject}/${senderProfile.pronounPossessive})
+` : '';
+
+    const targetContext = targetProfile ? `
+Target/Recipient Info:
+- Name: ${targetProfile.name || targetName}
+- Gender: ${targetProfile.gender || 'unknown'}
+- Pronouns: ${targetProfile.pronouns || 'they/them'} (use ${targetProfile.pronounSubject}/${targetProfile.pronounObject}/${targetProfile.pronounPossessive})
+` : '';
+
     const prompt = `You are rewriting a reminder message to sound more natural and personal.
 
-Original message from ${senderName}: "${originalMessage}"
-${isForOther ? `This reminder is being delivered TO: ${targetName}` : 'This is a self-reminder'}
+Original message from ${senderProfile?.name || senderName}: "${originalMessage}"
+${isForOther ? `This reminder is being delivered TO: ${targetProfile?.name || targetName}` : 'This is a self-reminder'}
 Message type: ${messageType}
 ${personalityContext}
+${senderContext}
+${targetContext}
 
 TASK: Rewrite this message to:
 1. Sound like a natural, friendly delivery from one person to another
 2. Keep the core meaning but make it sound conversational
-3. ${isForOther ? `Frame it as "${senderName} wanted me to remind you..."` : 'Frame it as a helpful reminder'}
+3. ${isForOther ? `Frame it as "${senderProfile?.name || senderName} wanted me to remind you..."` : 'Frame it as a helpful reminder'}
 4. ${includePersonality && personality ? `Include the bot's personality (${personality.name}'s style)` : 'Keep it neutral'}
+5. USE THE CORRECT PRONOUNS for both sender and recipient based on their profiles above!
 5. Be concise but warm
 6. If it's a romantic/personal message, keep the sentiment but make it sweet
 

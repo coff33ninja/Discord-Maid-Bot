@@ -1008,12 +1008,15 @@ const ACTIONS = {
       }
       
       // Rewrite the message with AI to sound more natural and include personality
+      // Pass user IDs so the rewriter can fetch profiles for correct pronouns
       let rewrittenMessage = parsed.message || 'Reminder';
       try {
         const { rewriteReminderMessage } = await import('../utils/message-rewriter.js');
         rewrittenMessage = await rewriteReminderMessage(parsed.message, {
           senderName: context.username || 'Someone',
+          senderUserId: context.userId,
           targetName: hasTargetUser ? `<@${targetUserId}>` : null,
+          targetUserId: hasTargetUser ? targetUserId : null,
           isForOther: hasTargetUser,
           includePersonality: true,
           messageType: 'reminder'

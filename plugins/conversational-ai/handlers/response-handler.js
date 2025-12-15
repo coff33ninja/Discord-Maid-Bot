@@ -160,9 +160,10 @@ export class ResponseHandler {
       parts.push('');
     }
     
-    // Add user profile context
+    // Add user profile context - IMPORTANT for personalization
     if (extras.userProfile) {
-      parts.push(`**User Profile:** ${extras.userProfile}`);
+      parts.push(`**User Profile (USE THIS!):** ${extras.userProfile}`);
+      parts.push('IMPORTANT: Use the correct pronouns and name from the profile above when referring to this user.');
       parts.push('');
     }
     

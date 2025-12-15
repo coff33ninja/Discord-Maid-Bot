@@ -113,22 +113,79 @@ export default class UserProfilesPlugin extends Plugin {
   /**
    * Get profile summary for AI context
    * @param {string} userId - Discord user ID
-   * @returns {string} Human-readable profile summary
+   * @returns {string} Human-readable profile summary with instructions
    */
   async getProfileSummary(userId) {
     const profile = await this.getProfile(userId);
     if (!profile) return null;
     
     const parts = [];
-    if (profile.displayName) parts.push(`Name: ${profile.displayName}`);
+    if (profile.displayName) parts.push(`Call them "${profile.displayName}"`);
     if (profile.gender) parts.push(`Gender: ${profile.gender}`);
-    if (profile.pronouns) parts.push(`Pronouns: ${profile.pronouns}`);
+    if (profile.pronouns) parts.push(`Use ${profile.pronouns} pronouns`);
     if (profile.personality) parts.push(`Personality: ${profile.personality}`);
-    if (profile.interests?.length) parts.push(`Interests: ${profile.interests.join(', ')}`);
+    if (profile.interests?.length) parts.push(`Interests: ${profile.interests.slice(0, 5).join(', ')}`);
     if (profile.timezone) parts.push(`Timezone: ${profile.timezone}`);
-    if (profile.bio) parts.push(`Bio: ${profile.bio}`);
     
-    return parts.length > 0 ? parts.join(' | ') : null;
+    return parts.length > 0 ? parts.join('. ') + '.' : null;
+  }
+  
+  /**
+   * Get detailed profile for another user (for reminders, mentions)
+   * @param {string} userId - Discord user ID
+   * @returns {Object} Profile data with formatted strings
+   */
+  async getProfileForContext(userId) {
+    const profile = await this.getProfile(userId);
+    if (!profile) return null;
+    
+    return {
+      name: profile.displayName || null,
+      gender: profile.gender || null,
+      pronouns: profile.pronouns || null,
+      personality: profile.personality || null,
+      interests: profile.interests || [],
+      // Helper strings for AI
+      pronounSubject: this.getPronounSubject(profile.pronouns),
+      pronounObject: this.getPronounObject(profile.pronouns),
+      pronounPossessive: this.getPronounPossessive(profile.pronouns)
+    };
+  }
+  
+  /**
+   * Get subject pronoun (he/she/they)
+   */
+  getPronounSubject(pronouns) {
+    if (!pronouns) return 'they';
+    const p = pronouns.toLowerCase();
+    if (p.startsWith('he')) return 'he';
+    if (p.startsWith('she')) return 'she';
+    if (p.includes('it/')) return 'it';
+    return 'they';
+  }
+  
+  /**
+   * Get object pronoun (him/her/them)
+   */
+  getPronounObject(pronouns) {
+    if (!pronouns) return 'them';
+    const p = pronouns.toLowerCase();
+    if (p.startsWith('he')) return 'him';
+    if (p.startsWith('she')) return 'her';
+    if (p.includes('it/')) return 'it';
+    return 'them';
+  }
+  
+  /**
+   * Get possessive pronoun (his/her/their)
+   */
+  getPronounPossessive(pronouns) {
+    if (!pronouns) return 'their';
+    const p = pronouns.toLowerCase();
+    if (p.startsWith('he')) return 'his';
+    if (p.startsWith('she')) return 'her';
+    if (p.includes('it/')) return 'its';
+    return 'their';
   }
   
   /**
