@@ -280,4 +280,4 @@ export async function handleChatMessage(interaction) {
 }
 
 // Export functions for use by other plugins
-export { chatWithMaid, chatWithContext, initializeHandler };
+export { chatWithMaid, chatWithContext };
