@@ -170,47 +170,39 @@ export async function formatPluginAwarenessForPrompt() {
   
   const parts = [];
   
-  parts.push('**Available Bot Capabilities:**');
-  parts.push(`You are part of a Discord bot with ${awareness.pluginCount} plugins loaded.`);
+  parts.push('**Your Capabilities:**');
+  parts.push(`You are an AI assistant integrated into a Discord bot with ${awareness.pluginCount} plugins.`);
   parts.push('');
   
-  // List capabilities
+  // IMPORTANT: Direct actions the AI can execute
+  parts.push('**🔧 ACTIONS YOU CAN EXECUTE DIRECTLY:**');
+  parts.push('When users ask for these, you will AUTOMATICALLY perform them (not just suggest commands):');
+  parts.push('• "What devices are online?" / "Show network devices" → Scans and shows devices');
+  parts.push('• "Run a speed test" → Runs actual speed test');
+  parts.push('• "Wake up [device]" / "Turn on [device]" → Sends Wake-on-LAN packet');
+  parts.push('• "Rename [IP] to [name]" / "[IP] is [name]" → Renames device in database');
+  parts.push('• "Research [topic]" / "Tell me about [topic]" → Performs AI research');
+  parts.push('• "What games are available?" → Lists games');
+  parts.push('• "Ping" → Shows bot latency');
+  parts.push('');
+  
+  // List general capabilities
   if (awareness.capabilities.length > 0) {
-    parts.push('You can help users with:');
+    parts.push('**General Capabilities:**');
     for (const cap of awareness.capabilities) {
       parts.push(`• ${cap}`);
     }
     parts.push('');
   }
   
-  // Key commands
-  parts.push('**Key Commands to Suggest:**');
-  
-  // Core
-  parts.push('Core: /help, /stats, /ping, /dashboard');
-  
-  // Plugin commands (abbreviated)
-  const pluginCmdSummary = [];
-  if (awareness.commands.plugins['conversational-ai']) {
-    pluginCmdSummary.push('AI: /chat, /memory, /ai');
-  }
-  if (awareness.commands.plugins['games']) {
-    pluginCmdSummary.push('Games: /game play, /game list');
-  }
-  if (awareness.commands.plugins['network-management']) {
-    pluginCmdSummary.push('Network: /network scan, /network devices');
-  }
-  if (awareness.commands.plugins['integrations']) {
-    pluginCmdSummary.push('Smart Home: /homeassistant, /weather');
-  }
-  if (awareness.commands.plugins['research']) {
-    pluginCmdSummary.push('Research: /research query');
-  }
-  
-  parts.push(pluginCmdSummary.join(' | '));
+  // Slash commands for things that need interaction
+  parts.push('**Slash Commands (for interactive features):**');
+  parts.push('• Games: `/game play game:[name]` - Games need Discord buttons');
+  parts.push('• Reminders: `/bot reminder set` - Needs time picker');
+  parts.push('• Home Assistant: `/homeassistant` - Device selection');
   parts.push('');
   
-  parts.push('When users ask about capabilities, suggest relevant commands. If they want to do something the bot can do, guide them to the right command.');
+  parts.push('**IMPORTANT:** When a user asks you to DO something (scan, wake, rename, research), you should execute it directly. Only suggest slash commands for interactive features like games or when the direct action fails.');
   
   return parts.join('\n');
 }
@@ -267,9 +259,34 @@ export function clearCache() {
   cacheTimestamp = 0;
 }
 
+/**
+ * Get action awareness - what the AI can do directly
+ * @returns {Object} Action capabilities
+ */
+export function getActionAwareness() {
+  return {
+    directActions: [
+      { trigger: 'network/devices/scan/online', action: 'Scan network and show devices' },
+      { trigger: 'speed test/bandwidth/internet speed', action: 'Run speed test' },
+      { trigger: 'wake/turn on/power on/boot', action: 'Wake device via WOL' },
+      { trigger: 'rename/name/is (for devices)', action: 'Rename device' },
+      { trigger: 'research/tell me about/what is', action: 'AI research' },
+      { trigger: 'games/play', action: 'List or start games' },
+      { trigger: 'weather', action: 'Get weather info' },
+      { trigger: 'ping/latency', action: 'Check bot ping' }
+    ],
+    slashCommandsOnly: [
+      { feature: 'Games', reason: 'Needs Discord buttons for interaction' },
+      { feature: 'Reminders', reason: 'Needs time/date picker' },
+      { feature: 'Home Assistant', reason: 'Needs device selection menu' }
+    ]
+  };
+}
+
 export default {
   buildPluginAwareness,
   formatPluginAwarenessForPrompt,
   suggestCommand,
-  clearCache
+  clearCache,
+  getActionAwareness
 };
