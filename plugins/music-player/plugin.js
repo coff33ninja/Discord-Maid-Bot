@@ -79,6 +79,14 @@ export default class MusicPlayerPlugin extends Plugin {
   async onReady(discordClient) {
     this.client = discordClient;
     this.logger.info('🎵 Music Player ready');
+  }
+  
+  /**
+   * Called by bot.js when Discord client is ready
+   */
+  setClient(discordClient) {
+    this.client = discordClient;
+    this.logger.info('🎵 Music Player received Discord client');
     
     // Auto-start music if enabled
     if (MUSIC_CONFIG.autoStart) {
