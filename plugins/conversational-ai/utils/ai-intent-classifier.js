@@ -380,8 +380,8 @@ const ACTION_CATEGORIES = {
   
   // Bot Info
   'help': {
-    description: 'Show general help and available commands',
-    examples: ['help', 'what can you do', 'commands', 'how to use']
+    description: 'Show general help and available commands (say "full help" or "all commands" for detailed list)',
+    examples: ['help', 'what can you do', 'commands', 'how to use', 'full help', 'all commands', 'show everything you can do']
   },
   'bot-stats': {
     description: 'Show bot statistics and uptime',
@@ -527,7 +527,7 @@ function fallbackClassification(query) {
     { keywords: ['give role', 'add role', 'remove role', 'assign role'], action: 'discord-role' },
     { keywords: ['lock channel', 'unlock channel'], action: 'discord-lock' },
     { keywords: ['ssh', 'run command on server', 'remote command'], action: 'ssh-command' },
-    { keywords: ['help', 'what can you do', 'commands'], action: 'help' },
+    { keywords: ['help', 'what can you do', 'commands', 'full help', 'all commands', 'everything you can do'], action: 'help' },
     { keywords: ['research', 'look up', 'tell me about'], action: 'research' },
     { keywords: ['home assistant', 'smart home', 'lights'], action: 'home-assistant' },
     { keywords: ['profile channel', 'introduce themselves', 'member profiles'], action: 'profile-setup' },

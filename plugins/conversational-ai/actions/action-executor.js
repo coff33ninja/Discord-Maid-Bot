@@ -513,12 +513,61 @@ Return ONLY the JSON, no other text.`;
     keywords: ['help', 'what can you do', 'commands', 'how to use'],
     plugin: 'core',
     description: 'Show available commands',
-    async execute() {
-      return { showHelp: true };
+    async execute(context) {
+      const query = context.query?.toLowerCase() || '';
+      // Check if user wants full/detailed/all commands
+      const wantsFull = query.includes('full') || query.includes('all') || query.includes('detail') || query.includes('everything') || query.includes('complete');
+      return { showHelp: true, full: wantsFull };
     },
-    formatResult() {
+    formatResult(result) {
+      if (result.full) {
+        // Full detailed help
+        return `**📚 Full Command List**\n\n` +
+          `**🌐 Network & Devices:**\n` +
+          `• "What devices are online?" - Quick network scan\n` +
+          `• "Scan the network" - Full network discovery\n` +
+          `• "Wake up [device]" - Wake-on-LAN\n` +
+          `• "Rename [IP] as [name]" - Name a device\n` +
+          `• "Set [device] type to server" - Set device type\n` +
+          `• "Device info [IP]" - Get device details\n` +
+          `• "Ping [device]" - Test connectivity\n` +
+          `• "Scan ports on [device]" - Port scan\n\n` +
+          `**🔌 Services:**\n` +
+          `• "List services" - Show all named services\n` +
+          `• "Name port 9000 as Portainer" - Name a service\n` +
+          `• "Add port 3000 to [device]" - Add custom port\n` +
+          `• "Check port 8080 on [device]" - Check if running\n` +
+          `• "Check all services on [device]" - Status check\n` +
+          `• "Delete port 8080 from [device]" - Remove service\n\n` +
+          `**🚀 Speed & Internet:**\n` +
+          `• "Run a speed test" - Test bandwidth\n` +
+          `• "How fast is my internet?" - Speed check\n\n` +
+          `**🎮 Games:**\n` +
+          `• "Play trivia" - Start trivia game\n` +
+          `• "Play hangman" - Word guessing\n` +
+          `• "Play riddles" - Riddle challenge\n` +
+          `• "What games can we play?" - List games\n\n` +
+          `**🔍 Research:**\n` +
+          `• "Research [topic]" - Look up info\n` +
+          `• "Tell me about [topic]" - Get information\n\n` +
+          `**🏠 Smart Home:**\n` +
+          `• "Turn on [device]" - Control lights/switches\n` +
+          `• "Set [device] to 50%" - Adjust brightness\n\n` +
+          `**🖥️ Server Admin:**\n` +
+          `• "Server status" - Check CPU/memory\n` +
+          `• "Show logs" - View bot logs\n` +
+          `• "Restart bot" - Restart service\n` +
+          `• "Deploy" - Pull & restart\n\n` +
+          `**⏰ Reminders:**\n` +
+          `• "Remind me to [task] in [time]"\n` +
+          `• "List my reminders"\n\n` +
+          `_Ask about a specific category for more details!_`;
+      }
+      
+      // Quick summary help
       return `Here's what I can do:\n\n` +
         `**🌐 Network:** Scan devices, check what's online, wake devices\n` +
+        `**🔌 Services:** Add ports, check if running, name services\n` +
         `**🚀 Speed Test:** Check your internet speed\n` +
         `**🎮 Games:** Play trivia, hangman, and more\n` +
         `**🔍 Research:** Look up topics\n` +
@@ -527,9 +576,8 @@ Return ONLY the JSON, no other text.`;
         `Just ask me naturally! For example:\n` +
         `• "What devices are online?"\n` +
         `• "Run a speed test"\n` +
-        `• "Let's play trivia"\n` +
-        `• "Is the bot running?"\n` +
-        `• "Show server logs"`;
+        `• "Let's play trivia"\n\n` +
+        `💡 **Want the full list?** Say "show me all commands" or "full help"`;
     }
   },
 
