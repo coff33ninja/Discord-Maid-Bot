@@ -379,8 +379,33 @@ export default class MusicPlayerPlugin extends Plugin {
     this.currentTrack = this.queue.shift();
     
     try {
-      const resource = createAudioResource(this.currentTrack.path, { inlineVolume: true });
+      this.logger.info(`Creating audio resource for: ${this.currentTrack.path}`);
+      
+      // Use ffmpeg to extract audio from video files (mp4, etc.)
+      const { spawn } = await import('child_process');
+      const ffmpeg = spawn('ffmpeg', [
+        '-i', this.currentTrack.path,
+        '-analyzeduration', '0',
+        '-loglevel', '0',
+        '-f', 's16le',
+        '-ar', '48000',
+        '-ac', '2',
+        'pipe:1'
+      ]);
+      
+      const resource = createAudioResource(ffmpeg.stdout, { 
+        inputType: 2, // StreamType.Raw
+        inlineVolume: true 
+      });
       resource.volume?.setVolume(this.volume);
+      
+      ffmpeg.stderr.on('data', (data) => {
+        this.logger.debug(`ffmpeg: ${data}`);
+      });
+      
+      ffmpeg.on('error', (error) => {
+        this.logger.error(`ffmpeg error: ${error.message}`);
+      });
       
       this.player.play(resource);
       this.isPlaying = true;
