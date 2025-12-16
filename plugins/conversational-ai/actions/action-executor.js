@@ -1895,6 +1895,7 @@ Examples:
     plugin: 'network-management',
     description: 'Deep scan network using nmap for OS/type detection',
     permission: 'run_network_scan',
+    longRunning: true,
     async execute(context) {
       const { deviceOps, db } = await import('../../../src/database/db.js');
       const { detectDeviceType, getDeviceEmoji } = await import('../../network-management/device-detector.js');
@@ -1915,7 +1916,28 @@ Examples:
       const toScan = targetDevice ? [targetDevice] : devices.slice(0, 10); // Limit to 10 for full scan
       const results = [];
       
+      // Send initial progress
+      if (context.sendProgress) {
+        await context.sendProgress(
+          `🔬 **Deep Scan Starting...**\n\n` +
+          `📊 Scanning ${toScan.length} device(s) with nmap\n` +
+          `⏱️ Estimated time: ${toScan.length * 15}-${toScan.length * 30} seconds\n\n` +
+          `_Detecting device types and operating systems..._`
+        );
+      }
+      
+      let scanned = 0;
       for (const device of toScan) {
+        // Update progress
+        scanned++;
+        if (context.sendProgress && toScan.length > 1) {
+          await context.sendProgress(
+            `🔬 **Deep Scan in Progress...**\n\n` +
+            `📊 Progress: ${scanned}/${toScan.length} devices\n` +
+            `🔍 Currently scanning: ${device.notes || device.ip}\n\n` +
+            `_Please wait..._`
+          );
+        }
         try {
           const detection = await detectDeviceType({ ip: device.ip, mac: device.mac, hostname: device.hostname }, true);
           
@@ -2178,6 +2200,7 @@ Return ONLY JSON: { "deviceIdentifier": "device name or IP" }`;
     keywords: ['port scan', 'scan ports', 'open ports', 'what ports', 'services', 'docker ports'],
     plugin: 'network-management',
     description: 'Scan open ports on a device',
+    longRunning: true, // Flag for progress updates
     async execute(context) {
       const { deviceOps } = await import('../../../src/database/db.js');
       const { scanDevicePorts } = await import('../../network-management/scanner.js');
@@ -2195,7 +2218,7 @@ Return ONLY JSON: { "deviceIdentifier": "device name or IP" }`;
         const devices = deviceOps.getAll();
         const nameMatch = query.match(/(?:scan|ports|on)\s+(.+)/i);
         if (nameMatch) {
-          const searchTerm = nameMatch[1].trim().toLowerCase().replace(/full|all|ports|scan/gi, '').trim();
+          const searchTerm = nameMatch[1].trim().toLowerCase().replace(/full|all|ports|scan|deep|deeper/gi, '').trim();
           if (searchTerm) {
             const device = devices.find(d => 
               d.notes?.toLowerCase().includes(searchTerm) ||
@@ -2210,12 +2233,27 @@ Return ONLY JSON: { "deviceIdentifier": "device name or IP" }`;
         return { needsInfo: true };
       }
       
-      const result = await scanDevicePorts(ip, fullScan);
-      
-      // Get device info and named services
+      // Get device info early for progress message
       const devices = deviceOps.getAll();
       const device = devices.find(d => d.ip === ip);
-      result.deviceName = device?.notes || device?.hostname || ip;
+      const deviceName = device?.notes || device?.hostname || ip;
+      
+      // Send progress update if we have a reply function
+      if (context.sendProgress) {
+        const scanType = fullScan ? 'deep' : 'quick';
+        const estimatedTime = fullScan ? '1-2 minutes' : '15-30 seconds';
+        await context.sendProgress(
+          `🔍 **Scanning ports on ${deviceName}...**\n\n` +
+          `⏳ Scan type: **${scanType}**\n` +
+          `⏱️ Estimated time: ${estimatedTime}\n\n` +
+          `_Checking for open ports and services..._`
+        );
+      }
+      
+      const result = await scanDevicePorts(ip, fullScan);
+      
+      // Set device info on result
+      result.deviceName = deviceName;
       result.deviceId = device?.id;
       result.deviceIp = ip;
       
@@ -6272,19 +6310,53 @@ export class ActionExecutor {
     try {
       logger.info(`Executing action: ${actionId} (user: ${context.userId})`);
       
+      // Create progress callback for long-running actions
+      let progressMessage = null;
+      const sendProgress = async (progressText) => {
+        if (context.message?.channel) {
+          try {
+            if (progressMessage) {
+              // Edit existing progress message
+              await progressMessage.edit(progressText);
+            } else {
+              // Send new progress message
+              progressMessage = await context.message.channel.send(progressText);
+            }
+          } catch (e) {
+            logger.debug('Failed to send progress update:', e.message);
+          }
+        }
+      };
+      
+      // For long-running actions, send initial progress
+      if (action.longRunning && context.message?.channel) {
+        await sendProgress(`⏳ _Processing ${action.description || actionId}..._`);
+      }
+      
       const result = await action.execute({
         ...context,
-        client: this.client
+        client: this.client,
+        sendProgress
       });
       
       const formatted = action.formatResult(result);
+      
+      // Delete progress message if we sent one (the final result will be sent separately)
+      if (progressMessage) {
+        try {
+          await progressMessage.delete();
+        } catch (e) {
+          // Message might already be deleted
+        }
+      }
       
       return {
         success: true,
         actionId,
         result,
         formatted,
-        description: action.description
+        description: action.description,
+        buttons: action.getButtons?.(result) || null
       };
     } catch (error) {
       logger.error(`Action execution failed: ${actionId}`, error);
