@@ -854,6 +854,43 @@ Return ONLY the JSON, no other text.`;
     }
   },
 
+  'music-setup': {
+    keywords: ['setup music', 'setup music channel', 'create music channel', 'music 24/7', 'setup 24/7 music'],
+    plugin: 'music-player',
+    description: 'Setup 24/7 music in this server with dedicated channels',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const musicPlugin = getPlugin('music-player');
+      
+      if (!musicPlugin?.music) {
+        return { error: 'Music player not available' };
+      }
+      
+      // Get the guild from context
+      const guild = context.message?.guild;
+      if (!guild) {
+        return { error: 'This command must be used in a server' };
+      }
+      
+      try {
+        const result = await musicPlugin.music.setupInGuild(guild);
+        return { success: true, ...result };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      
+      return `🎵 **Music Setup Complete!**\n\n` +
+        `✅ Voice Channel: **${result.voiceChannel}**\n` +
+        `✅ Control Channel: **${result.textChannel}**\n` +
+        `✅ Status: **${result.status}**\n\n` +
+        `The bot will now auto-start music in this server when it restarts!\n` +
+        `Use the buttons in the control channel to manage playback.`;
+    }
+  },
+
   // Not implemented / Coming soon features (music removed since implemented)
   'not-implemented': {
     keywords: ['calendar', 'schedule meeting', 'send notification', 'push notification', 'monitor traffic', 'bandwidth monitor', 'create automation', 'workflow', 'alert when down'],

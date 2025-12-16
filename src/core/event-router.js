@@ -94,6 +94,23 @@ export class EventRouter {
       return;
     }
     
+    // Route music player buttons
+    if (customId.startsWith('music_')) {
+      try {
+        const { getPlugin } = await import('./plugin-system.js');
+        const musicPlugin = getPlugin('music-player');
+        if (musicPlugin && typeof musicPlugin.onInteraction === 'function') {
+          await musicPlugin.onInteraction(interaction);
+        }
+      } catch (error) {
+        this.logger.error('Music button handler error:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
+        }
+      }
+      return;
+    }
+    
     // Unknown button - log and ignore
     this.logger.debug(`Unhandled button interaction: ${customId}`);
   }

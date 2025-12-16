@@ -48,7 +48,8 @@ const MUSIC_CONFIG = {
   autoStart: true,
   voiceChannelName: '🎵 Music 24/7',
   textChannelName: '🎵-music-controls',
-  channelCategory: null // Set to category ID if you want channels in a specific category
+  channelCategory: null, // Set to category ID if you want channels in a specific category
+  configFile: '/home/think/discord-maid-bot/data/music-config.json' // Persist guild settings
 };
 
 export default class MusicPlayerPlugin extends Plugin {
@@ -74,6 +75,47 @@ export default class MusicPlayerPlugin extends Plugin {
   
   async onLoad() {
     this.logger.info('🎵 Music Player plugin loading...');
+    await this.loadConfig();
+  }
+  
+  /**
+   * Load saved configuration (guild ID, channel IDs)
+   */
+  async loadConfig() {
+    try {
+      const data = await fs.readFile(MUSIC_CONFIG.configFile, 'utf8');
+      const config = JSON.parse(data);
+      this.savedGuildId = config.guildId || null;
+      this.savedVoiceChannelId = config.voiceChannelId || null;
+      this.savedTextChannelId = config.textChannelId || null;
+      this.logger.info(`Loaded music config for guild: ${this.savedGuildId}`);
+    } catch (error) {
+      // No config file yet - that's okay
+      this.savedGuildId = null;
+      this.savedVoiceChannelId = null;
+      this.savedTextChannelId = null;
+    }
+  }
+  
+  /**
+   * Save configuration (guild ID, channel IDs)
+   */
+  async saveConfig() {
+    try {
+      // Ensure data directory exists
+      const dir = path.dirname(MUSIC_CONFIG.configFile);
+      await fs.mkdir(dir, { recursive: true });
+      
+      const config = {
+        guildId: this.guildId,
+        voiceChannelId: this.voiceChannelId,
+        textChannelId: this.controlChannelId
+      };
+      await fs.writeFile(MUSIC_CONFIG.configFile, JSON.stringify(config, null, 2));
+      this.logger.info(`Saved music config for guild: ${this.guildId}`);
+    } catch (error) {
+      this.logger.error('Failed to save music config:', error.message);
+    }
   }
   
   async onReady(discordClient) {
@@ -102,10 +144,10 @@ export default class MusicPlayerPlugin extends Plugin {
     this.logger.info('🎵 Auto-starting music player...');
     
     try {
-      // Get the first guild the bot is in (or use env var for specific guild)
-      const guildId = process.env.MUSIC_GUILD_ID || this.client.guilds.cache.first()?.id;
+      // Use saved guild ID, env var, or first guild
+      const guildId = this.savedGuildId || process.env.MUSIC_GUILD_ID || this.client.guilds.cache.first()?.id;
       if (!guildId) {
-        this.logger.warn('No guild found for auto-start');
+        this.logger.warn('No guild configured for auto-start. Use "@bot setup music" in a server first.');
         return;
       }
       
@@ -472,6 +514,10 @@ export default class MusicPlayerPlugin extends Plugin {
     await this.playNext();
     
     this.logger.info(`Started playing in ${voiceChannel.name}`);
+    
+    // Save config so we auto-start in this guild next time
+    await this.saveConfig();
+    
     return true;
   }
   
@@ -646,6 +692,66 @@ export default class MusicPlayerPlugin extends Plugin {
     await this.updateControlMessage();
   }
   
+  /**
+   * Setup music in a specific guild (called by AI or command)
+   * Creates channels and starts playing
+   */
+  async setupInGuild(guild) {
+    if (!guild) throw new Error('No guild specified');
+    
+    this.logger.info(`🎵 Setting up music in guild: ${guild.name}`);
+    this.guildId = guild.id;
+    
+    // Find or create voice channel
+    let voiceChannel = guild.channels.cache.find(
+      c => c.type === 2 && c.name === MUSIC_CONFIG.voiceChannelName
+    );
+    
+    if (!voiceChannel) {
+      this.logger.info(`Creating voice channel: ${MUSIC_CONFIG.voiceChannelName}`);
+      voiceChannel = await guild.channels.create({
+        name: MUSIC_CONFIG.voiceChannelName,
+        type: 2, // GuildVoice
+        parent: MUSIC_CONFIG.channelCategory,
+        reason: 'Music Player setup'
+      });
+    }
+    
+    // Find or create text channel for controls
+    const textChannelName = MUSIC_CONFIG.textChannelName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+    let textChannel = guild.channels.cache.find(
+      c => c.type === 0 && c.name === textChannelName
+    );
+    
+    if (!textChannel) {
+      this.logger.info(`Creating text channel: ${MUSIC_CONFIG.textChannelName}`);
+      textChannel = await guild.channels.create({
+        name: MUSIC_CONFIG.textChannelName,
+        type: 0, // GuildText
+        parent: MUSIC_CONFIG.channelCategory,
+        topic: '🎵 Music player controls - Use the buttons below to control playback!',
+        reason: 'Music Player setup'
+      });
+      
+      await this.setupControlChannel(textChannel);
+    } else {
+      this.controlChannelId = textChannel.id;
+      await this.findOrCreateControlMessage(textChannel);
+    }
+    
+    this.voiceChannelId = voiceChannel.id;
+    this.controlChannelId = textChannel.id;
+    
+    // Start playing
+    await this.start(voiceChannel, textChannel);
+    
+    return {
+      voiceChannel: voiceChannel.name,
+      textChannel: textChannel.name,
+      status: 'playing'
+    };
+  }
+  
   // Expose music methods for AI actions
   get music() {
     return {
@@ -657,7 +763,8 @@ export default class MusicPlayerPlugin extends Plugin {
       changeFolder: this.changeFolder.bind(this),
       getStatus: this.getStatus.bind(this),
       getFolders: this.getFolders.bind(this),
-      updateControlMessage: this.updateControlMessage.bind(this)
+      updateControlMessage: this.updateControlMessage.bind(this),
+      setupInGuild: this.setupInGuild.bind(this)
     };
   }
 }

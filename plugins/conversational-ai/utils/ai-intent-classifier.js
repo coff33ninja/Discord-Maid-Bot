@@ -423,6 +423,10 @@ const ACTION_CATEGORIES = {
     description: 'Show what song is currently playing',
     examples: ['what song is this', 'whats playing', 'now playing', 'current song']
   },
+  'music-setup': {
+    description: 'Setup 24/7 music in this server - creates voice and control channels, starts playing automatically',
+    examples: ['setup music', 'setup music channel', 'create music channel', 'setup 24/7 music', 'configure music']
+  },
   
   // Not implemented / Coming soon (music removed)
   'not-implemented': {
@@ -619,6 +623,7 @@ function fallbackClassification(query) {
     { keywords: ['volume', 'louder', 'quieter', 'turn up', 'turn down'], action: 'music-volume' },
     { keywords: ['playlist', 'play rock', 'play country', 'play christmas', 'change playlist'], action: 'music-playlist' },
     { keywords: ['what song', 'whats playing', 'now playing', 'current song'], action: 'music-nowplaying' },
+    { keywords: ['setup music', 'setup music channel', 'create music channel', '24/7 music', 'configure music'], action: 'music-setup' },
     // Not implemented
     { keywords: ['calendar', 'schedule meeting', 'appointment', 'schedule event'], action: 'not-implemented' },
     { keywords: ['push notification', 'mobile alert', 'notify my phone'], action: 'not-implemented' },
