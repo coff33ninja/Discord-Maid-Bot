@@ -246,6 +246,59 @@ export const deviceOps = {
   }
 };
 
+// Device service operations (for named services on ports)
+export const serviceOps = {
+  // Add or update a service
+  upsert: (deviceId, port, name, description = null, url = null, icon = null) => {
+    const stmt = db.prepare(`
+      INSERT INTO device_services (device_id, port, name, description, url, icon)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(device_id, port) DO UPDATE SET
+        name = excluded.name,
+        description = excluded.description,
+        url = excluded.url,
+        icon = excluded.icon
+    `);
+    return stmt.run(deviceId, port, name, description, url, icon);
+  },
+  
+  // Get all services for a device
+  getByDevice: (deviceId) => {
+    return db.prepare('SELECT * FROM device_services WHERE device_id = ? ORDER BY port').all(deviceId);
+  },
+  
+  // Get a specific service
+  get: (deviceId, port) => {
+    return db.prepare('SELECT * FROM device_services WHERE device_id = ? AND port = ?').get(deviceId, port);
+  },
+  
+  // Delete a service
+  delete: (deviceId, port) => {
+    return db.prepare('DELETE FROM device_services WHERE device_id = ? AND port = ?').run(deviceId, port);
+  },
+  
+  // Get all services across all devices
+  getAll: () => {
+    return db.prepare(`
+      SELECT s.*, d.ip, d.notes as device_name, d.hostname 
+      FROM device_services s 
+      JOIN devices d ON s.device_id = d.id 
+      ORDER BY d.ip, s.port
+    `).all();
+  },
+  
+  // Search services by name
+  search: (query) => {
+    return db.prepare(`
+      SELECT s.*, d.ip, d.notes as device_name, d.hostname 
+      FROM device_services s 
+      JOIN devices d ON s.device_id = d.id 
+      WHERE s.name LIKE ? OR s.description LIKE ?
+      ORDER BY s.name
+    `).all(`%${query}%`, `%${query}%`);
+  }
+};
+
 // Speed test operations
 export const speedTestOps = {
   add: (test) => {

@@ -2212,10 +2212,18 @@ Return ONLY JSON: { "deviceIdentifier": "device name or IP" }`;
       
       const result = await scanDevicePorts(ip, fullScan);
       
-      // Get device name if exists
+      // Get device info and named services
       const devices = deviceOps.getAll();
       const device = devices.find(d => d.ip === ip);
       result.deviceName = device?.notes || device?.hostname || ip;
+      result.deviceId = device?.id;
+      result.deviceIp = ip;
+      
+      // Get named services for this device
+      if (device) {
+        const { serviceOps } = await import('../../../src/database/db.js');
+        result.namedServices = serviceOps.getByDevice(device.id);
+      }
       
       // Update device OS if detected
       if (result.osInfo && device) {
@@ -2249,25 +2257,282 @@ Return ONLY JSON: { "deviceIdentifier": "device name or IP" }`;
         return response;
       }
       
-      response += `**📡 Open Ports (${result.openPorts.length}):**\n`;
-      response += `┌──────┬────────────┬─────────────────────\n`;
-      response += `│ Port │ Service    │ Version\n`;
-      response += `├──────┼────────────┼─────────────────────\n`;
+      // Build service map from named services
+      const namedMap = {};
+      (result.namedServices || []).forEach(s => {
+        namedMap[s.port] = s;
+      });
       
-      result.openPorts.slice(0, 15).forEach(p => {
+      response += `**📡 Open Ports (${result.openPorts.length}):**\n`;
+      response += `┌──────┬────────────────┬─────────────────────\n`;
+      response += `│ Port │ Service        │ Details\n`;
+      response += `├──────┼────────────────┼─────────────────────\n`;
+      
+      result.openPorts.slice(0, 20).forEach(p => {
+        const named = namedMap[p.port];
         const port = String(p.port).padEnd(4);
-        const service = (p.service || 'unknown').padEnd(10);
-        const version = p.version || '';
+        const serviceName = named ? `⭐ ${named.name}` : (p.service || 'unknown');
+        const service = serviceName.substring(0, 14).padEnd(14);
+        const version = named?.description || p.version || '';
         response += `│ ${port} │ ${service} │ ${version}\n`;
       });
       
-      response += `└──────┴────────────┴─────────────────────\n`;
+      response += `└──────┴────────────────┴─────────────────────\n`;
       
-      if (result.openPorts.length > 15) {
-        response += `\n_...and ${result.openPorts.length - 15} more ports_`;
+      if (result.openPorts.length > 20) {
+        response += `\n_...and ${result.openPorts.length - 20} more ports_`;
+      }
+      
+      // Show quick access links for named services with URLs
+      const servicesWithUrls = (result.namedServices || []).filter(s => s.url);
+      if (servicesWithUrls.length > 0) {
+        response += `\n\n**🔗 Quick Access:**\n`;
+        servicesWithUrls.forEach(s => {
+          const icon = s.icon || '🌐';
+          response += `${icon} [${s.name}](${s.url})\n`;
+        });
+      }
+      
+      response += `\n\n💡 _Name a service: "name port ${result.openPorts[0]?.port || 80} on ${result.deviceName} as Portainer"_`;
+      
+      return response;
+    },
+    // Button definitions for services
+    getButtons(result) {
+      if (!result.namedServices?.length) return null;
+      return result.namedServices
+        .filter(s => s.url)
+        .slice(0, 5)
+        .map(s => ({
+          id: `service_${result.deviceId}_${s.port}`,
+          label: `${s.icon || '🌐'} ${s.name}`,
+          style: 'LINK',
+          url: s.url
+        }));
+    }
+  },
+  
+  // Name a service on a port
+  'service-name': {
+    keywords: ['name port', 'name service', 'call port', 'label port', 'service name', 'set service'],
+    plugin: 'device-management',
+    description: 'Name a service running on a port',
+    async execute(context) {
+      const { deviceOps, serviceOps } = await import('../../../src/database/db.js');
+      const query = context.query || '';
+      
+      let port = null;
+      let deviceId = null;
+      let serviceName = null;
+      let serviceUrl = null;
+      let serviceIcon = null;
+      
+      // Try AI parsing
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const devices = deviceOps.getAll();
+          const prompt = `Parse this service naming command.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE DEVICES:
+${devices.slice(0, 10).map(d => `- "${d.notes || d.ip}" (${d.ip})`).join('\n')}
+
+Return ONLY JSON:
+{
+  "deviceIdentifier": "device name or IP",
+  "port": port number,
+  "serviceName": "name for the service",
+  "serviceUrl": "URL to access (e.g., http://ip:port) or null",
+  "serviceIcon": "emoji icon or null"
+}
+
+EXAMPLES:
+- "name port 9000 on Think-Server as Portainer" → port: 9000, serviceName: "Portainer"
+- "call port 8080 on 192.168.0.250 Home Assistant with url http://192.168.0.250:8080" → port: 8080, serviceName: "Home Assistant", serviceUrl: "http://192.168.0.250:8080"
+- "label port 32400 as Plex 🎬" → port: 32400, serviceName: "Plex", serviceIcon: "🎬"`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt,
+            options: { maxOutputTokens: 200, temperature: 0.1 }
+          });
+          
+          const responseText = result?.response?.text?.() || '';
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            deviceId = parsed.deviceIdentifier;
+            port = parsed.port;
+            serviceName = parsed.serviceName;
+            serviceUrl = parsed.serviceUrl;
+            serviceIcon = parsed.serviceIcon;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for service name:', error.message);
+      }
+      
+      // Fallback regex
+      if (!port || !serviceName) {
+        const portMatch = query.match(/port\s+(\d+)/i);
+        const nameMatch = query.match(/(?:as|called|name(?:d)?)\s+["']?([^"'\n]+)["']?/i);
+        const ipMatch = query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+        
+        if (portMatch) port = parseInt(portMatch[1]);
+        if (nameMatch) serviceName = nameMatch[1].trim();
+        if (ipMatch) deviceId = ipMatch[1];
+      }
+      
+      if (!port || !serviceName) {
+        return { needsInfo: true };
+      }
+      
+      // Find device
+      const devices = deviceOps.getAll();
+      const device = devices.find(d => 
+        d.ip === deviceId ||
+        d.notes?.toLowerCase() === deviceId?.toLowerCase() ||
+        d.notes?.toLowerCase().includes(deviceId?.toLowerCase() || '')
+      );
+      
+      if (!device) {
+        return { error: 'Device not found. Specify device name or IP.' };
+      }
+      
+      // Auto-generate URL if not provided
+      if (!serviceUrl) {
+        const protocol = [443, 8443].includes(port) ? 'https' : 'http';
+        serviceUrl = `${protocol}://${device.ip}:${port}`;
+      }
+      
+      // Auto-suggest icon based on service name
+      if (!serviceIcon) {
+        const iconMap = {
+          'portainer': '🐳', 'docker': '🐳', 'plex': '🎬', 'jellyfin': '🎬', 'emby': '🎬',
+          'home assistant': '🏠', 'homeassistant': '🏠', 'grafana': '📊', 'prometheus': '📈',
+          'nginx': '🌐', 'apache': '🌐', 'traefik': '🔀', 'pihole': '🛡️', 'adguard': '🛡️',
+          'nextcloud': '☁️', 'syncthing': '🔄', 'transmission': '⬇️', 'qbittorrent': '⬇️',
+          'sonarr': '📺', 'radarr': '🎥', 'lidarr': '🎵', 'prowlarr': '🔍', 'jackett': '🔍',
+          'mysql': '🗄️', 'postgres': '🗄️', 'mongodb': '🗄️', 'redis': '🗄️', 'mariadb': '🗄️',
+          'ssh': '🔐', 'ftp': '📁', 'smb': '📁', 'nfs': '📁', 'webdav': '📁',
+          'minecraft': '⛏️', 'valheim': '🎮', 'ark': '🦖', 'rust': '🎮'
+        };
+        const lowerName = serviceName.toLowerCase();
+        for (const [key, icon] of Object.entries(iconMap)) {
+          if (lowerName.includes(key)) {
+            serviceIcon = icon;
+            break;
+          }
+        }
+        serviceIcon = serviceIcon || '🌐';
+      }
+      
+      // Save service
+      serviceOps.upsert(device.id, port, serviceName, null, serviceUrl, serviceIcon);
+      
+      return {
+        success: true,
+        device: device.notes || device.ip,
+        port,
+        serviceName,
+        serviceUrl,
+        serviceIcon
+      };
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        return `📝 To name a service, say:\n` +
+          `"Name port 9000 on Think-Server as Portainer"\n` +
+          `"Label port 8080 on 192.168.0.250 as Home Assistant"`;
+      }
+      if (result.error) return `❌ ${result.error}`;
+      
+      return `✅ **Service Named!**\n\n` +
+        `${result.serviceIcon} **${result.serviceName}**\n` +
+        `📍 ${result.device}:${result.port}\n` +
+        `🔗 ${result.serviceUrl}`;
+    }
+  },
+  
+  // List all named services
+  'service-list': {
+    keywords: ['list services', 'show services', 'my services', 'all services', 'what services'],
+    plugin: 'device-management',
+    description: 'List all named services',
+    async execute(context) {
+      const { serviceOps, deviceOps } = await import('../../../src/database/db.js');
+      const query = context.query || '';
+      
+      // Check if filtering by device
+      const ipMatch = query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+      let services;
+      let deviceName = null;
+      
+      if (ipMatch) {
+        const devices = deviceOps.getAll();
+        const device = devices.find(d => d.ip === ipMatch[1]);
+        if (device) {
+          services = serviceOps.getByDevice(device.id);
+          deviceName = device.notes || device.ip;
+        }
+      } else {
+        services = serviceOps.getAll();
+      }
+      
+      return { services: services || [], deviceName };
+    },
+    formatResult(result) {
+      if (!result.services || result.services.length === 0) {
+        return `📋 No named services found.\n\n` +
+          `💡 Name a service: "name port 9000 on Think-Server as Portainer"`;
+      }
+      
+      let response = result.deviceName 
+        ? `📋 **Services on ${result.deviceName}:**\n\n`
+        : `📋 **All Named Services:**\n\n`;
+      
+      // Group by device if showing all
+      if (!result.deviceName) {
+        const byDevice = {};
+        result.services.forEach(s => {
+          const key = s.device_name || s.ip;
+          if (!byDevice[key]) byDevice[key] = [];
+          byDevice[key].push(s);
+        });
+        
+        for (const [device, services] of Object.entries(byDevice)) {
+          response += `**${device}:**\n`;
+          services.forEach(s => {
+            response += `  ${s.icon || '🌐'} ${s.name} (port ${s.port})`;
+            if (s.url) response += ` - [Open](${s.url})`;
+            response += `\n`;
+          });
+          response += `\n`;
+        }
+      } else {
+        result.services.forEach(s => {
+          response += `${s.icon || '🌐'} **${s.name}** (port ${s.port})`;
+          if (s.url) response += ` - [Open](${s.url})`;
+          response += `\n`;
+        });
       }
       
       return response;
+    },
+    getButtons(result) {
+      if (!result.services?.length) return null;
+      return result.services
+        .filter(s => s.url)
+        .slice(0, 5)
+        .map(s => ({
+          id: `service_open_${s.id}`,
+          label: `${s.icon || '🌐'} ${s.name}`,
+          style: 'LINK',
+          url: s.url
+        }));
     }
   },
 

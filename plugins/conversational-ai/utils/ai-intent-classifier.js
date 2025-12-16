@@ -61,6 +61,14 @@ const ACTION_CATEGORIES = {
     description: 'Scan open ports on a device to see what services are running',
     examples: ['scan ports on 192.168.0.100', 'what ports are open', 'port scan server', 'check services', 'docker ports']
   },
+  'service-name': {
+    description: 'Name a service running on a specific port (e.g., Portainer on port 9000)',
+    examples: ['name port 9000 as Portainer', 'call port 8080 Home Assistant', 'label port 32400 as Plex']
+  },
+  'service-list': {
+    description: 'List all named services across devices',
+    examples: ['list services', 'show my services', 'what services do I have', 'all services']
+  },
   
   // Speed & Internet
   'speedtest': {
@@ -486,6 +494,8 @@ function fallbackClassification(query) {
     { keywords: ['device info', 'about device', 'device details', 'show device'], action: 'device-info' },
     { keywords: ['ping', 'ping device', 'is online', 'check connection', 'test ping'], action: 'device-ping' },
     { keywords: ['port scan', 'scan ports', 'open ports', 'what ports', 'docker ports', 'services on'], action: 'device-port-scan' },
+    { keywords: ['name port', 'name service', 'label port', 'call port', 'set service name'], action: 'service-name' },
+    { keywords: ['list services', 'show services', 'my services', 'all services', 'what services'], action: 'service-list' },
     { keywords: ['wake', 'turn on', 'boot', 'power on'], action: 'wake-device' },
     { keywords: ['speed test', 'bandwidth', 'internet speed'], action: 'speedtest' },
     { keywords: ['weather', 'temperature', 'forecast'], action: 'weather' },
