@@ -43,7 +43,12 @@ const MUSIC_CONFIG = {
     '7cloudsTikTok'
   ],
   supportedFormats: ['.mp3', '.mp4', '.m4a', '.webm', '.ogg', '.wav', '.flac'],
-  defaultVolume: 0.5
+  defaultVolume: 0.5,
+  // Auto-start configuration
+  autoStart: true,
+  voiceChannelName: '🎵 Music 24/7',
+  textChannelName: '🎵-music-controls',
+  channelCategory: null // Set to category ID if you want channels in a specific category
 };
 
 export default class MusicPlayerPlugin extends Plugin {
@@ -74,6 +79,149 @@ export default class MusicPlayerPlugin extends Plugin {
   async onReady(discordClient) {
     this.client = discordClient;
     this.logger.info('🎵 Music Player ready');
+    
+    // Auto-start music if enabled
+    if (MUSIC_CONFIG.autoStart) {
+      // Small delay to ensure everything is ready
+      setTimeout(() => this.autoStartMusic(), 5000);
+    }
+  }
+  
+  /**
+   * Auto-create channels and start playing on bot startup
+   */
+  async autoStartMusic() {
+    this.logger.info('🎵 Auto-starting music player...');
+    
+    try {
+      // Get the first guild the bot is in (or use env var for specific guild)
+      const guildId = process.env.MUSIC_GUILD_ID || this.client.guilds.cache.first()?.id;
+      if (!guildId) {
+        this.logger.warn('No guild found for auto-start');
+        return;
+      }
+      
+      const guild = await this.client.guilds.fetch(guildId);
+      if (!guild) {
+        this.logger.warn(`Guild ${guildId} not found`);
+        return;
+      }
+      
+      this.guildId = guildId;
+      
+      // Find or create voice channel
+      let voiceChannel = guild.channels.cache.find(
+        c => c.type === 2 && c.name === MUSIC_CONFIG.voiceChannelName
+      );
+      
+      if (!voiceChannel) {
+        this.logger.info(`Creating voice channel: ${MUSIC_CONFIG.voiceChannelName}`);
+        voiceChannel = await guild.channels.create({
+          name: MUSIC_CONFIG.voiceChannelName,
+          type: 2, // GuildVoice
+          parent: MUSIC_CONFIG.channelCategory,
+          reason: 'Music Player auto-setup'
+        });
+      }
+      
+      // Find or create text channel for controls
+      let textChannel = guild.channels.cache.find(
+        c => c.type === 0 && c.name === MUSIC_CONFIG.textChannelName.replace(/[^a-z0-9-]/gi, '-').toLowerCase()
+      );
+      
+      if (!textChannel) {
+        this.logger.info(`Creating text channel: ${MUSIC_CONFIG.textChannelName}`);
+        textChannel = await guild.channels.create({
+          name: MUSIC_CONFIG.textChannelName,
+          type: 0, // GuildText
+          parent: MUSIC_CONFIG.channelCategory,
+          topic: '🎵 Music player controls - Use the buttons below to control playback!',
+          reason: 'Music Player auto-setup'
+        });
+        
+        // Clean channel and send initial control message
+        await this.setupControlChannel(textChannel);
+      } else {
+        // Channel exists, find or create control message
+        this.controlChannelId = textChannel.id;
+        await this.findOrCreateControlMessage(textChannel);
+      }
+      
+      this.voiceChannelId = voiceChannel.id;
+      this.controlChannelId = textChannel.id;
+      
+      // Start playing
+      await this.start(voiceChannel, textChannel);
+      this.logger.info(`🎵 Auto-started in ${voiceChannel.name}`);
+      
+    } catch (error) {
+      this.logger.error('Auto-start failed:', error.message);
+    }
+  }
+  
+  /**
+   * Setup the control channel with a persistent message
+   */
+  async setupControlChannel(channel) {
+    try {
+      // Delete old messages (clean slate)
+      const messages = await channel.messages.fetch({ limit: 10 });
+      const botMessages = messages.filter(m => m.author.id === this.client.user.id);
+      for (const msg of botMessages.values()) {
+        await msg.delete().catch(() => {});
+      }
+      
+      // Send welcome message
+      const welcomeEmbed = new EmbedBuilder()
+        .setColor('#667eea')
+        .setTitle('🎵 Welcome to the Music Channel!')
+        .setDescription('This channel controls the 24/7 music player.\nUse the buttons below to control playback!')
+        .addFields(
+          { name: '▶️ Play/Pause', value: 'Start or pause music', inline: true },
+          { name: '⏭️ Skip', value: 'Skip to next track', inline: true },
+          { name: '🔀 Shuffle', value: 'Shuffle the queue', inline: true },
+          { name: '📁 Playlist', value: 'Cycle through playlists', inline: true },
+          { name: '🔊 Volume', value: 'Adjust volume up/down', inline: true },
+          { name: '⏹️ Stop', value: 'Stop playback', inline: true }
+        )
+        .setFooter({ text: 'Music plays 24/7 - Enjoy!' });
+      
+      await channel.send({ embeds: [welcomeEmbed] });
+      
+      // Send control panel
+      const embed = this.createNowPlayingEmbed();
+      const buttons = this.createControlButtons(true);
+      const controlMsg = await channel.send({ embeds: [embed], components: buttons });
+      this.controlMessageId = controlMsg.id;
+      
+    } catch (error) {
+      this.logger.error('Error setting up control channel:', error.message);
+    }
+  }
+  
+  /**
+   * Find existing control message or create new one
+   */
+  async findOrCreateControlMessage(channel) {
+    try {
+      const messages = await channel.messages.fetch({ limit: 20 });
+      const controlMsg = messages.find(m => 
+        m.author.id === this.client.user.id && 
+        m.embeds.length > 0 && 
+        m.embeds[0].title === '🎵 Music Player'
+      );
+      
+      if (controlMsg) {
+        this.controlMessageId = controlMsg.id;
+      } else {
+        const embed = this.createNowPlayingEmbed();
+        const buttons = this.createControlButtons(true);
+        const newMsg = await channel.send({ embeds: [embed], components: buttons });
+        this.controlMessageId = newMsg.id;
+      }
+    } catch (error) {
+      this.logger.error('Error finding control message:', error.message);
+    }
   }
   
   async onUnload() {
@@ -305,7 +453,9 @@ export default class MusicPlayerPlugin extends Plugin {
           entersState(this.connection, VoiceConnectionStatus.Connecting, 5000)
         ]);
       } catch (error) {
-        this.stop();
+        // Try to reconnect instead of stopping (24/7 mode)
+        this.logger.warn('Disconnected, attempting to reconnect...');
+        setTimeout(() => this.reconnect(), 3000);
       }
     });
     
@@ -331,6 +481,31 @@ export default class MusicPlayerPlugin extends Plugin {
     this.currentTrack = null;
     this.updateControlMessage();
     this.logger.info('Stopped playing');
+  }
+  
+  /**
+   * Reconnect to voice channel (for 24/7 mode)
+   */
+  async reconnect() {
+    if (!this.voiceChannelId || !this.guildId) {
+      this.logger.warn('Cannot reconnect - no channel info saved');
+      return;
+    }
+    
+    try {
+      const guild = await this.client.guilds.fetch(this.guildId);
+      const voiceChannel = await guild.channels.fetch(this.voiceChannelId);
+      const textChannel = this.controlChannelId ? await guild.channels.fetch(this.controlChannelId) : null;
+      
+      if (voiceChannel) {
+        this.logger.info('Reconnecting to voice channel...');
+        await this.start(voiceChannel, textChannel);
+      }
+    } catch (error) {
+      this.logger.error('Reconnect failed:', error.message);
+      // Try again in 30 seconds
+      setTimeout(() => this.reconnect(), 30000);
+    }
   }
   
   /**
