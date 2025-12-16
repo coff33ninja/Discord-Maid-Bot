@@ -392,6 +392,12 @@ const ACTION_CATEGORIES = {
   'conversation': {
     description: 'General conversation, chat, or questions not matching other categories',
     examples: ['hello', 'how are you', 'tell me a joke', 'what do you think about...']
+  },
+  
+  // Not implemented / Coming soon
+  'not-implemented': {
+    description: 'Feature that is planned but not yet implemented (music, calendar, notifications, traffic monitoring, automations)',
+    examples: ['play music', 'play a song', 'calendar', 'schedule meeting', 'send notification', 'monitor traffic', 'create automation', 'workflow', 'alert me when service goes down']
   }
 };
 
@@ -574,7 +580,13 @@ function fallbackClassification(query) {
     { keywords: ['list plugins', 'show plugins', 'loaded plugins'], action: 'plugin-list' },
     { keywords: ['plugin stats', 'plugin statistics'], action: 'plugin-stats' },
     { keywords: ['dashboard', 'web dashboard', 'dashboard url'], action: 'dashboard-url' },
-    { keywords: ['tailscale', 'tailscale status', 'vpn status'], action: 'tailscale-status' }
+    { keywords: ['tailscale', 'tailscale status', 'vpn status'], action: 'tailscale-status' },
+    { keywords: ['play music', 'play song', 'play a song', 'spotify', 'youtube music'], action: 'not-implemented' },
+    { keywords: ['calendar', 'schedule meeting', 'appointment', 'schedule event'], action: 'not-implemented' },
+    { keywords: ['push notification', 'mobile alert', 'notify my phone'], action: 'not-implemented' },
+    { keywords: ['monitor traffic', 'bandwidth monitor', 'network usage', 'data usage'], action: 'not-implemented' },
+    { keywords: ['alert when down', 'notify when offline', 'service down alert', 'uptime monitor'], action: 'not-implemented' },
+    { keywords: ['create automation', 'workflow', 'if this then that', 'auto trigger'], action: 'not-implemented' }
   ];
 
   for (const match of quickMatches) {

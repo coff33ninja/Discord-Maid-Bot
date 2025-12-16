@@ -561,7 +561,15 @@ Return ONLY the JSON, no other text.`;
           `**⏰ Reminders:**\n` +
           `• "Remind me to [task] in [time]"\n` +
           `• "List my reminders"\n\n` +
-          `_Ask about a specific category for more details!_`;
+          `**🚧 Coming Soon:**\n` +
+          `• 📊 Dashboard buttons in Discord\n` +
+          `• 📈 Network traffic monitoring\n` +
+          `• 🔔 Service down alerts\n` +
+          `• 📱 Mobile push notifications\n` +
+          `• 🎵 Music playback controls\n` +
+          `• 📅 Calendar integration\n` +
+          `• 🤖 Custom automations/workflows\n\n` +
+          `_Have a feature request? Let me know!_`;
       }
       
       // Quick summary help
@@ -578,6 +586,87 @@ Return ONLY the JSON, no other text.`;
         `• "Run a speed test"\n` +
         `• "Let's play trivia"\n\n` +
         `💡 **Want the full list?** Say "show me all commands" or "full help"`;
+    }
+  },
+
+  // Not implemented / Coming soon features
+  'not-implemented': {
+    keywords: ['play music', 'play song', 'calendar', 'schedule meeting', 'send notification', 'push notification', 'monitor traffic', 'bandwidth monitor', 'create automation', 'workflow', 'alert when down'],
+    plugin: 'core',
+    description: 'Planned features not yet implemented',
+    async execute(context) {
+      const query = context.query?.toLowerCase() || '';
+      
+      // Detect which feature they're asking about
+      const features = {
+        music: { 
+          keywords: ['music', 'song', 'play ', 'spotify', 'youtube music', 'playlist'],
+          name: '🎵 Music Playback',
+          description: 'Play music in voice channels, control playback, queue songs'
+        },
+        calendar: {
+          keywords: ['calendar', 'schedule', 'meeting', 'appointment', 'event'],
+          name: '📅 Calendar Integration',
+          description: 'Sync with Google/Outlook calendar, schedule events, meeting reminders'
+        },
+        notifications: {
+          keywords: ['notification', 'push', 'alert me', 'notify me', 'mobile alert'],
+          name: '📱 Push Notifications',
+          description: 'Send alerts to your phone when important events happen'
+        },
+        traffic: {
+          keywords: ['traffic', 'bandwidth', 'network usage', 'data usage', 'monitor network'],
+          name: '📈 Network Traffic Monitoring',
+          description: 'Monitor bandwidth usage, track data consumption per device'
+        },
+        serviceAlerts: {
+          keywords: ['service down', 'alert when', 'notify when offline', 'down alert', 'uptime'],
+          name: '🔔 Service Down Alerts',
+          description: 'Get notified when a service or device goes offline'
+        },
+        automations: {
+          keywords: ['automation', 'workflow', 'trigger', 'when then', 'auto ', 'automatically'],
+          name: '🤖 Custom Automations',
+          description: 'Create if-this-then-that style automations and workflows'
+        },
+        dashboard: {
+          keywords: ['dashboard button', 'button in discord', 'interactive', 'click button'],
+          name: '📊 Interactive Dashboard',
+          description: 'Clickable buttons and menus in Discord for quick actions'
+        }
+      };
+      
+      let matchedFeature = null;
+      for (const [key, feature] of Object.entries(features)) {
+        if (feature.keywords.some(kw => query.includes(kw))) {
+          matchedFeature = feature;
+          break;
+        }
+      }
+      
+      return { 
+        feature: matchedFeature,
+        query: query
+      };
+    },
+    formatResult(result) {
+      if (result.feature) {
+        return `**${result.feature.name}**\n\n` +
+          `🚧 This feature is **coming soon!**\n\n` +
+          `_${result.feature.description}_\n\n` +
+          `Want to see this prioritized? Let the developer know! 💬`;
+      }
+      
+      return `🚧 **Feature Not Yet Available**\n\n` +
+        `I don't have that capability yet, but it might be on the roadmap!\n\n` +
+        `**Coming Soon:**\n` +
+        `• 🎵 Music playback\n` +
+        `• 📅 Calendar integration\n` +
+        `• 📱 Push notifications\n` +
+        `• 📈 Traffic monitoring\n` +
+        `• 🔔 Service alerts\n` +
+        `• 🤖 Custom automations\n\n` +
+        `_Have a feature request? Let me know!_`;
     }
   },
 
