@@ -268,9 +268,10 @@ export async function quickPingCheck() {
   
   const devices = await Promise.all(promises);
   
-  // Separate by network type
-  const localDevices = devices.filter(d => d.network !== 'tailscale');
-  const tailscaleDevices = devices.filter(d => d.network === 'tailscale' || d.network === 'both');
+  // Separate by network type (detect Tailscale by MAC prefix 'ts:' or IP range 100.x.x.x)
+  const isTailscale = (d) => d.network === 'tailscale' || d.network === 'both' || d.mac?.startsWith('ts:') || d.ip?.startsWith('100.');
+  const localDevices = devices.filter(d => !isTailscale(d));
+  const tailscaleDevices = devices.filter(d => isTailscale(d));
   
   const onlineCount = devices.filter(d => d.online).length;
   console.log(`✅ Quick ping complete: ${onlineCount}/${devices.length} devices online`);
@@ -379,6 +380,88 @@ export function findDevice(identifier) {
     d.hostname?.toLowerCase().includes(lowerIdentifier) ||
     d.notes?.toLowerCase().includes(lowerIdentifier)
   );
+}
+
+/**
+ * Get Tailscale device info and link with local device if exists
+ * @param {string} identifier - IP, hostname, or Tailscale hostname
+ * @returns {Promise<Object|null>} Combined device info
+ */
+export async function getTailscaleDeviceInfo(identifier) {
+  const status = await getTailscaleStatus();
+  if (!status) return null;
+  
+  const lowerIdentifier = identifier.toLowerCase();
+  
+  // Find in Tailscale peers
+  for (const [id, peer] of Object.entries(status.Peer || {})) {
+    const tailscaleIP = peer.TailscaleIPs?.[0];
+    const hostname = peer.HostName?.toLowerCase();
+    
+    if (tailscaleIP === identifier || hostname === lowerIdentifier || hostname?.includes(lowerIdentifier)) {
+      // Found Tailscale device, now check if it has a local counterpart
+      const allDevices = deviceOps.getAll();
+      const localDevice = allDevices.find(d => 
+        d.hostname?.toLowerCase() === hostname ||
+        d.notes?.toLowerCase() === hostname ||
+        d.tailscale_hostname?.toLowerCase() === hostname
+      );
+      
+      return {
+        tailscale: {
+          id,
+          hostname: peer.HostName,
+          ip: tailscaleIP,
+          os: peer.OS,
+          online: peer.Online,
+          lastSeen: peer.LastSeen,
+          exitNode: peer.ExitNode
+        },
+        local: localDevice ? {
+          id: localDevice.id,
+          name: localDevice.notes || localDevice.hostname,
+          ip: localDevice.ip,
+          mac: localDevice.mac,
+          type: localDevice.device_type,
+          os: localDevice.os,
+          online: localDevice.online
+        } : null,
+        linked: !!localDevice
+      };
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Link a Tailscale device to a local device
+ * @param {string} tailscaleHostname - Tailscale hostname
+ * @param {string} localIdentifier - Local device IP, MAC, or name
+ * @returns {Object} Result
+ */
+export function linkTailscaleToLocal(tailscaleHostname, localIdentifier) {
+  const device = findDevice(localIdentifier);
+  if (!device) {
+    throw new Error(`Local device "${localIdentifier}" not found`);
+  }
+  
+  // Update the device with Tailscale hostname
+  const { db } = deviceOps;
+  // We need to add tailscale_hostname column if it doesn't exist
+  try {
+    deviceOps.db?.prepare?.('ALTER TABLE devices ADD COLUMN tailscale_hostname TEXT DEFAULT NULL');
+  } catch (e) {
+    // Column might already exist
+  }
+  
+  deviceOps.db?.prepare?.('UPDATE devices SET tailscale_hostname = ? WHERE id = ?').run(tailscaleHostname, device.id);
+  
+  return {
+    success: true,
+    device: device.notes || device.hostname || device.ip,
+    tailscaleHostname
+  };
 }
 
 export { getTailscaleStatus };

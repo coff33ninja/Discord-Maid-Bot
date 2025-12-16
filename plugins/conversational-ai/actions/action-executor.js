@@ -131,30 +131,79 @@ const ACTIONS = {
       return result;
     },
     formatResult(result) {
-      const online = result.devices?.filter(d => d.online) || [];
-      const offline = result.devices?.filter(d => !d.online) || [];
+      const devices = result.devices || [];
       
-      // Helper to format device: "Name (IP)" if named, otherwise just IP
+      // Separate by network type
+      const localDevices = devices.filter(d => d.network !== 'tailscale' && !d.mac?.startsWith('ts:'));
+      const tailscaleDevices = devices.filter(d => d.network === 'tailscale' || d.mac?.startsWith('ts:'));
+      
+      const localOnline = localDevices.filter(d => d.online);
+      const localOffline = localDevices.filter(d => !d.online);
+      const tsOnline = tailscaleDevices.filter(d => d.online);
+      const tsOffline = tailscaleDevices.filter(d => !d.online);
+      
+      // Helper to format device with emoji, name, type, OS
       const formatDevice = (d) => {
-        const label = d.name ? `${d.name} (${d.ip})` : d.ip;
-        const type = d.type ? ` [${d.type}]` : '';
-        return `• ${label}${type}`;
+        const emoji = d.emoji || (d.device_type ? getTypeEmoji(d.device_type) : '📱');
+        const name = d.name || d.notes || d.hostname || d.ip;
+        const ip = d.name ? ` (${d.ip})` : '';
+        const type = d.device_type ? ` [${d.device_type}]` : '';
+        const os = d.os && d.os !== 'unknown' ? ` (${d.os})` : '';
+        const latency = d.latency ? ` ${d.latency}ms` : '';
+        return `${emoji} ${name}${ip}${type}${os}${latency}`;
       };
       
-      let response = `I found **${result.count || result.devices?.length || 0}** devices on the network.\n\n`;
+      // Helper for type emoji
+      const getTypeEmoji = (type) => {
+        const emojis = { pc: '💻', laptop: '💻', server: '🖥️', phone: '📱', tablet: '📲', router: '📡', printer: '🖨️', tv: '📺', gaming: '🎮', iot: '🔌' };
+        return emojis[type] || '📱';
+      };
       
-      if (online.length > 0) {
-        response += `**�  Online (${online.length}):**\n`;
-        response += online.slice(0, 10).map(formatDevice).join('\n');
-        if (online.length > 10) response += `\n...and ${online.length - 10} more`;
-        response += '\n\n';
+      let response = `**📊 Network Scan Results**\n`;
+      response += `Found **${devices.length}** devices total\n\n`;
+      
+      // Local Network Section
+      if (localDevices.length > 0) {
+        response += `**🏠 Local Network** (${localOnline.length}/${localDevices.length} online)\n`;
+        response += `┌─────────────────────────────\n`;
+        
+        if (localOnline.length > 0) {
+          response += `│ 🟢 **Online:**\n`;
+          localOnline.slice(0, 8).forEach(d => {
+            response += `│  ${formatDevice(d)}\n`;
+          });
+          if (localOnline.length > 8) response += `│  ...and ${localOnline.length - 8} more\n`;
+        }
+        
+        if (localOffline.length > 0) {
+          response += `│ 🔴 **Offline:** ${localOffline.length} device(s)\n`;
+        }
+        response += `└─────────────────────────────\n\n`;
       }
       
-      if (offline.length > 0) {
-        response += `**🔴 Offline (${offline.length}):**\n`;
-        response += offline.slice(0, 5).map(formatDevice).join('\n');
-        if (offline.length > 5) response += `\n...and ${offline.length - 5} more`;
+      // Tailscale VPN Section
+      if (tailscaleDevices.length > 0) {
+        response += `**🌐 Tailscale VPN** (${tsOnline.length}/${tailscaleDevices.length} online)\n`;
+        response += `┌─────────────────────────────\n`;
+        
+        if (tsOnline.length > 0) {
+          response += `│ 🟢 **Online:**\n`;
+          tsOnline.slice(0, 8).forEach(d => {
+            response += `│  ${formatDevice(d)}\n`;
+          });
+          if (tsOnline.length > 8) response += `│  ...and ${tsOnline.length - 8} more\n`;
+        }
+        
+        if (tsOffline.length > 0) {
+          response += `│ 🔴 **Offline:** ${tsOffline.length} device(s)\n`;
+        }
+        response += `└─────────────────────────────\n`;
       }
+      
+      // Summary stats
+      const totalOnline = localOnline.length + tsOnline.length;
+      const totalOffline = localOffline.length + tsOffline.length;
+      response += `\n📈 **Summary:** ${totalOnline} online, ${totalOffline} offline`;
       
       return response;
     }
