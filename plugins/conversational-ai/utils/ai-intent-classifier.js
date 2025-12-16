@@ -53,6 +53,14 @@ const ACTION_CATEGORIES = {
     description: 'Get detailed information about a specific device',
     examples: ['device info', 'about device', 'show device details', 'what is this device', 'info about 192.168.0.100']
   },
+  'device-ping': {
+    description: 'Ping a device to check if it is online and measure latency',
+    examples: ['ping 192.168.0.100', 'ping my server', 'is device online', 'check connection to', 'test ping']
+  },
+  'device-port-scan': {
+    description: 'Scan open ports on a device to see what services are running',
+    examples: ['scan ports on 192.168.0.100', 'what ports are open', 'port scan server', 'check services', 'docker ports']
+  },
   
   // Speed & Internet
   'speedtest': {
@@ -476,6 +484,8 @@ function fallbackClassification(query) {
     { keywords: ['set os', 'operating system', 'runs windows', 'runs linux', 'running ubuntu'], action: 'device-set-os' },
     { keywords: ['deep scan', 'full scan', 'nmap scan', 'identify devices', 'detect devices'], action: 'device-deep-scan' },
     { keywords: ['device info', 'about device', 'device details', 'show device'], action: 'device-info' },
+    { keywords: ['ping', 'ping device', 'is online', 'check connection', 'test ping'], action: 'device-ping' },
+    { keywords: ['port scan', 'scan ports', 'open ports', 'what ports', 'docker ports', 'services on'], action: 'device-port-scan' },
     { keywords: ['wake', 'turn on', 'boot', 'power on'], action: 'wake-device' },
     { keywords: ['speed test', 'bandwidth', 'internet speed'], action: 'speedtest' },
     { keywords: ['weather', 'temperature', 'forecast'], action: 'weather' },

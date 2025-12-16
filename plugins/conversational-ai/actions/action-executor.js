@@ -1981,6 +1981,7 @@ Examples:
     keywords: ['device info', 'about device', 'device details', 'show device', 'what is device'],
     plugin: 'device-management',
     description: 'Get detailed info about a device',
+    hasButtons: true, // Flag for button support
     async execute(context) {
       const { deviceOps } = await import('../../../src/database/db.js');
       const query = context.query || '';
@@ -2040,7 +2041,18 @@ Return ONLY JSON: { "deviceIdentifier": "device name or IP" }`;
         return { error: `Device "${deviceId}" not found`, notFound: true };
       }
       
-      return { device };
+      // Check for Tailscale link
+      let tailscaleInfo = null;
+      if (device.tailscale_hostname || device.ip?.startsWith('100.') || device.mac?.startsWith('ts:')) {
+        try {
+          const { getTailscaleDeviceInfo } = await import('../../network-management/scanner.js');
+          tailscaleInfo = await getTailscaleDeviceInfo(device.tailscale_hostname || device.hostname || device.ip);
+        } catch (e) {
+          // Tailscale info not available
+        }
+      }
+      
+      return { device, tailscaleInfo };
     },
     formatResult(result) {
       if (result.needsInfo) {
@@ -2052,16 +2064,210 @@ Return ONLY JSON: { "deviceIdentifier": "device name or IP" }`;
       
       const d = result.device;
       const emoji = d.emoji || '📱';
+      const ts = result.tailscaleInfo;
       
-      return `${emoji} **${d.notes || d.hostname || d.ip}**\n\n` +
-        `📍 **IP:** ${d.ip}\n` +
-        `🔗 **MAC:** ${d.mac}\n` +
-        `📊 **Type:** ${d.device_type || 'Unknown'}\n` +
-        `💿 **OS:** ${d.os || 'Unknown'}\n` +
-        `📁 **Group:** ${d.device_group || 'None'}\n` +
-        `🟢 **Status:** ${d.online ? 'Online' : 'Offline'}\n` +
-        `📅 **First seen:** ${d.first_seen || 'Unknown'}\n` +
-        `🕐 **Last seen:** ${d.last_seen || 'Unknown'}`;
+      let response = `${emoji} **${d.notes || d.hostname || d.ip}**\n\n`;
+      response += `┌─────────────────────────────\n`;
+      response += `│ 📍 **IP:** ${d.ip}\n`;
+      response += `│ 🔗 **MAC:** ${d.mac}\n`;
+      response += `│ 📊 **Type:** ${d.device_type || 'Unknown'}\n`;
+      response += `│ 💿 **OS:** ${d.os || 'Unknown'}\n`;
+      response += `│ 📁 **Group:** ${d.device_group || 'None'}\n`;
+      response += `│ ${d.online ? '🟢' : '🔴'} **Status:** ${d.online ? 'Online' : 'Offline'}\n`;
+      response += `└─────────────────────────────\n`;
+      
+      // Tailscale info if available
+      if (ts?.tailscale) {
+        response += `\n**🌐 Tailscale:**\n`;
+        response += `┌─────────────────────────────\n`;
+        response += `│ 📛 **Hostname:** ${ts.tailscale.hostname}\n`;
+        response += `│ 📍 **VPN IP:** ${ts.tailscale.ip}\n`;
+        response += `│ 💿 **OS:** ${ts.tailscale.os}\n`;
+        response += `│ ${ts.tailscale.online ? '🟢' : '🔴'} **VPN Status:** ${ts.tailscale.online ? 'Online' : 'Offline'}\n`;
+        response += `└─────────────────────────────\n`;
+      }
+      
+      response += `\n📅 First seen: ${d.first_seen ? new Date(d.first_seen).toLocaleDateString() : 'Unknown'}`;
+      response += ` | 🕐 Last seen: ${d.last_seen ? new Date(d.last_seen).toLocaleDateString() : 'Unknown'}`;
+      
+      response += `\n\n💡 _Say "ping ${d.ip}" or "scan ports on ${d.ip}" for more details_`;
+      
+      return response;
+    },
+    // Button definitions for Discord
+    getButtons(result) {
+      if (!result.device) return null;
+      const ip = result.device.ip;
+      return [
+        { id: `ping_${ip}`, label: '🏓 Ping', style: 'PRIMARY' },
+        { id: `portscan_${ip}`, label: '🔍 Scan Ports', style: 'SECONDARY' },
+        { id: `fullscan_${ip}`, label: '🔬 Full Scan', style: 'SECONDARY' }
+      ];
+    }
+  },
+  
+  // Device ping action
+  'device-ping': {
+    keywords: ['ping', 'ping device', 'check device', 'is device online', 'test connection'],
+    plugin: 'network-management',
+    description: 'Ping a device to check connectivity',
+    async execute(context) {
+      const { deviceOps } = await import('../../../src/database/db.js');
+      const { pingDeviceDetailed } = await import('../../network-management/scanner.js');
+      const query = context.query || '';
+      
+      // Extract IP
+      const ipMatch = query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+      let ip = ipMatch?.[1];
+      
+      if (!ip) {
+        // Try to find device by name
+        const devices = deviceOps.getAll();
+        const nameMatch = query.match(/ping\s+(.+)/i);
+        if (nameMatch) {
+          const searchTerm = nameMatch[1].trim().toLowerCase();
+          const device = devices.find(d => 
+            d.notes?.toLowerCase().includes(searchTerm) ||
+            d.hostname?.toLowerCase().includes(searchTerm)
+          );
+          if (device) ip = device.ip;
+        }
+      }
+      
+      if (!ip) {
+        return { needsInfo: true };
+      }
+      
+      const result = await pingDeviceDetailed(ip);
+      
+      // Get device name if exists
+      const devices = deviceOps.getAll();
+      const device = devices.find(d => d.ip === ip);
+      result.deviceName = device?.notes || device?.hostname || ip;
+      
+      return result;
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        return `🏓 Which device? Say "ping [IP or device name]"`;
+      }
+      if (result.error) {
+        return `❌ Ping failed: ${result.error}`;
+      }
+      
+      const status = result.alive ? '🟢 **ONLINE**' : '🔴 **OFFLINE**';
+      
+      let response = `🏓 **Ping: ${result.deviceName}**\n\n`;
+      response += `Status: ${status}\n`;
+      
+      if (result.alive) {
+        response += `┌─────────────────────────────\n`;
+        response += `│ ⏱️ **Min:** ${result.min} ms\n`;
+        response += `│ ⏱️ **Avg:** ${result.avg} ms\n`;
+        response += `│ ⏱️ **Max:** ${result.max} ms\n`;
+        response += `│ 📉 **Packet Loss:** ${result.packetLoss}\n`;
+        response += `└─────────────────────────────\n`;
+      }
+      
+      return response;
+    }
+  },
+  
+  // Port scan action
+  'device-port-scan': {
+    keywords: ['port scan', 'scan ports', 'open ports', 'what ports', 'services', 'docker ports'],
+    plugin: 'network-management',
+    description: 'Scan open ports on a device',
+    async execute(context) {
+      const { deviceOps } = await import('../../../src/database/db.js');
+      const { scanDevicePorts } = await import('../../network-management/scanner.js');
+      const query = context.query || '';
+      
+      // Check for full scan flag
+      const fullScan = query.includes('full') || query.includes('all ports') || query.includes('deep');
+      
+      // Extract IP
+      const ipMatch = query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+      let ip = ipMatch?.[1];
+      
+      if (!ip) {
+        // Try to find device by name
+        const devices = deviceOps.getAll();
+        const nameMatch = query.match(/(?:scan|ports|on)\s+(.+)/i);
+        if (nameMatch) {
+          const searchTerm = nameMatch[1].trim().toLowerCase().replace(/full|all|ports|scan/gi, '').trim();
+          if (searchTerm) {
+            const device = devices.find(d => 
+              d.notes?.toLowerCase().includes(searchTerm) ||
+              d.hostname?.toLowerCase().includes(searchTerm)
+            );
+            if (device) ip = device.ip;
+          }
+        }
+      }
+      
+      if (!ip) {
+        return { needsInfo: true };
+      }
+      
+      const result = await scanDevicePorts(ip, fullScan);
+      
+      // Get device name if exists
+      const devices = deviceOps.getAll();
+      const device = devices.find(d => d.ip === ip);
+      result.deviceName = device?.notes || device?.hostname || ip;
+      
+      // Update device OS if detected
+      if (result.osInfo && device) {
+        try {
+          const { db } = await import('../../../src/database/db.js');
+          db.prepare('UPDATE devices SET os = ? WHERE id = ?').run(result.osInfo, device.id);
+        } catch (e) {
+          // OS update failed
+        }
+      }
+      
+      return result;
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        return `🔍 Which device? Say "scan ports on [IP or device name]"`;
+      }
+      if (result.error) {
+        return `❌ Port scan failed: ${result.error}`;
+      }
+      
+      let response = `🔍 **Port Scan: ${result.deviceName}**\n`;
+      response += `_Scan type: ${result.scanType}_\n\n`;
+      
+      if (result.osInfo) {
+        response += `💿 **Detected OS:** ${result.osInfo}\n\n`;
+      }
+      
+      if (result.openPorts.length === 0) {
+        response += `No open ports found (or host is blocking scans)`;
+        return response;
+      }
+      
+      response += `**📡 Open Ports (${result.openPorts.length}):**\n`;
+      response += `┌──────┬────────────┬─────────────────────\n`;
+      response += `│ Port │ Service    │ Version\n`;
+      response += `├──────┼────────────┼─────────────────────\n`;
+      
+      result.openPorts.slice(0, 15).forEach(p => {
+        const port = String(p.port).padEnd(4);
+        const service = (p.service || 'unknown').padEnd(10);
+        const version = p.version || '';
+        response += `│ ${port} │ ${service} │ ${version}\n`;
+      });
+      
+      response += `└──────┴────────────┴─────────────────────\n`;
+      
+      if (result.openPorts.length > 15) {
+        response += `\n_...and ${result.openPorts.length - 15} more ports_`;
+      }
+      
+      return response;
     }
   },
 

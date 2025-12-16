@@ -229,6 +229,157 @@ async function scanTailscaleNetwork() {
   }
 }
 
+/**
+ * Scan common ports on a device using nmap
+ * @param {string} ip - IP address to scan
+ * @param {boolean} fullScan - If true, scan more ports (slower)
+ * @returns {Promise<Object>} Port scan results
+ */
+export async function scanDevicePorts(ip, fullScan = false) {
+  console.log(`🔍 Scanning ports on ${ip}...`);
+  
+  // Common ports to scan
+  const quickPorts = '21,22,23,25,53,80,110,139,143,443,445,993,995,3306,3389,5432,5900,8080,8443,9000';
+  const fullPorts = '1-1024,3000-3999,5000-5999,8000-9999,27017,32400';
+  
+  const ports = fullScan ? fullPorts : quickPorts;
+  
+  try {
+    // Use nmap for port scanning with service detection
+    const { stdout } = await execAsync(`nmap -sT -sV -T4 -p ${ports} ${ip}`, {
+      timeout: fullScan ? 120000 : 30000
+    });
+    
+    const openPorts = [];
+    const portRegex = /(\d+)\/tcp\s+open\s+(\S+)\s*(.*)/g;
+    let match;
+    
+    while ((match = portRegex.exec(stdout)) !== null) {
+      openPorts.push({
+        port: parseInt(match[1]),
+        service: match[2],
+        version: match[3]?.trim() || null
+      });
+    }
+    
+    // Extract OS info if available
+    let osInfo = null;
+    const osMatch = stdout.match(/OS details?:\s*(.+)/i) || stdout.match(/Running:\s*(.+)/i);
+    if (osMatch) {
+      osInfo = osMatch[1].trim();
+    }
+    
+    // Extract hostname if available
+    let hostname = null;
+    const hostMatch = stdout.match(/Nmap scan report for\s+(\S+)/);
+    if (hostMatch && hostMatch[1] !== ip) {
+      hostname = hostMatch[1];
+    }
+    
+    console.log(`✅ Port scan complete: ${openPorts.length} open ports found`);
+    
+    return {
+      ip,
+      hostname,
+      openPorts,
+      osInfo,
+      scanType: fullScan ? 'full' : 'quick',
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error(`❌ Port scan failed for ${ip}: ${error.message}`);
+    
+    // Fallback to basic TCP connect scan without nmap
+    try {
+      const basicPorts = [22, 80, 443, 3389, 8080];
+      const openPorts = [];
+      
+      for (const port of basicPorts) {
+        try {
+          const { stdout } = await execAsync(`nc -zv -w 2 ${ip} ${port} 2>&1 || true`, { timeout: 5000 });
+          if (stdout.includes('succeeded') || stdout.includes('open')) {
+            openPorts.push({ port, service: getServiceName(port), version: null });
+          }
+        } catch (e) {
+          // Port closed or timeout
+        }
+      }
+      
+      return {
+        ip,
+        hostname: null,
+        openPorts,
+        osInfo: null,
+        scanType: 'basic',
+        timestamp: new Date().toISOString()
+      };
+    } catch (e) {
+      return {
+        ip,
+        hostname: null,
+        openPorts: [],
+        osInfo: null,
+        error: error.message,
+        scanType: 'failed',
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+}
+
+/**
+ * Get common service name for a port
+ */
+function getServiceName(port) {
+  const services = {
+    21: 'ftp', 22: 'ssh', 23: 'telnet', 25: 'smtp', 53: 'dns',
+    80: 'http', 110: 'pop3', 139: 'netbios', 143: 'imap', 443: 'https',
+    445: 'smb', 993: 'imaps', 995: 'pop3s', 3306: 'mysql', 3389: 'rdp',
+    5432: 'postgresql', 5900: 'vnc', 8080: 'http-alt', 8443: 'https-alt',
+    9000: 'portainer', 27017: 'mongodb', 32400: 'plex'
+  };
+  return services[port] || 'unknown';
+}
+
+/**
+ * Ping a single device and return detailed results
+ * @param {string} ip - IP address to ping
+ * @returns {Promise<Object>} Ping results
+ */
+export async function pingDeviceDetailed(ip) {
+  console.log(`🏓 Pinging ${ip}...`);
+  
+  try {
+    const results = [];
+    
+    // Do 4 pings
+    for (let i = 0; i < 4; i++) {
+      const result = await pingDevice(ip);
+      results.push(result);
+    }
+    
+    const successful = results.filter(r => r.alive);
+    const times = successful.map(r => r.time);
+    
+    return {
+      ip,
+      alive: successful.length > 0,
+      packetLoss: ((4 - successful.length) / 4 * 100).toFixed(0) + '%',
+      min: times.length > 0 ? Math.min(...times).toFixed(2) : null,
+      max: times.length > 0 ? Math.max(...times).toFixed(2) : null,
+      avg: times.length > 0 ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(2) : null,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    return {
+      ip,
+      alive: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+
 // Quick ping check - only pings already registered devices
 export async function quickPingCheck() {
   console.log('🔄 Quick ping check of registered devices...');
