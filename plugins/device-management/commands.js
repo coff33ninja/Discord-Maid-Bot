@@ -78,8 +78,66 @@ export const commands = [
           option.setName('emoji')
             .setDescription('Emoji (e.g., 🎮 💻 📱)'))
         .addStringOption(option =>
+          option.setName('type')
+            .setDescription('Device type')
+            .addChoices(
+              { name: '💻 PC/Desktop', value: 'pc' },
+              { name: '💻 Laptop', value: 'laptop' },
+              { name: '🖥️ Server', value: 'server' },
+              { name: '📱 Phone', value: 'phone' },
+              { name: '📲 Tablet', value: 'tablet' },
+              { name: '📡 Router', value: 'router' },
+              { name: '🖨️ Printer', value: 'printer' },
+              { name: '📺 TV', value: 'tv' },
+              { name: '🎮 Gaming', value: 'gaming' },
+              { name: '🔌 IoT/Smart', value: 'iot' }
+            ))
+        .addStringOption(option =>
+          option.setName('os')
+            .setDescription('Operating system')
+            .addChoices(
+              { name: 'Windows', value: 'Windows' },
+              { name: 'Linux', value: 'Linux' },
+              { name: 'macOS', value: 'macOS' },
+              { name: 'Android', value: 'Android' },
+              { name: 'iOS', value: 'iOS' },
+              { name: 'Ubuntu', value: 'Ubuntu' },
+              { name: 'Debian', value: 'Debian' },
+              { name: 'FreeBSD', value: 'FreeBSD' }
+            ))
+        .addStringOption(option =>
           option.setName('group')
             .setDescription('Group name')))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('rename')
+        .setDescription('Rename a device')
+        .addStringOption(option =>
+          option.setName('device')
+            .setDescription('Device to rename')
+            .setRequired(true)
+            .setAutocomplete(true))
+        .addStringOption(option =>
+          option.setName('name')
+            .setDescription('New name for the device')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('info')
+        .setDescription('Get detailed info about a device')
+        .addStringOption(option =>
+          option.setName('device')
+            .setDescription('Device to get info about')
+            .setRequired(true)
+            .setAutocomplete(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('scan')
+        .setDescription('Deep scan a device with nmap to detect type/OS')
+        .addStringOption(option =>
+          option.setName('device')
+            .setDescription('Device to scan (leave empty for all)')
+            .setAutocomplete(true)))
     .addSubcommand(subcommand =>
       subcommand
         .setName('list')
@@ -124,6 +182,12 @@ export async function handleCommand(interaction, commandName, subcommand) {
       return await handleDeviceConfig(interaction);
     case 'list':
       return await handleDeviceList(interaction);
+    case 'rename':
+      return await handleDeviceRename(interaction);
+    case 'info':
+      return await handleDeviceInfo(interaction);
+    case 'scan':
+      return await handleDeviceScan(interaction);
     default:
       return false;
   }
@@ -272,6 +336,8 @@ async function handleDeviceConfig(interaction) {
     const deviceMac = interaction.options.getString('device');
     const newName = interaction.options.getString('name');
     const newEmoji = interaction.options.getString('emoji');
+    const newType = interaction.options.getString('type');
+    const newOs = interaction.options.getString('os');
     const newGroup = interaction.options.getString('group');
     
     const device = deviceOps.getByMac(deviceMac);
@@ -280,19 +346,30 @@ async function handleDeviceConfig(interaction) {
       return true;
     }
     
-    const updated = { ...device };
     const changes = [];
     
     if (newName) {
-      updated.name = newName;
+      deviceOps.updateNotes(device.id, newName);
       changes.push(`Name: **${newName}**`);
     }
     if (newEmoji) {
-      updated.emoji = newEmoji;
+      deviceOps.updateEmoji(device.id, newEmoji);
       changes.push(`Emoji: ${newEmoji}`);
     }
+    if (newType) {
+      // Update device_type directly
+      const { db } = await import('../../src/database/db.js');
+      db.prepare('UPDATE devices SET device_type = ? WHERE id = ?').run(newType, device.id);
+      changes.push(`Type: **${newType}**`);
+    }
+    if (newOs) {
+      // Update os directly
+      const { db } = await import('../../src/database/db.js');
+      db.prepare('UPDATE devices SET os = ? WHERE id = ?').run(newOs, device.id);
+      changes.push(`OS: **${newOs}**`);
+    }
     if (newGroup) {
-      updated.group = newGroup;
+      deviceOps.updateGroup(device.id, newGroup);
       changes.push(`Group: **${newGroup}**`);
     }
     
@@ -301,12 +378,10 @@ async function handleDeviceConfig(interaction) {
       return true;
     }
     
-    deviceOps.upsert(updated);
-    
     const embed = new EmbedBuilder()
       .setColor('#90EE90')
       .setTitle('✅ Device Configured')
-      .setDescription(`Updated **${device.name || device.ip}**\n\n${changes.join('\n')}`)
+      .setDescription(`Updated **${device.notes || device.hostname || device.ip}**\n\n${changes.join('\n')}`)
       .setTimestamp();
     
     await interaction.reply({ embeds: [embed] });
@@ -342,9 +417,10 @@ async function handleDeviceList(interaction) {
     const deviceList = devices.slice(0, 20).map(d => {
       const status = d.online ? '🟢' : '🔴';
       const emoji = d.emoji || '📱';
-      const label = d.name ? `${d.name} (${d.ip})` : (d.hostname || d.ip);
-      const group = d.group ? ` [${d.group}]` : '';
-      return `${status} ${emoji} ${label}${group}`;
+      const label = d.notes || d.hostname || d.ip;
+      const type = d.device_type ? ` [${d.device_type}]` : '';
+      const os = d.os ? ` (${d.os})` : '';
+      return `${status} ${emoji} ${label}${type}${os}`;
     }).join('\n');
     
     const embed = new EmbedBuilder()
@@ -410,5 +486,197 @@ export async function handleAutocomplete(interaction) {
   } catch (error) {
     logger.error('Autocomplete error:', error);
     await interaction.respond([]);
+  }
+}
+
+/**
+ * /device rename
+ */
+async function handleDeviceRename(interaction) {
+  try {
+    const deviceMac = interaction.options.getString('device');
+    const newName = interaction.options.getString('name');
+    
+    const device = deviceOps.getByMac(deviceMac);
+    if (!device) {
+      await interaction.reply({ content: '❌ Device not found!', ephemeral: true });
+      return true;
+    }
+    
+    const oldName = device.notes || device.hostname || device.ip;
+    deviceOps.updateNotes(device.id, newName);
+    
+    const embed = new EmbedBuilder()
+      .setColor('#90EE90')
+      .setTitle('✅ Device Renamed')
+      .setDescription(`**${oldName}** → **${newName}**`)
+      .addFields(
+        { name: 'IP', value: device.ip, inline: true },
+        { name: 'MAC', value: device.mac, inline: true }
+      )
+      .setTimestamp();
+    
+    await interaction.reply({ embeds: [embed] });
+    return true;
+  } catch (error) {
+    logger.error('Device rename error:', error);
+    await interaction.reply({ content: `❌ Failed: ${error.message}`, ephemeral: true });
+    return true;
+  }
+}
+
+/**
+ * /device info
+ */
+async function handleDeviceInfo(interaction) {
+  try {
+    const deviceMac = interaction.options.getString('device');
+    
+    const device = deviceOps.getByMac(deviceMac);
+    if (!device) {
+      await interaction.reply({ content: '❌ Device not found!', ephemeral: true });
+      return true;
+    }
+    
+    const embed = new EmbedBuilder()
+      .setColor('#667eea')
+      .setTitle(`${device.emoji || '📱'} ${device.notes || device.hostname || device.ip}`)
+      .addFields(
+        { name: 'IP Address', value: device.ip, inline: true },
+        { name: 'MAC Address', value: device.mac, inline: true },
+        { name: 'Status', value: device.online ? '🟢 Online' : '🔴 Offline', inline: true },
+        { name: 'Type', value: device.device_type || 'Unknown', inline: true },
+        { name: 'OS', value: device.os || 'Unknown', inline: true },
+        { name: 'Group', value: device.device_group || 'None', inline: true },
+        { name: 'First Seen', value: device.first_seen ? new Date(device.first_seen).toLocaleDateString() : 'Unknown', inline: true },
+        { name: 'Last Seen', value: device.last_seen ? new Date(device.last_seen).toLocaleDateString() : 'Unknown', inline: true }
+      )
+      .setTimestamp();
+    
+    await interaction.reply({ embeds: [embed] });
+    return true;
+  } catch (error) {
+    logger.error('Device info error:', error);
+    await interaction.reply({ content: `❌ Failed: ${error.message}`, ephemeral: true });
+    return true;
+  }
+}
+
+/**
+ * /device scan - Deep scan with nmap
+ */
+async function handleDeviceScan(interaction) {
+  await interaction.deferReply();
+  
+  try {
+    const deviceMac = interaction.options.getString('device');
+    const { detectDeviceType, getDeviceEmoji } = await import('../network-management/device-detector.js');
+    const { db } = await import('../../src/database/db.js');
+    
+    let devices = [];
+    
+    if (deviceMac) {
+      // Scan single device
+      const device = deviceOps.getByMac(deviceMac);
+      if (!device) {
+        await interaction.editReply('❌ Device not found!');
+        return true;
+      }
+      devices = [device];
+    } else {
+      // Scan all online devices
+      devices = deviceOps.getAll().filter(d => d.online);
+    }
+    
+    if (devices.length === 0) {
+      await interaction.editReply('📱 No devices to scan.');
+      return true;
+    }
+    
+    await interaction.editReply(`🔍 Deep scanning ${devices.length} device(s) with nmap... This may take a while.`);
+    
+    const results = [];
+    
+    for (const device of devices) {
+      try {
+        const detection = await detectDeviceType({ ip: device.ip, mac: device.mac, hostname: device.hostname }, true);
+        
+        if (detection.type !== 'unknown') {
+          // Update database
+          db.prepare('UPDATE devices SET device_type = ?, os = ? WHERE id = ?')
+            .run(detection.type, detection.os || null, device.id);
+          
+          // Update emoji if not set
+          if (!device.emoji) {
+            const emoji = getDeviceEmoji(detection.type);
+            deviceOps.updateEmoji(device.id, emoji);
+          }
+          
+          results.push({
+            name: device.notes || device.hostname || device.ip,
+            type: detection.type,
+            os: detection.os,
+            confidence: detection.confidence,
+            method: detection.method
+          });
+        } else {
+          results.push({
+            name: device.notes || device.hostname || device.ip,
+            type: 'unknown',
+            os: null,
+            confidence: 0,
+            method: 'none'
+          });
+        }
+      } catch (e) {
+        logger.warn(`Scan failed for ${device.ip}: ${e.message}`);
+        results.push({
+          name: device.notes || device.hostname || device.ip,
+          type: 'error',
+          error: e.message
+        });
+      }
+    }
+    
+    const detected = results.filter(r => r.type !== 'unknown' && r.type !== 'error');
+    const unknown = results.filter(r => r.type === 'unknown');
+    const errors = results.filter(r => r.type === 'error');
+    
+    let description = '';
+    
+    if (detected.length > 0) {
+      description += '**✅ Detected:**\n';
+      description += detected.map(r => 
+        `• ${r.name}: ${r.type}${r.os ? ` (${r.os})` : ''} [${Math.round(r.confidence * 100)}%]`
+      ).join('\n');
+      description += '\n\n';
+    }
+    
+    if (unknown.length > 0) {
+      description += `**❓ Unknown:** ${unknown.length} device(s)\n\n`;
+    }
+    
+    if (errors.length > 0) {
+      description += `**❌ Errors:** ${errors.length} device(s)\n`;
+    }
+    
+    const embed = new EmbedBuilder()
+      .setColor('#667eea')
+      .setTitle('🔍 Deep Scan Results')
+      .setDescription(description || 'No results')
+      .addFields(
+        { name: 'Scanned', value: `${devices.length}`, inline: true },
+        { name: 'Detected', value: `${detected.length}`, inline: true },
+        { name: 'Unknown', value: `${unknown.length}`, inline: true }
+      )
+      .setFooter({ text: 'Uses nmap for OS detection' })
+      .setTimestamp();
+    
+    await interaction.editReply({ content: null, embeds: [embed] });
+    return true;
+  } catch (error) {
+    logger.error('Device scan error:', error);
+    await interaction.editReply(`❌ Scan failed: ${error.message}`);
+    return true;
   }
 }
