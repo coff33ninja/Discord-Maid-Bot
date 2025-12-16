@@ -29,6 +29,14 @@ const ACTION_CATEGORIES = {
     description: 'Shutdown or restart a remote device',
     examples: ['shutdown my pc', 'turn off computer', 'restart my server', 'power off device']
   },
+  'device-rename': {
+    description: 'Rename a device on the network (give it a friendly name)',
+    examples: ['rename 192.168.0.100 to Gaming PC', 'call my server Kusanagi', 'name device', '192.168.0.50 is my phone', 'rename device as']
+  },
+  'device-emoji': {
+    description: 'Set or change the emoji for a device',
+    examples: ['set emoji for device', 'change device emoji', 'give device an emoji']
+  },
   
   // Speed & Internet
   'speedtest': {
@@ -446,6 +454,8 @@ function fallbackClassification(query) {
   // Quick keyword checks for common intents
   const quickMatches = [
     { keywords: ['scan', 'devices online', 'network'], action: 'network-scan' },
+    { keywords: ['rename', 'name device', 'call it', 'call my', ' is my ', ' as '], action: 'device-rename' },
+    { keywords: ['device emoji', 'set emoji', 'change emoji'], action: 'device-emoji' },
     { keywords: ['wake', 'turn on', 'boot', 'power on'], action: 'wake-device' },
     { keywords: ['speed test', 'bandwidth', 'internet speed'], action: 'speedtest' },
     { keywords: ['weather', 'temperature', 'forecast'], action: 'weather' },

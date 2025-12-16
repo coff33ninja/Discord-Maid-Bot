@@ -391,10 +391,15 @@ Return ONLY the JSON, no other text.`;
       return await integrationsPlugin.speedtest.runSpeedtest();
     },
     formatResult(result) {
+      // Values come as strings from speedtest plugin, handle both string and number
+      const download = result.download != null ? (typeof result.download === 'number' ? result.download.toFixed(2) : result.download) : 'N/A';
+      const upload = result.upload != null ? (typeof result.upload === 'number' ? result.upload.toFixed(2) : result.upload) : 'N/A';
+      const ping = result.ping != null ? (typeof result.ping === 'number' ? result.ping.toFixed(0) : Math.round(parseFloat(result.ping))) : 'N/A';
+      
       return `**🚀 Speed Test Results:**\n\n` +
-        `⬇️ **Download:** ${result.download?.toFixed(2) || 'N/A'} Mbps\n` +
-        `⬆️ **Upload:** ${result.upload?.toFixed(2) || 'N/A'} Mbps\n` +
-        `📶 **Ping:** ${result.ping?.toFixed(0) || 'N/A'} ms\n` +
+        `⬇️ **Download:** ${download} Mbps\n` +
+        `⬆️ **Upload:** ${upload} Mbps\n` +
+        `📶 **Ping:** ${ping} ms\n` +
         (result.server ? `\n_Server: ${result.server}_` : '');
     }
   },
