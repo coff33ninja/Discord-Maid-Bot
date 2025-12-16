@@ -44,8 +44,8 @@ const MUSIC_CONFIG = {
   ],
   supportedFormats: ['.mp3', '.mp4', '.m4a', '.webm', '.ogg', '.wav', '.flac'],
   defaultVolume: 0.5,
-  // Auto-start configuration
-  autoStart: true,
+  // Auto-start configuration - only auto-starts if user has previously set up music
+  autoStart: false, // Don't auto-start on first boot - wait for user to setup
   voiceChannelName: '🎵 Music 24/7',
   textChannelName: '🎵-music-controls',
   channelCategory: null, // Set to category ID if you want channels in a specific category
@@ -130,24 +130,28 @@ export default class MusicPlayerPlugin extends Plugin {
     this.client = discordClient;
     this.logger.info('🎵 Music Player received Discord client');
     
-    // Auto-start music if enabled
-    if (MUSIC_CONFIG.autoStart) {
+    // Only auto-start if we have a saved guild config (user previously set up music)
+    if (this.savedGuildId) {
+      this.logger.info(`🎵 Found saved config for guild ${this.savedGuildId}, auto-starting...`);
       // Small delay to ensure everything is ready
       setTimeout(() => this.autoStartMusic(), 5000);
+    } else {
+      this.logger.info('🎵 No saved config - waiting for user to setup music with "@bot setup music"');
     }
   }
   
   /**
    * Auto-create channels and start playing on bot startup
+   * Only runs if user has previously set up music in a guild
    */
   async autoStartMusic() {
     this.logger.info('🎵 Auto-starting music player...');
     
     try {
-      // Use saved guild ID, env var, or first guild
-      const guildId = this.savedGuildId || process.env.MUSIC_GUILD_ID || this.client.guilds.cache.first()?.id;
+      // Only use saved guild ID - don't auto-start in random guilds
+      const guildId = this.savedGuildId;
       if (!guildId) {
-        this.logger.warn('No guild configured for auto-start. Use "@bot setup music" in a server first.');
+        this.logger.info('No guild configured for auto-start. Use "@bot setup music" in a server first.');
         return;
       }
       
