@@ -561,12 +561,18 @@ Return ONLY the JSON, no other text.`;
           `**⏰ Reminders:**\n` +
           `• "Remind me to [task] in [time]"\n` +
           `• "List my reminders"\n\n` +
+          `**🎵 Music Player:**\n` +
+          `• "Play music" - Start 24/7 music\n` +
+          `• "Skip" / "Next song" - Skip track\n` +
+          `• "Pause" / "Resume" - Control playback\n` +
+          `• "Play rock" / "Play christmas" - Change playlist\n` +
+          `• "What song is this?" - Now playing\n` +
+          `• "Volume 50" / "Louder" - Adjust volume\n\n` +
           `**🚧 Coming Soon:**\n` +
           `• 📊 Dashboard buttons in Discord\n` +
           `• 📈 Network traffic monitoring\n` +
           `• 🔔 Service down alerts\n` +
           `• 📱 Mobile push notifications\n` +
-          `• 🎵 Music playback controls\n` +
           `• 📅 Calendar integration\n` +
           `• 🤖 Custom automations/workflows\n\n` +
           `_Have a feature request? Let me know!_`;
@@ -576,6 +582,7 @@ Return ONLY the JSON, no other text.`;
       return `Here's what I can do:\n\n` +
         `**🌐 Network:** Scan devices, check what's online, wake devices\n` +
         `**🔌 Services:** Add ports, check if running, name services\n` +
+        `**🎵 Music:** 24/7 playback, skip, pause, playlists\n` +
         `**🚀 Speed Test:** Check your internet speed\n` +
         `**🎮 Games:** Play trivia, hangman, and more\n` +
         `**🔍 Research:** Look up topics\n` +
@@ -589,9 +596,267 @@ Return ONLY the JSON, no other text.`;
     }
   },
 
-  // Not implemented / Coming soon features
+  // ============ MUSIC PLAYER ============
+  'music-play': {
+    keywords: ['play music', 'start music', 'play some music', 'put on music', 'music on'],
+    plugin: 'music-player',
+    description: 'Start playing music in a voice channel',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const musicPlugin = getPlugin('music-player');
+      
+      if (!musicPlugin?.music) {
+        return { error: 'Music player not available' };
+      }
+      
+      // Need voice channel from member
+      const member = context.member;
+      if (!member?.voice?.channel) {
+        return { needsVoiceChannel: true };
+      }
+      
+      try {
+        await musicPlugin.music.start(member.voice.channel, context.channel);
+        const status = musicPlugin.music.getStatus();
+        return { success: true, status };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsVoiceChannel) {
+        return `🎵 Join a voice channel first, then ask me to play music!`;
+      }
+      if (result.error) return `❌ ${result.error}`;
+      
+      return `🎵 **Music started!**\n\n` +
+        `📁 Playlist: ${result.status?.currentFolder || 'Default'}\n` +
+        `📋 Queue: ${result.status?.queueLength || 0} tracks\n\n` +
+        `_Use the control buttons or ask me to skip, pause, or change playlist!_`;
+    }
+  },
+
+  'music-stop': {
+    keywords: ['stop music', 'stop playing', 'music off', 'turn off music', 'disconnect music'],
+    plugin: 'music-player',
+    description: 'Stop playing music',
+    async execute() {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const musicPlugin = getPlugin('music-player');
+      
+      if (!musicPlugin?.music) {
+        return { error: 'Music player not available' };
+      }
+      
+      musicPlugin.music.stop();
+      return { success: true };
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      return `⏹️ Music stopped`;
+    }
+  },
+
+  'music-skip': {
+    keywords: ['skip', 'next song', 'skip song', 'next track', 'skip track'],
+    plugin: 'music-player',
+    description: 'Skip to next track',
+    async execute() {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const musicPlugin = getPlugin('music-player');
+      
+      if (!musicPlugin?.music) {
+        return { error: 'Music player not available' };
+      }
+      
+      await musicPlugin.music.skip();
+      
+      // Wait a moment for track to change
+      await new Promise(r => setTimeout(r, 500));
+      const status = musicPlugin.music.getStatus();
+      return { success: true, track: status.currentTrack };
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      
+      const track = result.track;
+      if (track) {
+        return `⏭️ **Skipped!** Now playing:\n**${track.title}** by *${track.artist}*`;
+      }
+      return `⏭️ Skipped to next track`;
+    }
+  },
+
+  'music-pause': {
+    keywords: ['pause music', 'pause', 'resume music', 'resume', 'unpause'],
+    plugin: 'music-player',
+    description: 'Pause or resume music',
+    async execute() {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const musicPlugin = getPlugin('music-player');
+      
+      if (!musicPlugin?.music) {
+        return { error: 'Music player not available' };
+      }
+      
+      const playing = musicPlugin.music.pause();
+      return { success: true, playing };
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      return result.playing ? `▶️ Resumed` : `⏸️ Paused`;
+    }
+  },
+
+  'music-volume': {
+    keywords: ['volume', 'louder', 'quieter', 'turn up', 'turn down', 'set volume'],
+    plugin: 'music-player',
+    description: 'Adjust music volume',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const musicPlugin = getPlugin('music-player');
+      
+      if (!musicPlugin?.music) {
+        return { error: 'Music player not available' };
+      }
+      
+      const query = context.query?.toLowerCase() || '';
+      const status = musicPlugin.music.getStatus();
+      let newVolume = status.volume / 100;
+      
+      // Parse volume from query
+      const volumeMatch = query.match(/(\d+)\s*%?/);
+      if (volumeMatch) {
+        newVolume = parseInt(volumeMatch[1]) / 100;
+      } else if (query.includes('louder') || query.includes('up')) {
+        newVolume = Math.min(1, (status.volume + 20) / 100);
+      } else if (query.includes('quieter') || query.includes('down') || query.includes('lower')) {
+        newVolume = Math.max(0, (status.volume - 20) / 100);
+      }
+      
+      const finalVolume = musicPlugin.music.setVolume(newVolume);
+      return { success: true, volume: Math.round(finalVolume * 100) };
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      return `🔊 Volume: **${result.volume}%**`;
+    }
+  },
+
+  'music-playlist': {
+    keywords: ['playlist', 'change playlist', 'switch playlist', 'play rock', 'play country', 'play christmas'],
+    plugin: 'music-player',
+    description: 'Change music playlist',
+    async execute(context) {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const musicPlugin = getPlugin('music-player');
+      
+      if (!musicPlugin?.music) {
+        return { error: 'Music player not available' };
+      }
+      
+      const query = context.query?.toLowerCase() || '';
+      const folders = musicPlugin.music.getFolders();
+      
+      // Try to match playlist from query
+      const playlistMap = {
+        'rock': '7cloudsRock',
+        'country': '7clouds Country',
+        'dance': '7clouds Dance',
+        'drum': '7clouds Drum & Bass',
+        'dnb': '7clouds Drum & Bass',
+        'dubstep': '7clouds Dubstep',
+        'trap': '7clouds Trap',
+        'acoustic': '7cloudsAcoustic',
+        'christmas': '7cloudsChristmasMusic',
+        'xmas': '7cloudsChristmasMusic',
+        'indie': '7cloudsIndieOfficial',
+        'kpop': '7cloudsKPop',
+        'k-pop': '7cloudsKPop',
+        'tiktok': '7cloudsTikTok',
+        'ncs': '7clouds',
+        'default': '7clouds'
+      };
+      
+      let targetPlaylist = null;
+      for (const [keyword, playlist] of Object.entries(playlistMap)) {
+        if (query.includes(keyword)) {
+          targetPlaylist = playlist;
+          break;
+        }
+      }
+      
+      if (!targetPlaylist) {
+        return { showPlaylists: true, folders };
+      }
+      
+      const success = await musicPlugin.music.changeFolder(targetPlaylist);
+      const status = musicPlugin.music.getStatus();
+      
+      return { success, playlist: targetPlaylist, queueLength: status.queueLength };
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      
+      if (result.showPlaylists) {
+        return `📁 **Available Playlists:**\n\n` +
+          `• NCS/7clouds (default)\n` +
+          `• Rock\n` +
+          `• Country\n` +
+          `• Dance\n` +
+          `• Drum & Bass\n` +
+          `• Dubstep\n` +
+          `• Trap\n` +
+          `• Acoustic\n` +
+          `• Christmas\n` +
+          `• Indie\n` +
+          `• K-Pop\n` +
+          `• TikTok Hits\n\n` +
+          `Say "play rock" or "switch to christmas playlist"`;
+      }
+      
+      return `📁 **Playlist changed!**\n\n` +
+        `Now playing: **${result.playlist}**\n` +
+        `📋 ${result.queueLength} tracks loaded`;
+    }
+  },
+
+  'music-nowplaying': {
+    keywords: ['what song', 'whats playing', 'now playing', 'current song', 'what is this song'],
+    plugin: 'music-player',
+    description: 'Show current track info',
+    async execute() {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const musicPlugin = getPlugin('music-player');
+      
+      if (!musicPlugin?.music) {
+        return { error: 'Music player not available' };
+      }
+      
+      const status = musicPlugin.music.getStatus();
+      return { status };
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      
+      const status = result.status;
+      if (!status.isPlaying) {
+        return `🔇 Not playing anything right now.\n\nSay "play music" to start!`;
+      }
+      
+      const track = status.currentTrack;
+      return `🎵 **Now Playing:**\n\n` +
+        `**${track?.title || 'Unknown'}**\n` +
+        `*by ${track?.artist || 'Unknown'}*\n` +
+        (track?.genre ? `🎸 ${track.genre}\n` : '') +
+        `\n📁 ${status.currentFolder}\n` +
+        `🔊 ${status.volume}% | 📋 ${status.queueLength} in queue`;
+    }
+  },
+
+  // Not implemented / Coming soon features (music removed since implemented)
   'not-implemented': {
-    keywords: ['play music', 'play song', 'calendar', 'schedule meeting', 'send notification', 'push notification', 'monitor traffic', 'bandwidth monitor', 'create automation', 'workflow', 'alert when down'],
+    keywords: ['calendar', 'schedule meeting', 'send notification', 'push notification', 'monitor traffic', 'bandwidth monitor', 'create automation', 'workflow', 'alert when down'],
     plugin: 'core',
     description: 'Planned features not yet implemented',
     async execute(context) {
@@ -599,11 +864,6 @@ Return ONLY the JSON, no other text.`;
       
       // Detect which feature they're asking about
       const features = {
-        music: { 
-          keywords: ['music', 'song', 'play ', 'spotify', 'youtube music', 'playlist'],
-          name: '🎵 Music Playback',
-          description: 'Play music in voice channels, control playback, queue songs'
-        },
         calendar: {
           keywords: ['calendar', 'schedule', 'meeting', 'appointment', 'event'],
           name: '📅 Calendar Integration',
@@ -628,11 +888,6 @@ Return ONLY the JSON, no other text.`;
           keywords: ['automation', 'workflow', 'trigger', 'when then', 'auto ', 'automatically'],
           name: '🤖 Custom Automations',
           description: 'Create if-this-then-that style automations and workflows'
-        },
-        dashboard: {
-          keywords: ['dashboard button', 'button in discord', 'interactive', 'click button'],
-          name: '📊 Interactive Dashboard',
-          description: 'Clickable buttons and menus in Discord for quick actions'
         }
       };
       
@@ -660,7 +915,6 @@ Return ONLY the JSON, no other text.`;
       return `🚧 **Feature Not Yet Available**\n\n` +
         `I don't have that capability yet, but it might be on the roadmap!\n\n` +
         `**Coming Soon:**\n` +
-        `• 🎵 Music playback\n` +
         `• 📅 Calendar integration\n` +
         `• 📱 Push notifications\n` +
         `• 📈 Traffic monitoring\n` +

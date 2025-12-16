@@ -394,10 +394,40 @@ const ACTION_CATEGORIES = {
     examples: ['hello', 'how are you', 'tell me a joke', 'what do you think about...']
   },
   
-  // Not implemented / Coming soon
+  // Music Player
+  'music-play': {
+    description: 'Start playing music in a voice channel',
+    examples: ['play music', 'start music', 'put on some music', 'play some tunes']
+  },
+  'music-stop': {
+    description: 'Stop playing music',
+    examples: ['stop music', 'stop playing', 'turn off music', 'disconnect']
+  },
+  'music-skip': {
+    description: 'Skip to next track',
+    examples: ['skip', 'next song', 'skip this', 'next track']
+  },
+  'music-pause': {
+    description: 'Pause or resume music',
+    examples: ['pause', 'pause music', 'resume', 'unpause']
+  },
+  'music-volume': {
+    description: 'Adjust music volume',
+    examples: ['volume 50', 'louder', 'quieter', 'turn it up', 'turn down the music']
+  },
+  'music-playlist': {
+    description: 'Change music playlist/genre',
+    examples: ['play rock', 'switch to christmas music', 'change playlist', 'play country']
+  },
+  'music-nowplaying': {
+    description: 'Show what song is currently playing',
+    examples: ['what song is this', 'whats playing', 'now playing', 'current song']
+  },
+  
+  // Not implemented / Coming soon (music removed)
   'not-implemented': {
-    description: 'Feature that is planned but not yet implemented (music, calendar, notifications, traffic monitoring, automations)',
-    examples: ['play music', 'play a song', 'calendar', 'schedule meeting', 'send notification', 'monitor traffic', 'create automation', 'workflow', 'alert me when service goes down']
+    description: 'Feature that is planned but not yet implemented (calendar, notifications, traffic monitoring, automations)',
+    examples: ['calendar', 'schedule meeting', 'send notification', 'monitor traffic', 'create automation', 'workflow', 'alert me when service goes down']
   }
 };
 
@@ -581,7 +611,15 @@ function fallbackClassification(query) {
     { keywords: ['plugin stats', 'plugin statistics'], action: 'plugin-stats' },
     { keywords: ['dashboard', 'web dashboard', 'dashboard url'], action: 'dashboard-url' },
     { keywords: ['tailscale', 'tailscale status', 'vpn status'], action: 'tailscale-status' },
-    { keywords: ['play music', 'play song', 'play a song', 'spotify', 'youtube music'], action: 'not-implemented' },
+    // Music player
+    { keywords: ['play music', 'start music', 'put on music', 'play some music'], action: 'music-play' },
+    { keywords: ['stop music', 'stop playing', 'turn off music', 'music off'], action: 'music-stop' },
+    { keywords: ['skip', 'next song', 'skip song', 'next track'], action: 'music-skip' },
+    { keywords: ['pause music', 'pause', 'resume', 'unpause'], action: 'music-pause' },
+    { keywords: ['volume', 'louder', 'quieter', 'turn up', 'turn down'], action: 'music-volume' },
+    { keywords: ['playlist', 'play rock', 'play country', 'play christmas', 'change playlist'], action: 'music-playlist' },
+    { keywords: ['what song', 'whats playing', 'now playing', 'current song'], action: 'music-nowplaying' },
+    // Not implemented
     { keywords: ['calendar', 'schedule meeting', 'appointment', 'schedule event'], action: 'not-implemented' },
     { keywords: ['push notification', 'mobile alert', 'notify my phone'], action: 'not-implemented' },
     { keywords: ['monitor traffic', 'bandwidth monitor', 'network usage', 'data usage'], action: 'not-implemented' },
