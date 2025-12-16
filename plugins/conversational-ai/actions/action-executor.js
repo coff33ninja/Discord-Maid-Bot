@@ -1411,15 +1411,25 @@ Return ONLY the JSON, no other text.`;
       }
       
       // Update device with name and optionally type/emoji
-      const oldName = device.name || device.ip;
-      const updateData = { ...device, name: newName };
-      if (deviceType) {
-        updateData.type = deviceType;
-      }
+      const oldName = device.name || device.notes || device.ip;
+      
+      // Update the notes field (used for device names in the database)
+      deviceOps.updateNotes(device.id, newName);
+      
+      // Update emoji if suggested and not already set
       if (suggestedEmoji && !device.emoji) {
-        updateData.emoji = suggestedEmoji;
+        deviceOps.updateEmoji(device.id, suggestedEmoji);
       }
-      deviceOps.upsert(updateData);
+      
+      // Update device type if specified
+      if (deviceType) {
+        try {
+          const { db } = await import('../../../src/database/db.js');
+          db.prepare('UPDATE devices SET device_type = ? WHERE id = ?').run(deviceType, device.id);
+        } catch (e) {
+          // Type update failed, continue anyway
+        }
+      }
       
       return { 
         success: true, 
