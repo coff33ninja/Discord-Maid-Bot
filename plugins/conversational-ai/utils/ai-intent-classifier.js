@@ -37,6 +37,22 @@ const ACTION_CATEGORIES = {
     description: 'Set or change the emoji for a device',
     examples: ['set emoji for device', 'change device emoji', 'give device an emoji']
   },
+  'device-set-type': {
+    description: 'Set the type of a device (pc, server, phone, tablet, router, printer, iot, tv, gaming)',
+    examples: ['set device type to server', 'mark as pc', 'this is a phone', 'change type to router', 'set 192.168.0.100 as server']
+  },
+  'device-set-os': {
+    description: 'Set the operating system of a device (Windows, Linux, macOS, Android, iOS)',
+    examples: ['set os to Windows', 'runs Linux', 'device is running Ubuntu', 'operating system is macOS']
+  },
+  'device-deep-scan': {
+    description: 'Run a deep network scan using nmap to detect device types and operating systems',
+    examples: ['deep scan', 'full scan', 'nmap scan', 'detect all devices', 'identify devices', 'scan with nmap']
+  },
+  'device-info': {
+    description: 'Get detailed information about a specific device',
+    examples: ['device info', 'about device', 'show device details', 'what is this device', 'info about 192.168.0.100']
+  },
   
   // Speed & Internet
   'speedtest': {
@@ -456,6 +472,10 @@ function fallbackClassification(query) {
     { keywords: ['scan', 'devices online', 'network'], action: 'network-scan' },
     { keywords: ['rename', 'name device', 'call it', 'call my', ' is my ', ' as '], action: 'device-rename' },
     { keywords: ['device emoji', 'set emoji', 'change emoji'], action: 'device-emoji' },
+    { keywords: ['set type', 'device type', 'mark as', 'is a pc', 'is a server', 'is a phone'], action: 'device-set-type' },
+    { keywords: ['set os', 'operating system', 'runs windows', 'runs linux', 'running ubuntu'], action: 'device-set-os' },
+    { keywords: ['deep scan', 'full scan', 'nmap scan', 'identify devices', 'detect devices'], action: 'device-deep-scan' },
+    { keywords: ['device info', 'about device', 'device details', 'show device'], action: 'device-info' },
     { keywords: ['wake', 'turn on', 'boot', 'power on'], action: 'wake-device' },
     { keywords: ['speed test', 'bandwidth', 'internet speed'], action: 'speedtest' },
     { keywords: ['weather', 'temperature', 'forecast'], action: 'weather' },

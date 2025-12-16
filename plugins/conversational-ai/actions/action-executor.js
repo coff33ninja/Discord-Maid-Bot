@@ -1631,6 +1631,391 @@ Return ONLY the JSON, no other text.`;
     }
   },
 
+  'device-set-type': {
+    keywords: ['set type', 'device type', 'change type', 'mark as', 'is a', 'set as'],
+    plugin: 'device-management',
+    description: 'Set device type (pc, server, phone, etc)',
+    async execute(context) {
+      const { deviceOps } = await import('../../../src/database/db.js');
+      const { DeviceType, getDeviceEmoji } = await import('../../network-management/device-detector.js');
+      const query = context.query || '';
+      
+      const devices = deviceOps.getAll();
+      const validTypes = Object.values(DeviceType);
+      
+      let deviceId = null;
+      let deviceType = null;
+      let autoEmoji = null;
+      
+      // Use AI to parse
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse a device type assignment command.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE DEVICES:
+${devices.slice(0, 15).map(d => `- "${d.notes || d.ip}" (${d.ip})`).join('\n')}
+
+VALID DEVICE TYPES: ${validTypes.join(', ')}
+
+Return ONLY JSON:
+{
+  "deviceIdentifier": "device name or IP",
+  "deviceType": "one of the valid types",
+  "confidence": "high/medium/low"
+}
+
+Examples:
+- "set 192.168.0.100 as a server" → deviceType: "server"
+- "my PC is a gaming computer" → deviceType: "gaming"
+- "mark the router as router" → deviceType: "router"`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt,
+            options: { maxOutputTokens: 150, temperature: 0.1 }
+          });
+          
+          const responseText = result?.response?.text?.() || '';
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            deviceId = parsed.deviceIdentifier;
+            deviceType = parsed.deviceType?.toLowerCase();
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for device type:', error.message);
+      }
+      
+      // Fallback regex
+      if (!deviceId || !deviceType) {
+        const match = query.match(/(\S+)\s+(?:is\s+a|as\s+a?|type\s+)\s*(\w+)/i);
+        if (match) {
+          deviceId = match[1];
+          deviceType = match[2].toLowerCase();
+        }
+      }
+      
+      if (!deviceId || !deviceType) {
+        return { needsInfo: true, validTypes };
+      }
+      
+      // Validate type
+      if (!validTypes.includes(deviceType)) {
+        return { error: `Invalid type "${deviceType}"`, validTypes };
+      }
+      
+      // Find device
+      const device = devices.find(d => 
+        d.ip === deviceId ||
+        d.notes?.toLowerCase() === deviceId.toLowerCase() ||
+        d.notes?.toLowerCase().includes(deviceId.toLowerCase())
+      );
+      
+      if (!device) {
+        return { error: `Device "${deviceId}" not found`, notFound: true };
+      }
+      
+      // Update type
+      const { db } = await import('../../../src/database/db.js');
+      db.prepare('UPDATE devices SET device_type = ? WHERE id = ?').run(deviceType, device.id);
+      
+      // Auto-set emoji if not already set
+      if (!device.emoji) {
+        autoEmoji = getDeviceEmoji(deviceType);
+        deviceOps.updateEmoji(device.id, autoEmoji);
+      }
+      
+      return { success: true, device: device.notes || device.ip, type: deviceType, emoji: autoEmoji };
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        return `📋 To set device type, say:\n\n` +
+          `"Set 192.168.0.100 as a server"\n` +
+          `"Mark my PC as gaming"\n\n` +
+          `**Valid types:** ${result.validTypes.join(', ')}`;
+      }
+      if (result.error) {
+        if (result.validTypes) {
+          return `❌ ${result.error}\n\n**Valid types:** ${result.validTypes.join(', ')}`;
+        }
+        return `❌ ${result.error}`;
+      }
+      let response = `✅ Set **${result.device}** type to **${result.type}**`;
+      if (result.emoji) {
+        response += ` ${result.emoji}`;
+      }
+      return response;
+    }
+  },
+
+  'device-set-os': {
+    keywords: ['set os', 'operating system', 'runs', 'running'],
+    plugin: 'device-management',
+    description: 'Set device operating system',
+    async execute(context) {
+      const { deviceOps, db } = await import('../../../src/database/db.js');
+      const query = context.query || '';
+      
+      const devices = deviceOps.getAll();
+      let deviceId = null;
+      let os = null;
+      
+      // Use AI to parse
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse a device OS assignment command.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE DEVICES:
+${devices.slice(0, 15).map(d => `- "${d.notes || d.ip}" (${d.ip})`).join('\n')}
+
+Return ONLY JSON:
+{
+  "deviceIdentifier": "device name or IP",
+  "os": "operating system name (Windows 11, Ubuntu, macOS, Android, etc)",
+  "confidence": "high/medium/low"
+}
+
+Examples:
+- "my server runs Ubuntu" → os: "Ubuntu"
+- "192.168.0.100 is running Windows 11" → os: "Windows 11"
+- "set OS of my PC to Arch Linux" → os: "Arch Linux"`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt,
+            options: { maxOutputTokens: 150, temperature: 0.1 }
+          });
+          
+          const responseText = result?.response?.text?.() || '';
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            deviceId = parsed.deviceIdentifier;
+            os = parsed.os;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for device OS:', error.message);
+      }
+      
+      if (!deviceId || !os) {
+        return { needsInfo: true };
+      }
+      
+      // Find device
+      const device = devices.find(d => 
+        d.ip === deviceId ||
+        d.notes?.toLowerCase() === deviceId.toLowerCase() ||
+        d.notes?.toLowerCase().includes(deviceId.toLowerCase())
+      );
+      
+      if (!device) {
+        return { error: `Device "${deviceId}" not found`, notFound: true };
+      }
+      
+      // Update OS
+      db.prepare('UPDATE devices SET os = ? WHERE id = ?').run(os, device.id);
+      
+      return { success: true, device: device.notes || device.ip, os };
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        return `💿 To set device OS, say:\n\n` +
+          `"My server runs Ubuntu"\n` +
+          `"192.168.0.100 is running Windows 11"\n` +
+          `"Set OS of my PC to Arch Linux"`;
+      }
+      if (result.error) return `❌ ${result.error}`;
+      return `✅ Set **${result.device}** OS to **${result.os}**`;
+    }
+  },
+
+  'device-deep-scan': {
+    keywords: ['deep scan', 'full scan', 'nmap scan', 'detect devices', 'scan with nmap', 'identify devices'],
+    plugin: 'network-management',
+    description: 'Deep scan network using nmap for OS/type detection',
+    permission: 'run_network_scan',
+    async execute(context) {
+      const { deviceOps, db } = await import('../../../src/database/db.js');
+      const { detectDeviceType, getDeviceEmoji } = await import('../../network-management/device-detector.js');
+      
+      const query = context.query || '';
+      const devices = deviceOps.getAll().filter(d => d.online);
+      
+      // Check if scanning specific device or all
+      let targetDevice = null;
+      const ipMatch = query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+      if (ipMatch) {
+        targetDevice = devices.find(d => d.ip === ipMatch[1]);
+        if (!targetDevice) {
+          return { error: `Device ${ipMatch[1]} not found or offline` };
+        }
+      }
+      
+      const toScan = targetDevice ? [targetDevice] : devices.slice(0, 10); // Limit to 10 for full scan
+      const results = [];
+      
+      for (const device of toScan) {
+        try {
+          const detection = await detectDeviceType({ ip: device.ip, mac: device.mac, hostname: device.hostname }, true);
+          
+          if (detection.type !== 'unknown') {
+            // Update database
+            db.prepare('UPDATE devices SET device_type = ?, os = ? WHERE id = ?')
+              .run(detection.type, detection.os || null, device.id);
+            
+            // Auto-set emoji if not set
+            if (!device.emoji) {
+              const emoji = getDeviceEmoji(detection.type);
+              deviceOps.updateEmoji(device.id, emoji);
+            }
+            
+            results.push({
+              ip: device.ip,
+              name: device.notes || device.ip,
+              type: detection.type,
+              os: detection.os,
+              method: detection.method,
+              confidence: detection.confidence
+            });
+          } else {
+            results.push({
+              ip: device.ip,
+              name: device.notes || device.ip,
+              type: 'unknown',
+              method: 'none'
+            });
+          }
+        } catch (error) {
+          results.push({
+            ip: device.ip,
+            name: device.notes || device.ip,
+            error: error.message
+          });
+        }
+      }
+      
+      return { results, scanned: results.length, total: devices.length };
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      
+      let response = `🔍 **Deep Scan Results** (${result.scanned}/${result.total} devices)\n\n`;
+      
+      for (const r of result.results) {
+        if (r.error) {
+          response += `❌ ${r.name}: Error - ${r.error}\n`;
+        } else if (r.type === 'unknown') {
+          response += `❓ ${r.name}: Unknown\n`;
+        } else {
+          const conf = r.confidence ? ` (${Math.round(r.confidence * 100)}%)` : '';
+          response += `✅ ${r.name}: **${r.type}**${r.os ? ` - ${r.os}` : ''}${conf}\n`;
+        }
+      }
+      
+      return response;
+    }
+  },
+
+  'device-info': {
+    keywords: ['device info', 'about device', 'device details', 'show device', 'what is device'],
+    plugin: 'device-management',
+    description: 'Get detailed info about a device',
+    async execute(context) {
+      const { deviceOps } = await import('../../../src/database/db.js');
+      const query = context.query || '';
+      
+      const devices = deviceOps.getAll();
+      let deviceId = null;
+      
+      // Extract device identifier
+      const ipMatch = query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+      if (ipMatch) {
+        deviceId = ipMatch[1];
+      } else {
+        // Try AI parsing
+        try {
+          const { getPlugin } = await import('../../../src/core/plugin-system.js');
+          const aiPlugin = getPlugin('conversational-ai');
+          
+          if (aiPlugin) {
+            const prompt = `Extract the device identifier from this query.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE DEVICES:
+${devices.slice(0, 15).map(d => `- "${d.notes || d.ip}" (${d.ip})`).join('\n')}
+
+Return ONLY JSON: { "deviceIdentifier": "device name or IP" }`;
+
+            const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+              prompt,
+              options: { maxOutputTokens: 100, temperature: 0.1 }
+            });
+            
+            const responseText = result?.response?.text?.() || '';
+            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              deviceId = parsed.deviceIdentifier;
+            }
+          }
+        } catch (error) {
+          logger.warn('AI parsing failed for device info:', error.message);
+        }
+      }
+      
+      if (!deviceId) {
+        return { needsInfo: true, devices: devices.slice(0, 10) };
+      }
+      
+      // Find device
+      const device = devices.find(d => 
+        d.ip === deviceId ||
+        d.notes?.toLowerCase() === deviceId.toLowerCase() ||
+        d.notes?.toLowerCase().includes(deviceId.toLowerCase())
+      );
+      
+      if (!device) {
+        return { error: `Device "${deviceId}" not found`, notFound: true };
+      }
+      
+      return { device };
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        let response = `📋 Which device? Say "info about [device name or IP]"\n\n**Devices:**\n`;
+        response += result.devices.map(d => `• ${d.notes || d.ip}`).join('\n');
+        return response;
+      }
+      if (result.error) return `❌ ${result.error}`;
+      
+      const d = result.device;
+      const emoji = d.emoji || '📱';
+      
+      return `${emoji} **${d.notes || d.hostname || d.ip}**\n\n` +
+        `📍 **IP:** ${d.ip}\n` +
+        `🔗 **MAC:** ${d.mac}\n` +
+        `📊 **Type:** ${d.device_type || 'Unknown'}\n` +
+        `💿 **OS:** ${d.os || 'Unknown'}\n` +
+        `📁 **Group:** ${d.device_group || 'None'}\n` +
+        `🟢 **Status:** ${d.online ? 'Online' : 'Offline'}\n` +
+        `📅 **First seen:** ${d.first_seen || 'Unknown'}\n` +
+        `🕐 **Last seen:** ${d.last_seen || 'Unknown'}`;
+    }
+  },
+
   // ============ RESEARCH ============
   'research': {
     keywords: ['research', 'look up', 'find out about', 'learn about', 'tell me about', 'what is', 'who is', 'explain'],
