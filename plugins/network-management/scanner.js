@@ -94,7 +94,7 @@ async function scanLocalNetwork(subnet) {
                 ip,
                 mac: isValidMac ? mac : 'unknown',
                 hostname: existingDevice?.hostname || ip,
-                name: existingDevice?.notes || null, // User-assigned name
+                name: existingDevice?.name || existingDevice?.notes || null, // User-assigned name
                 emoji: existingDevice?.emoji || null,
                 device_group: existingDevice?.device_group || null,
                 online: true,
@@ -254,14 +254,14 @@ export async function quickPingCheck() {
         ...device,
         online: result.alive,
         latency: result.alive ? Math.round(result.time) : null,
-        name: device.notes || null // User-assigned name
+        name: device.name || device.notes || null // User-assigned name
       };
     } catch (error) {
       return {
         ...device,
         online: false,
         latency: null,
-        name: device.notes || null
+        name: device.name || device.notes || null
       };
     }
   });
