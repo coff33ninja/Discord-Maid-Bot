@@ -130,14 +130,14 @@ export default class MusicPlayerPlugin extends Plugin {
     this.client = discordClient;
     this.logger.info('🎵 Music Player received Discord client');
     
-    // Only auto-start if we have a saved guild config (user previously set up music)
-    if (this.savedGuildId) {
-      this.logger.info(`🎵 Found saved config for guild ${this.savedGuildId}, auto-starting...`);
-      // Small delay to ensure everything is ready
-      setTimeout(() => this.autoStartMusic(), 5000);
-    } else {
-      this.logger.info('🎵 No saved config - waiting for user to setup music with "@bot setup music"');
-    }
+    // DISABLED: Music auto-start causes server overload with ffmpeg
+    // TODO: Implement Lavalink or move music processing to separate machine
+    this.logger.info('� Music auto-estart disabled - use /music play or "@bot play music" to start manually');
+    
+    // if (this.savedGuildId) {
+    //   this.logger.info(`🎵 Found saved config for guild ${this.savedGuildId}, auto-starting...`);
+    //   setTimeout(() => this.autoStartMusic(), 5000);
+    // }
   }
   
   /**
