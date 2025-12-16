@@ -3594,6 +3594,352 @@ Return ONLY JSON:
     }
   },
 
+  // ============ DISCORD PURGE MESSAGES ============
+  'discord-purge': {
+    keywords: ['purge', 'delete messages', 'clear messages', 'bulk delete', 'clean chat', 'clear chat', 'remove messages'],
+    plugin: 'server-admin',
+    description: 'Bulk delete messages in a channel',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      if (!context.guild) return { needsGuild: true };
+      if (!context.channel) return { error: 'No channel context' };
+      
+      let count = 10; // Default
+      let targetUser = null;
+      
+      // Extract user mention
+      const userMatch = query.match(/<@!?(\d+)>/);
+      if (userMatch) targetUser = userMatch[1];
+      
+      // Use AI to parse count
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse a message purge/delete command.
+
+USER MESSAGE: "${query}"
+
+Return ONLY JSON:
+{
+  "count": number of messages to delete (1-100, default 10),
+  "reason": "optional reason for deletion"
+}
+
+Examples:
+- "purge 50 messages" → count: 50
+- "delete last 20" → count: 20
+- "clear chat" → count: 10
+- "purge 100 spam messages" → count: 100, reason: "spam"`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 100, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.count) count = Math.min(100, Math.max(1, parsed.count));
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for purge:', error.message);
+        // Fallback to regex
+        const countMatch = query.match(/(\d+)/);
+        if (countMatch) count = Math.min(100, Math.max(1, parseInt(countMatch[1])));
+      }
+      
+      try {
+        let messages = await context.channel.messages.fetch({ limit: count });
+        
+        // Filter by user if specified
+        if (targetUser) {
+          messages = messages.filter(m => m.author.id === targetUser);
+        }
+        
+        // Filter out messages older than 14 days (Discord limitation)
+        const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+        messages = messages.filter(m => m.createdTimestamp > twoWeeksAgo);
+        
+        if (messages.size === 0) {
+          return { error: 'No messages found to delete (messages older than 14 days cannot be bulk deleted)' };
+        }
+        
+        const deleted = await context.channel.bulkDelete(messages, true);
+        return { success: true, count: deleted.size, targetUser };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `🗑️ I can only purge messages in a server.`;
+      if (result.error) return `❌ ${result.error}`;
+      let response = `🗑️ **Deleted ${result.count} messages**`;
+      if (result.targetUser) response += ` from <@${result.targetUser}>`;
+      return response;
+    }
+  },
+
+  // ============ DISCORD ANNOUNCE ============
+  'discord-announce': {
+    keywords: ['announce', 'announcement', 'send announcement', 'make announcement', 'broadcast'],
+    plugin: 'server-admin',
+    description: 'Send an announcement message with embed',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      if (!context.guild) return { needsGuild: true };
+      
+      let title = null;
+      let message = null;
+      let color = '#5865F2'; // Discord blurple
+      let channelName = null;
+      
+      // Use AI to parse
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        const channels = context.guild.channels.cache
+          .filter(c => c.type === 0)
+          .map(c => c.name).slice(0, 20);
+        
+        if (aiPlugin) {
+          const prompt = `Parse an announcement command.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE CHANNELS: ${channels.join(', ')}
+
+Return ONLY JSON:
+{
+  "title": "announcement title (short, optional)",
+  "message": "the announcement message content",
+  "color": "hex color like #FF0000 or null for default blue",
+  "channelName": "target channel name or null for current channel"
+}
+
+Examples:
+- "announce Server maintenance tonight at 10pm" → title: "📢 Announcement", message: "Server maintenance tonight at 10pm"
+- "announce in general: Welcome new members!" → channelName: "general", message: "Welcome new members!"`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 200, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            title = parsed.title || '📢 Announcement';
+            message = parsed.message;
+            if (parsed.color) color = parsed.color;
+            channelName = parsed.channelName;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for announce:', error.message);
+      }
+      
+      if (!message) return { needsInfo: true };
+      
+      try {
+        // Find target channel
+        let targetChannel = context.channel;
+        if (channelName) {
+          const found = context.guild.channels.cache.find(c => 
+            c.type === 0 && c.name.toLowerCase().includes(channelName.toLowerCase())
+          );
+          if (found) targetChannel = found;
+        }
+        
+        // Create embed
+        const { EmbedBuilder } = await import('discord.js');
+        const embed = new EmbedBuilder()
+          .setTitle(title || '📢 Announcement')
+          .setDescription(message)
+          .setColor(color)
+          .setTimestamp()
+          .setFooter({ text: `Announced by ${context.username}` });
+        
+        await targetChannel.send({ embeds: [embed] });
+        return { success: true, channel: targetChannel.name, message };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `📢 I can only send announcements in a server.`;
+      if (result.needsInfo) return `📢 Usage: "Announce Server maintenance tonight" or "Announce in general: Welcome!"`;
+      if (result.error) return `❌ ${result.error}`;
+      return `📢 **Announcement sent** to #${result.channel}`;
+    }
+  },
+
+  // ============ DISCORD CREATE INVITE ============
+  'discord-create-invite': {
+    keywords: ['create invite', 'make invite', 'invite link', 'generate invite', 'get invite', 'server invite'],
+    plugin: 'server-admin',
+    description: 'Create a server invite link',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      if (!context.guild) return { needsGuild: true };
+      
+      let maxAge = 86400; // 24 hours default
+      let maxUses = 0; // Unlimited
+      let temporary = false;
+      
+      // Use AI to parse options
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse an invite creation command.
+
+USER MESSAGE: "${query}"
+
+Return ONLY JSON:
+{
+  "maxAge": seconds until expiry (0 = never, 3600 = 1 hour, 86400 = 1 day, 604800 = 1 week),
+  "maxUses": max number of uses (0 = unlimited),
+  "temporary": true if temporary membership
+}
+
+Examples:
+- "create invite" → maxAge: 86400, maxUses: 0
+- "create permanent invite" → maxAge: 0, maxUses: 0
+- "create invite for 10 uses" → maxUses: 10
+- "create 1 hour invite" → maxAge: 3600
+- "create temporary invite" → temporary: true`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 100, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.maxAge !== undefined) maxAge = parsed.maxAge;
+            if (parsed.maxUses !== undefined) maxUses = parsed.maxUses;
+            if (parsed.temporary !== undefined) temporary = parsed.temporary;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for create invite:', error.message);
+      }
+      
+      try {
+        // Use the first text channel or current channel
+        const channel = context.channel || context.guild.channels.cache.find(c => c.type === 0);
+        if (!channel) return { error: 'No suitable channel found' };
+        
+        const invite = await channel.createInvite({
+          maxAge,
+          maxUses,
+          temporary,
+          reason: `Created by ${context.username} via AI`
+        });
+        
+        return { 
+          success: true, 
+          url: invite.url,
+          code: invite.code,
+          maxAge: maxAge === 0 ? 'Never' : `${Math.floor(maxAge / 3600)} hours`,
+          maxUses: maxUses === 0 ? 'Unlimited' : maxUses
+        };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `🔗 I can only create invites in a server.`;
+      if (result.error) return `❌ ${result.error}`;
+      return `🔗 **Invite Created!**\n\n` +
+        `**Link:** ${result.url}\n` +
+        `**Expires:** ${result.maxAge}\n` +
+        `**Max Uses:** ${result.maxUses}`;
+    }
+  },
+
+  // ============ DISCORD SET NICKNAME ============
+  'discord-set-nickname': {
+    keywords: ['set nickname', 'change nickname', 'nickname', 'set nick', 'change nick', 'rename user'],
+    plugin: 'server-admin',
+    description: 'Change a member\'s nickname',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      if (!context.guild) return { needsGuild: true };
+      
+      const userMatch = query.match(/<@!?(\d+)>/);
+      if (!userMatch) return { needsUser: true };
+      
+      let nickname = null;
+      
+      // Use AI to parse nickname
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const prompt = `Parse a nickname change command.
+
+USER MESSAGE: "${query}"
+
+Return ONLY JSON:
+{
+  "nickname": "the new nickname to set (or null to reset)"
+}
+
+Examples:
+- "set nickname of @user to CoolGuy" → nickname: "CoolGuy"
+- "change @user's nick to Admin Bob" → nickname: "Admin Bob"
+- "reset @user's nickname" → nickname: null`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt, options: { maxOutputTokens: 100, temperature: 0.1 }
+          });
+          
+          const jsonMatch = result?.response?.text?.()?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            nickname = parsed.nickname;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for set nickname:', error.message);
+        // Fallback regex
+        const nickMatch = query.match(/(?:to|as)\s+["']?([^"']+)["']?$/i);
+        if (nickMatch) nickname = nickMatch[1].trim();
+      }
+      
+      try {
+        const member = await context.guild.members.fetch(userMatch[1]);
+        const oldNick = member.nickname || member.user.username;
+        
+        await member.setNickname(nickname, `Changed by ${context.username} via AI`);
+        
+        return { 
+          success: true, 
+          member: member.user.tag,
+          oldNick,
+          newNick: nickname || member.user.username
+        };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsGuild) return `📛 I can only change nicknames in a server.`;
+      if (result.needsUser) return `📛 Who should I rename? "Set nickname of @user to NewName"`;
+      if (result.error) return `❌ ${result.error}`;
+      return `📛 Changed **${result.member}**'s nickname: **${result.oldNick}** → **${result.newNick}**`;
+    }
+  },
+
   // ============ NETWORK INSIGHTS ============
   'network-insights': {
     keywords: ['network insights', 'network analysis', 'analyze network', 'network report', 'network health'],

@@ -177,6 +177,22 @@ const ACTION_CATEGORIES = {
     description: 'Set the server description',
     examples: ['set server description', 'change server description', 'server description to']
   },
+  'discord-purge': {
+    description: 'Bulk delete messages in a channel',
+    examples: ['purge 50 messages', 'delete last 20 messages', 'clear chat', 'bulk delete']
+  },
+  'discord-announce': {
+    description: 'Send an announcement message with embed',
+    examples: ['announce server maintenance', 'make announcement', 'broadcast message']
+  },
+  'discord-create-invite': {
+    description: 'Create a server invite link',
+    examples: ['create invite', 'make invite link', 'generate invite', 'get server invite']
+  },
+  'discord-set-nickname': {
+    description: 'Change a member nickname',
+    examples: ['set nickname of @user to', 'change nickname', 'rename user']
+  },
   
   // Network & Device Health
   'network-insights': {
@@ -467,6 +483,10 @@ function fallbackClassification(query) {
     { keywords: ['delete role', 'remove role', 'destroy role'], action: 'discord-delete-role' },
     { keywords: ['rename server', 'change server name', 'set server name'], action: 'discord-set-server-name' },
     { keywords: ['server description', 'set server description'], action: 'discord-set-server-description' },
+    { keywords: ['purge', 'delete messages', 'clear messages', 'bulk delete', 'clean chat'], action: 'discord-purge' },
+    { keywords: ['announce', 'announcement', 'broadcast'], action: 'discord-announce' },
+    { keywords: ['create invite', 'invite link', 'generate invite', 'server invite'], action: 'discord-create-invite' },
+    { keywords: ['set nickname', 'change nickname', 'rename user'], action: 'discord-set-nickname' },
     { keywords: ['network insights', 'analyze network', 'network health', 'network report'], action: 'network-insights' },
     { keywords: ['device health', 'health report', 'device uptime', 'unhealthy devices'], action: 'device-health' },
     { keywords: ['shutdown', 'turn off', 'power off', 'restart', 'reboot'], action: 'shutdown-device' },
