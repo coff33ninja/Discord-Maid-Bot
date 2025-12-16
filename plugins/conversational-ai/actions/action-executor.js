@@ -2574,6 +2574,405 @@ EXAMPLES:
     }
   },
 
+  // Add a custom port/service to a device
+  'service-add': {
+    keywords: ['add port', 'add service', 'register port', 'custom port', 'manual port'],
+    plugin: 'device-management',
+    description: 'Add a custom port/service to a device (even if not detected by scan)',
+    async execute(context) {
+      const { deviceOps, serviceOps } = await import('../../../src/database/db.js');
+      const query = context.query || '';
+      
+      let port = null;
+      let deviceId = null;
+      let serviceName = null;
+      let serviceUrl = null;
+      
+      // Try AI parsing
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        
+        if (aiPlugin) {
+          const devices = deviceOps.getAll();
+          const prompt = `Parse this command to add a custom port/service.
+
+USER MESSAGE: "${query}"
+
+AVAILABLE DEVICES:
+${devices.slice(0, 10).map(d => `- "${d.notes || d.ip}" (${d.ip})`).join('\n')}
+
+Return ONLY JSON:
+{
+  "deviceIdentifier": "device name or IP",
+  "port": port number,
+  "serviceName": "name for the service (optional, can be null)",
+  "serviceUrl": "URL to access (optional, can be null)"
+}
+
+EXAMPLES:
+- "add port 3000 to Think-Server" → port: 3000, serviceName: null
+- "add port 8080 as API on 192.168.0.250" → port: 8080, serviceName: "API"
+- "register port 5000 on server with url http://192.168.0.250:5000" → port: 5000, serviceUrl: "http://..."`;
+
+          const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
+            prompt,
+            options: { maxOutputTokens: 150, temperature: 0.1 }
+          });
+          
+          const responseText = result?.response?.text?.() || '';
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            deviceId = parsed.deviceIdentifier;
+            port = parsed.port;
+            serviceName = parsed.serviceName;
+            serviceUrl = parsed.serviceUrl;
+          }
+        }
+      } catch (error) {
+        logger.warn('AI parsing failed for service add:', error.message);
+      }
+      
+      // Fallback regex
+      if (!port) {
+        const portMatch = query.match(/port\s+(\d+)/i);
+        const ipMatch = query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+        const nameMatch = query.match(/(?:as|called|named)\s+["']?([^"'\n]+)["']?/i);
+        
+        if (portMatch) port = parseInt(portMatch[1]);
+        if (ipMatch) deviceId = ipMatch[1];
+        if (nameMatch) serviceName = nameMatch[1].trim();
+      }
+      
+      if (!port) {
+        return { needsInfo: true, missing: 'port' };
+      }
+      
+      // Find device
+      const devices = deviceOps.getAll();
+      const device = devices.find(d => 
+        d.ip === deviceId ||
+        d.notes?.toLowerCase() === deviceId?.toLowerCase() ||
+        d.notes?.toLowerCase().includes(deviceId?.toLowerCase() || '')
+      );
+      
+      if (!device) {
+        return { needsInfo: true, missing: 'device', availableDevices: devices.slice(0, 5) };
+      }
+      
+      // Auto-generate URL if not provided
+      if (!serviceUrl) {
+        const protocol = [443, 8443].includes(port) ? 'https' : 'http';
+        serviceUrl = `${protocol}://${device.ip}:${port}`;
+      }
+      
+      // Use port number as default name if not provided
+      const finalName = serviceName || `Port ${port}`;
+      
+      // Save service
+      serviceOps.upsert(device.id, port, finalName, null, serviceUrl, '🔌');
+      
+      return {
+        success: true,
+        device: device.notes || device.ip,
+        deviceIp: device.ip,
+        port,
+        serviceName: finalName,
+        serviceUrl
+      };
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        if (result.missing === 'port') {
+          return `📝 Please specify a port number:\n"Add port 3000 to Think-Server"`;
+        }
+        if (result.missing === 'device') {
+          let response = `📝 Which device? Available:\n`;
+          result.availableDevices?.forEach(d => {
+            response += `• ${d.notes || d.ip}\n`;
+          });
+          return response;
+        }
+      }
+      if (result.error) return `❌ ${result.error}`;
+      
+      return `✅ **Port Added!**\n\n` +
+        `🔌 **${result.serviceName}**\n` +
+        `📍 ${result.device}:${result.port}\n` +
+        `🔗 ${result.serviceUrl}\n\n` +
+        `💡 Check if it's running: "is port ${result.port} open on ${result.device}"`;
+    }
+  },
+
+  // Check if a service/port is running
+  'service-check': {
+    keywords: ['check port', 'is port open', 'port status', 'service status', 'is service running', 'check service'],
+    plugin: 'network-management',
+    description: 'Check if a port/service is running on a device',
+    longRunning: true,
+    async execute(context) {
+      const { deviceOps, serviceOps } = await import('../../../src/database/db.js');
+      const { checkPort, checkPorts } = await import('../../network-management/scanner.js');
+      const query = context.query || '';
+      
+      let port = null;
+      let ports = [];
+      let deviceId = null;
+      let checkAllServices = false;
+      
+      // Check if user wants to check all services on a device
+      if (query.match(/all\s+(?:services|ports)/i) || query.match(/check\s+services/i)) {
+        checkAllServices = true;
+      }
+      
+      // Extract port(s) and device
+      const portMatch = query.match(/port\s+(\d+)/i);
+      const portsMatch = query.match(/ports?\s+([\d,\s]+)/i);
+      const ipMatch = query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+      
+      if (portMatch) port = parseInt(portMatch[1]);
+      if (portsMatch) {
+        ports = portsMatch[1].split(/[,\s]+/).map(p => parseInt(p.trim())).filter(p => !isNaN(p));
+      }
+      if (ipMatch) deviceId = ipMatch[1];
+      
+      // Try to find device by name
+      if (!deviceId) {
+        const devices = deviceOps.getAll();
+        const deviceNames = devices.map(d => d.notes?.toLowerCase()).filter(Boolean);
+        for (const name of deviceNames) {
+          if (query.toLowerCase().includes(name)) {
+            const device = devices.find(d => d.notes?.toLowerCase() === name);
+            if (device) {
+              deviceId = device.ip;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (!deviceId) {
+        return { needsInfo: true, missing: 'device' };
+      }
+      
+      // Find device in database
+      const devices = deviceOps.getAll();
+      const device = devices.find(d => 
+        d.ip === deviceId ||
+        d.notes?.toLowerCase() === deviceId?.toLowerCase()
+      );
+      
+      // If checking all services, get them from database
+      if (checkAllServices && device) {
+        const services = serviceOps.getByDevice(device.id);
+        if (services.length > 0) {
+          ports = services.map(s => s.port);
+        } else {
+          return { noServices: true, device: device.notes || device.ip };
+        }
+      }
+      
+      // Single port check
+      if (port && ports.length === 0) {
+        const result = await checkPort(deviceId, port);
+        
+        // Get service name from database if exists
+        if (device) {
+          const service = serviceOps.get(device.id, port);
+          if (service) {
+            result.serviceName = service.name;
+            result.serviceIcon = service.icon;
+            result.serviceUrl = service.url;
+          }
+        }
+        
+        return {
+          single: true,
+          device: device?.notes || deviceId,
+          ...result
+        };
+      }
+      
+      // Multiple ports check
+      if (ports.length > 0) {
+        const results = await checkPorts(deviceId, ports);
+        
+        // Enrich with service names from database
+        if (device) {
+          for (const result of results) {
+            const service = serviceOps.get(device.id, result.port);
+            if (service) {
+              result.serviceName = service.name;
+              result.serviceIcon = service.icon;
+              result.serviceUrl = service.url;
+            }
+          }
+        }
+        
+        return {
+          multiple: true,
+          device: device?.notes || deviceId,
+          results,
+          openCount: results.filter(r => r.open).length,
+          totalCount: results.length
+        };
+      }
+      
+      return { needsInfo: true, missing: 'port' };
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        if (result.missing === 'device') {
+          return `📝 Which device? Try:\n"Check port 8080 on Think-Server"\n"Is port 3000 open on 192.168.0.250"`;
+        }
+        if (result.missing === 'port') {
+          return `📝 Which port? Try:\n"Check port 8080 on Think-Server"\n"Check all services on Think-Server"`;
+        }
+      }
+      
+      if (result.noServices) {
+        return `📋 No services registered on **${result.device}**\n\n` +
+          `💡 Add one: "add port 8080 to ${result.device}"`;
+      }
+      
+      if (result.error) return `❌ Error: ${result.error}`;
+      
+      // Single port result
+      if (result.single) {
+        const icon = result.serviceIcon || (result.open ? '🟢' : '🔴');
+        const name = result.serviceName || result.service || `Port ${result.port}`;
+        const status = result.open ? 'OPEN ✅' : 'CLOSED ❌';
+        
+        let response = `**${icon} ${name}** on ${result.device}\n\n`;
+        response += `Port ${result.port}: **${status}**\n`;
+        
+        if (result.open && result.serviceUrl) {
+          response += `🔗 ${result.serviceUrl}`;
+        } else if (!result.open) {
+          response += `\n💡 The service might be down or the port is blocked.`;
+        }
+        
+        return response;
+      }
+      
+      // Multiple ports result
+      if (result.multiple) {
+        let response = `**📊 Service Status on ${result.device}**\n`;
+        response += `${result.openCount}/${result.totalCount} services running\n\n`;
+        
+        result.results.forEach(r => {
+          const icon = r.serviceIcon || (r.open ? '🟢' : '🔴');
+          const name = r.serviceName || r.service || `Port ${r.port}`;
+          const status = r.open ? '✅' : '❌';
+          response += `${icon} ${name} (${r.port}): ${status}\n`;
+        });
+        
+        return response;
+      }
+      
+      return `❌ Could not check port status.`;
+    }
+  },
+
+  // Delete a service
+  'service-delete': {
+    keywords: ['delete service', 'remove service', 'delete port', 'remove port', 'unregister service'],
+    plugin: 'device-management',
+    description: 'Remove a service from a device',
+    async execute(context) {
+      const { deviceOps, serviceOps } = await import('../../../src/database/db.js');
+      const query = context.query || '';
+      
+      let port = null;
+      let deviceId = null;
+      let serviceName = null;
+      
+      // Extract info
+      const portMatch = query.match(/port\s+(\d+)/i);
+      const ipMatch = query.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+      const nameMatch = query.match(/(?:service|called|named)\s+["']?([^"'\n]+)["']?/i);
+      
+      if (portMatch) port = parseInt(portMatch[1]);
+      if (ipMatch) deviceId = ipMatch[1];
+      if (nameMatch) serviceName = nameMatch[1].trim();
+      
+      // Find device by name if no IP
+      if (!deviceId) {
+        const devices = deviceOps.getAll();
+        for (const d of devices) {
+          if (d.notes && query.toLowerCase().includes(d.notes.toLowerCase())) {
+            deviceId = d.ip;
+            break;
+          }
+        }
+      }
+      
+      if (!deviceId) {
+        return { needsInfo: true, missing: 'device' };
+      }
+      
+      // Find device
+      const devices = deviceOps.getAll();
+      const device = devices.find(d => d.ip === deviceId || d.notes?.toLowerCase() === deviceId?.toLowerCase());
+      
+      if (!device) {
+        return { error: 'Device not found' };
+      }
+      
+      // If service name provided but no port, find by name
+      if (!port && serviceName) {
+        const services = serviceOps.getByDevice(device.id);
+        const service = services.find(s => s.name.toLowerCase() === serviceName.toLowerCase());
+        if (service) {
+          port = service.port;
+        }
+      }
+      
+      if (!port) {
+        // List services to help user
+        const services = serviceOps.getByDevice(device.id);
+        return { needsInfo: true, missing: 'port', services, device: device.notes || device.ip };
+      }
+      
+      // Get service info before deleting
+      const service = serviceOps.get(device.id, port);
+      
+      // Delete
+      serviceOps.delete(device.id, port);
+      
+      return {
+        success: true,
+        device: device.notes || device.ip,
+        port,
+        serviceName: service?.name || `Port ${port}`
+      };
+    },
+    formatResult(result) {
+      if (result.needsInfo) {
+        if (result.missing === 'device') {
+          return `📝 Which device? Try:\n"Delete port 8080 from Think-Server"`;
+        }
+        if (result.missing === 'port') {
+          let response = `📝 Which service on **${result.device}**?\n\n`;
+          if (result.services?.length > 0) {
+            result.services.forEach(s => {
+              response += `• ${s.icon || '🔌'} ${s.name} (port ${s.port})\n`;
+            });
+            response += `\nTry: "delete port ${result.services[0].port} from ${result.device}"`;
+          } else {
+            response += `No services registered on this device.`;
+          }
+          return response;
+        }
+      }
+      if (result.error) return `❌ ${result.error}`;
+      
+      return `🗑️ **Service Removed**\n\n` +
+        `Deleted **${result.serviceName}** (port ${result.port}) from ${result.device}`;
+    }
+  },
+
   // ============ RESEARCH ============
   'research': {
     keywords: ['research', 'look up', 'find out about', 'learn about', 'tell me about', 'what is', 'who is', 'explain'],

@@ -69,6 +69,18 @@ const ACTION_CATEGORIES = {
     description: 'List all named services across devices',
     examples: ['list services', 'show my services', 'what services do I have', 'all services']
   },
+  'service-add': {
+    description: 'Add a custom port/service to a device (even if not detected by scan)',
+    examples: ['add port 3000 to server', 'register port 8080 on Think-Server', 'add custom port 5000']
+  },
+  'service-check': {
+    description: 'Check if a port/service is running on a device',
+    examples: ['is port 8080 open', 'check port 3000 on server', 'is Portainer running', 'check all services on Think-Server']
+  },
+  'service-delete': {
+    description: 'Remove a service from a device',
+    examples: ['delete port 8080 from server', 'remove service Portainer', 'unregister port 3000']
+  },
   
   // Speed & Internet
   'speedtest': {
@@ -496,6 +508,9 @@ function fallbackClassification(query) {
     { keywords: ['port scan', 'scan ports', 'open ports', 'what ports', 'docker ports', 'services on'], action: 'device-port-scan' },
     { keywords: ['name port', 'name service', 'label port', 'call port', 'set service name'], action: 'service-name' },
     { keywords: ['list services', 'show services', 'my services', 'all services', 'what services'], action: 'service-list' },
+    { keywords: ['add port', 'add service', 'register port', 'custom port', 'manual port'], action: 'service-add' },
+    { keywords: ['check port', 'is port open', 'port status', 'service running', 'check service', 'is service'], action: 'service-check' },
+    { keywords: ['delete service', 'remove service', 'delete port', 'remove port', 'unregister'], action: 'service-delete' },
     { keywords: ['wake', 'turn on', 'boot', 'power on'], action: 'wake-device' },
     { keywords: ['speed test', 'bandwidth', 'internet speed'], action: 'speedtest' },
     { keywords: ['weather', 'temperature', 'forecast'], action: 'weather' },

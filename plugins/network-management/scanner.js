@@ -391,6 +391,85 @@ function getServiceName(port) {
 }
 
 /**
+ * Check if a specific port is open on a device
+ * @param {string} ip - IP address to check
+ * @param {number} port - Port number to check
+ * @param {number} timeout - Timeout in ms (default 5000)
+ * @returns {Promise<Object>} Port status
+ */
+export async function checkPort(ip, port, timeout = 5000) {
+  console.log(`🔍 Checking port ${port} on ${ip}...`);
+  
+  try {
+    // Try nmap first (most reliable)
+    try {
+      const { stdout } = await execAsync(`nmap -sT -T4 --open -p ${port} ${ip}`, {
+        timeout: timeout
+      });
+      
+      const isOpen = stdout.includes(`${port}/tcp`) && stdout.includes('open');
+      const serviceMatch = stdout.match(new RegExp(`${port}/tcp\\s+open\\s+(\\S+)`));
+      
+      return {
+        ip,
+        port,
+        open: isOpen,
+        service: serviceMatch ? serviceMatch[1] : getServiceName(port),
+        method: 'nmap',
+        timestamp: new Date().toISOString()
+      };
+    } catch (nmapError) {
+      // Fallback to bash TCP check
+      try {
+        await execAsync(`timeout 2 bash -c "echo >/dev/tcp/${ip}/${port}" 2>/dev/null`, { timeout: 3000 });
+        return {
+          ip,
+          port,
+          open: true,
+          service: getServiceName(port),
+          method: 'tcp',
+          timestamp: new Date().toISOString()
+        };
+      } catch (tcpError) {
+        // Port is closed or unreachable
+        return {
+          ip,
+          port,
+          open: false,
+          service: getServiceName(port),
+          method: 'tcp',
+          timestamp: new Date().toISOString()
+        };
+      }
+    }
+  } catch (error) {
+    return {
+      ip,
+      port,
+      open: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+
+/**
+ * Check multiple ports on a device
+ * @param {string} ip - IP address to check
+ * @param {number[]} ports - Array of port numbers
+ * @returns {Promise<Object[]>} Array of port statuses
+ */
+export async function checkPorts(ip, ports) {
+  console.log(`🔍 Checking ${ports.length} ports on ${ip}...`);
+  
+  const results = await Promise.all(
+    ports.map(port => checkPort(ip, port, 3000))
+  );
+  
+  return results;
+}
+
+/**
  * Ping a single device and return detailed results
  * @param {string} ip - IP address to ping
  * @returns {Promise<Object>} Ping results
