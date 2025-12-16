@@ -238,16 +238,25 @@ async function scanTailscaleNetwork() {
 export async function scanDevicePorts(ip, fullScan = false) {
   console.log(`🔍 Scanning ports on ${ip}...`);
   
-  // Common ports to scan
+  // Common ports to scan - optimized for speed
   const quickPorts = '21,22,23,25,53,80,110,139,143,443,445,993,995,3306,3389,5432,5900,8080,8443,9000';
-  const fullPorts = '1-1024,3000-3999,5000-5999,8000-9999,27017,32400';
+  // Full scan: common service ports + Docker range + media servers
+  const fullPorts = '21,22,23,25,53,80,110,139,143,443,445,993,995,1433,3000,3306,3389,5000,5432,5900,6379,8000,8080,8123,8443,8888,9000,9090,9100,27017,32400';
   
   const ports = fullScan ? fullPorts : quickPorts;
   
   try {
-    // Use nmap for port scanning with service detection
-    const { stdout } = await execAsync(`nmap -sT -sV -T4 -p ${ports} ${ip}`, {
-      timeout: fullScan ? 120000 : 30000
+    // Use nmap for port scanning
+    // -sT: TCP connect scan (doesn't require root)
+    // -T4: Aggressive timing (faster)
+    // --open: Only show open ports
+    // -sV: Service version detection (only for quick scan, too slow for full)
+    const nmapCmd = fullScan 
+      ? `nmap -sT -T4 --open -p ${ports} ${ip}`  // No -sV for full scan (faster)
+      : `nmap -sT -sV -T4 --open -p ${ports} ${ip}`;
+    
+    const { stdout } = await execAsync(nmapCmd, {
+      timeout: fullScan ? 60000 : 45000  // 60s for full, 45s for quick
     });
     
     const openPorts = [];
@@ -289,22 +298,58 @@ export async function scanDevicePorts(ip, fullScan = false) {
   } catch (error) {
     console.error(`❌ Port scan failed for ${ip}: ${error.message}`);
     
-    // Fallback to basic TCP connect scan without nmap
+    // Fallback to basic scan with more ports
     try {
-      const basicPorts = [22, 80, 443, 3389, 8080];
+      console.log(`🔄 Trying fallback scan for ${ip}...`);
+      
+      // Try simpler nmap without service detection
+      try {
+        const { stdout } = await execAsync(`nmap -sT -T5 --open -p 22,80,443,3000,3306,3389,5000,8000,8080,8123,9000,32400 ${ip}`, {
+          timeout: 30000
+        });
+        
+        const openPorts = [];
+        const portRegex = /(\d+)\/tcp\s+open\s+(\S+)/g;
+        let match;
+        
+        while ((match = portRegex.exec(stdout)) !== null) {
+          openPorts.push({
+            port: parseInt(match[1]),
+            service: match[2] || getServiceName(parseInt(match[1])),
+            version: null
+          });
+        }
+        
+        if (openPorts.length > 0) {
+          console.log(`✅ Fallback scan found ${openPorts.length} open ports`);
+          return {
+            ip,
+            hostname: null,
+            openPorts,
+            osInfo: null,
+            scanType: 'fallback',
+            timestamp: new Date().toISOString()
+          };
+        }
+      } catch (nmapError) {
+        console.log(`⚠️ Fallback nmap failed: ${nmapError.message}`);
+      }
+      
+      // Last resort: use bash TCP check
+      const basicPorts = [22, 80, 443, 3389, 8080, 8123, 9000];
       const openPorts = [];
       
       for (const port of basicPorts) {
         try {
-          const { stdout } = await execAsync(`nc -zv -w 2 ${ip} ${port} 2>&1 || true`, { timeout: 5000 });
-          if (stdout.includes('succeeded') || stdout.includes('open')) {
-            openPorts.push({ port, service: getServiceName(port), version: null });
-          }
+          // Use bash built-in TCP check (works without nc)
+          await execAsync(`timeout 2 bash -c "echo >/dev/tcp/${ip}/${port}" 2>/dev/null`, { timeout: 3000 });
+          openPorts.push({ port, service: getServiceName(port), version: null });
         } catch (e) {
-          // Port closed or timeout
+          // Port closed or timeout - this is expected
         }
       }
       
+      console.log(`✅ Basic scan found ${openPorts.length} open ports`);
       return {
         ip,
         hostname: null,
@@ -334,9 +379,13 @@ function getServiceName(port) {
   const services = {
     21: 'ftp', 22: 'ssh', 23: 'telnet', 25: 'smtp', 53: 'dns',
     80: 'http', 110: 'pop3', 139: 'netbios', 143: 'imap', 443: 'https',
-    445: 'smb', 993: 'imaps', 995: 'pop3s', 3306: 'mysql', 3389: 'rdp',
-    5432: 'postgresql', 5900: 'vnc', 8080: 'http-alt', 8443: 'https-alt',
-    9000: 'portainer', 27017: 'mongodb', 32400: 'plex'
+    445: 'smb', 993: 'imaps', 995: 'pop3s', 1433: 'mssql', 
+    3000: 'node/grafana', 3306: 'mysql', 3389: 'rdp',
+    5000: 'flask/docker', 5432: 'postgresql', 5900: 'vnc', 
+    6379: 'redis', 8000: 'http-alt', 8080: 'http-proxy', 
+    8123: 'home-assistant', 8443: 'https-alt', 8888: 'jupyter',
+    9000: 'portainer', 9090: 'prometheus', 9100: 'node-exporter',
+    27017: 'mongodb', 32400: 'plex'
   };
   return services[port] || 'unknown';
 }

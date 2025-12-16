@@ -1,0 +1,142 @@
+# Architecture Documentation
+
+Generated: 2025-12-16T05:10:14.480Z
+
+## src/
+
+- [src\auth\auth.js](src\auth\auth.md) - 13 exports, 11 functions
+- [src\commands\slash-commands.js](src\commands\slash-commands.md) - * Slash Commands Registry
+- [src\config\gemini-keys.js](src\config\gemini-keys.md) - 2 exports, 0 functions
+- [src\config\personalities.js](src\config\personalities.md) - 4 exports, 2 functions
+- [src\config\smb-config.js](src\config\smb-config.md) - * SMB/CIFS Configuration Module
+- [src\core\bot.js](src\core\bot.md) - * Setup Discord event handlers
+- [src\core\command-bridge.js](src\core\command-bridge.md) - * Command Bridge
+- [src\core\command-registry.js](src\core\command-registry.md) - * Register a command
+- [src\core\event-router.js](src\core\event-router.md) - 1 exports, 0 functions
+- [src\core\permission-manager.js](src\core\permission-manager.md) - 4 exports, 4 functions
+- [src\core\plugin-system.js](src\core\plugin-system.md) - 26 exports, 12 functions
+- [src\dashboard\server.js](src\dashboard\server.md) - 3 exports, 2 functions
+- [src\database\db.js](src\database\db.md) - 9 exports, 2 functions
+- [src\logging\logger.js](src\logging\logger.md) - 4 exports, 0 functions
+- [src\utils\autocomplete-helpers.js](src\utils\autocomplete-helpers.md) - * Autocomplete Helpers
+
+## plugins/
+
+- [plugins\automation\commands.js](plugins\automation\commands.md) - * Automation Commands
+- [plugins\automation\plugin.js](plugins\automation\plugin.md) - 1 exports, 0 functions
+- [plugins\automation\scheduler.js](plugins\automation\scheduler.md) - 6 exports, 5 functions
+- [plugins\conversational-ai\actions\action-executor.js](plugins\conversational-ai\actions\action-executor.md) - * Action Executor
+- [plugins\conversational-ai\actions\index.js](plugins\conversational-ai\actions\index.md) - * Actions System Exports
+- [plugins\conversational-ai\commands\ai-commands.js](plugins\conversational-ai\commands\ai-commands.md) - * AI Commands
+- [plugins\conversational-ai\commands\memory-commands.js](plugins\conversational-ai\commands\memory-commands.md) - * Memory Commands
+- [plugins\conversational-ai\commands.js](plugins\conversational-ai\commands.md) - * Conversational AI Commands
+- [plugins\conversational-ai\config.js](plugins\conversational-ai\config.md) - * Conversational AI Configuration
+- [plugins\conversational-ai\context\action-registry.js](plugins\conversational-ai\context\action-registry.md) - * Action Registry
+- [plugins\conversational-ai\context\context-reconstructor.js](plugins\conversational-ai\context\context-reconstructor.md) - * Context Reconstructor
+- [plugins\conversational-ai\context\index.js](plugins\conversational-ai\context\index.md) - * Context System Exports
+- [plugins\conversational-ai\context\plugin-awareness.js](plugins\conversational-ai\context\plugin-awareness.md) - * Plugin Awareness Module
+- [plugins\conversational-ai\handlers\index.js](plugins\conversational-ai\handlers\index.md) - * Handlers module exports
+- [plugins\conversational-ai\handlers\message-handler.js](plugins\conversational-ai\handlers\message-handler.md) - * Message Event Handler
+- [plugins\conversational-ai\handlers\response-handler.js](plugins\conversational-ai\handlers\response-handler.md) - * Conversational Response Handler
+- [plugins\conversational-ai\handlers\response-handler.test.js](plugins\conversational-ai\handlers\response-handler.test.md) - * Response Handler Tests
+- [plugins\conversational-ai\memory\index.js](plugins\conversational-ai\memory\index.md) - * Memory System Exports
+- [plugins\conversational-ai\memory\semantic.js](plugins\conversational-ai\memory\semantic.md) - * Semantic Memory System
+- [plugins\conversational-ai\memory\semantic.test.js](plugins\conversational-ai\memory\semantic.test.md) - * Property-Based Tests for Semantic Memory
+- [plugins\conversational-ai\memory\short-term.js](plugins\conversational-ai\memory\short-term.md) - * Short-Term Memory System
+- [plugins\conversational-ai\plugin.js](plugins\conversational-ai\plugin.md) - * Conversational AI Plugin
+- [plugins\conversational-ai\router\index.js](plugins\conversational-ai\router\index.md) - * Router System Exports
+- [plugins\conversational-ai\router\message-router.js](plugins\conversational-ai\router\message-router.md) - * Message Router
+- [plugins\conversational-ai\router\message-router.test.js](plugins\conversational-ai\router\message-router.test.md) - * Property-Based Tests for Message Router
+- [plugins\conversational-ai\router\prefix-handler.js](plugins\conversational-ai\router\prefix-handler.md) - * Prefix Handler
+- [plugins\conversational-ai\router\prefix-handler.test.js](plugins\conversational-ai\router\prefix-handler.test.md) - * Unit Tests for Prefix Handler
+- [plugins\conversational-ai\router\response-filter.js](plugins\conversational-ai\router\response-filter.md) - * Smart Response Filter
+- [plugins\conversational-ai\triggers\index.js](plugins\conversational-ai\triggers\index.md) - * Trigger System Exports
+- [plugins\conversational-ai\triggers\trigger-system.js](plugins\conversational-ai\triggers\trigger-system.md) - * Passive Trigger System
+- [plugins\conversational-ai\utils\ai-intent-classifier.js](plugins\conversational-ai\utils\ai-intent-classifier.md) - * AI Intent Classifier
+- [plugins\conversational-ai\utils\ai-reminder-parser.js](plugins\conversational-ai\utils\ai-reminder-parser.md) - * AI-Powered Reminder Parser
+- [plugins\conversational-ai\utils\message-rewriter.js](plugins\conversational-ai\utils\message-rewriter.md) - * AI Message Rewriter
+- [plugins\conversational-ai\utils\time-parser.js](plugins\conversational-ai\utils\time-parser.md) - * Time Parser Utility
+- [plugins\core-commands\commands.js](plugins\core-commands\commands.md) - * Core Commands - Command Definitions and Handlers
+- [plugins\core-commands\plugin.js](plugins\core-commands\plugin.md) - 1 exports, 0 functions
+- [plugins\device-bulk-ops\commands.js](plugins\device-bulk-ops\commands.md) - * Device Bulk Operations Plugin Commands
+- [plugins\device-bulk-ops\plugin.js](plugins\device-bulk-ops\plugin.md) - 1 exports, 0 functions
+- [plugins\device-health\commands.js](plugins\device-health\commands.md) - * Device Health Plugin Commands
+- [plugins\device-health\plugin.js](plugins\device-health\plugin.md) - 1 exports, 0 functions
+- [plugins\device-management\commands.js](plugins\device-management\commands.md) - * Device Management Commands
+- [plugins\device-management\plugin.js](plugins\device-management\plugin.md) - 1 exports, 0 functions
+- [plugins\device-triggers\commands.js](plugins\device-triggers\commands.md) - * Device Triggers Plugin Commands
+- [plugins\device-triggers\plugin.js](plugins\device-triggers\plugin.md) - 1 exports, 0 functions
+- [plugins\example-plugin\plugin.js](plugins\example-plugin\plugin.md) - * Example Plugin
+- [plugins\games\commands.js](plugins\games\commands.md) - * Games Commands - Queued Loading System
+- [plugins\games\game-manager.js](plugins\games\game-manager.md) - 10 exports, 10 functions
+- [plugins\games\games\acronym.js](plugins\games\games\acronym.md) - 2 exports, 7 functions
+- [plugins\games\games\ai-helper.js](plugins\games\games\ai-helper.md) - * AI Helper for Games
+- [plugins\games\games\caption.js](plugins\games\games\caption.md) - 2 exports, 7 functions
+- [plugins\games\games\connectfour.js](plugins\games\games\connectfour.md) - 3 exports, 12 functions
+- [plugins\games\games\emojidecode.js](plugins\games\games\emojidecode.md) - 3 exports, 7 functions
+- [plugins\games\games\game-manager.js](plugins\games\games\game-manager.md) - * Game Manager - Handles active game sessions and stats
+- [plugins\games\games\hangman.js](plugins\games\games\hangman.md) - 4 exports, 7 functions
+- [plugins\games\games\mafia.js](plugins\games\games\mafia.md) - 2 exports, 10 functions
+- [plugins\games\games\mathblitz.js](plugins\games\games\mathblitz.md) - 3 exports, 6 functions
+- [plugins\games\games\numguess.js](plugins\games\games\numguess.md) - 2 exports, 3 functions
+- [plugins\games\games\reaction.js](plugins\games\games\reaction.md) - 2 exports, 5 functions
+- [plugins\games\games\riddles.js](plugins\games\games\riddles.md) - 3 exports, 7 functions
+- [plugins\games\games\rps.js](plugins\games\games\rps.md) - 2 exports, 4 functions
+- [plugins\games\games\storybuilder.js](plugins\games\games\storybuilder.md) - 2 exports, 6 functions
+- [plugins\games\games\tictactoe.js](plugins\games\games\tictactoe.md) - 3 exports, 8 functions
+- [plugins\games\games\trivia.js](plugins\games\games\trivia.md) - 12 exports, 20 functions
+- [plugins\games\games\twenty-questions.js](plugins\games\games\twenty-questions.md) - 3 exports, 6 functions
+- [plugins\games\games\wordchain.js](plugins\games\games\wordchain.md) - 3 exports, 11 functions
+- [plugins\games\games\wouldyourather.js](plugins\games\games\wouldyourather.md) - 3 exports, 7 functions
+- [plugins\games\plugin.js](plugins\games\plugin.md) - 1 exports, 0 functions
+- [plugins\integrations\commands.js](plugins\integrations\commands.md) - * Integrations Commands
+- [plugins\integrations\homeassistant\commands.js](plugins\integrations\homeassistant\commands.md) - * Home Assistant Commands - Queued Loading System
+- [plugins\integrations\homeassistant\plugin.js](plugins\integrations\homeassistant\plugin.md) - 11 exports, 0 functions
+- [plugins\integrations\plugin.js](plugins\integrations\plugin.md) - 1 exports, 0 functions
+- [plugins\integrations\speedtest\commands.js](plugins\integrations\speedtest\commands.md) - * Speed Test Commands
+- [plugins\integrations\speedtest\plugin.js](plugins\integrations\speedtest\plugin.md) - 1 exports, 0 functions
+- [plugins\integrations\weather\commands.js](plugins\integrations\weather\commands.md) - * Weather Commands
+- [plugins\integrations\weather\plugin.js](plugins\integrations\weather\plugin.md) - 1 exports, 0 functions
+- [plugins\network-insights\commands.js](plugins\network-insights\commands.md) - * Network Insights Plugin Commands
+- [plugins\network-insights\plugin.js](plugins\network-insights\plugin.md) - 1 exports, 0 functions
+- [plugins\network-management\commands.js](plugins\network-management\commands.md) - * Network Management Commands
+- [plugins\network-management\device-detector.js](plugins\network-management\device-detector.md) - * Device Type Detector
+- [plugins\network-management\plugin.js](plugins\network-management\plugin.md) - 1 exports, 0 functions
+- [plugins\network-management\scanner.js](plugins\network-management\scanner.md) - 10 exports, 14 functions
+- [plugins\network-management\tailscale.js](plugins\network-management\tailscale.md) - 6 exports, 7 functions
+- [plugins\personality\commands.js](plugins\personality\commands.md) - * Personality Commands
+- [plugins\personality\personalities.js](plugins\personality\personalities.md) - * Bot Personality Configurations
+- [plugins\personality\plugin.js](plugins\personality\plugin.md) - 1 exports, 0 functions
+- [plugins\power-management\commands.js](plugins\power-management\commands.md) - * Power Management Commands
+- [plugins\power-management\plugin.js](plugins\power-management\plugin.md) - * Get power state for a device
+- [plugins\research\commands.js](plugins\research\commands.md) - * Research Commands
+- [plugins\research\plugin.js](plugins\research\plugin.md) - 1 exports, 0 functions
+- [plugins\research\web-search.js](plugins\research\web-search.md) - * Web Search Module
+- [plugins\server-admin\approval-manager.js](plugins\server-admin\approval-manager.md) - * Approval Manager for Server Admin
+- [plugins\server-admin\audit-logger.js](plugins\server-admin\audit-logger.md) - * Audit Logger for Server Admin
+- [plugins\server-admin\button-handler.js](plugins\server-admin\button-handler.md) - * Button Handler for Server Admin
+- [plugins\server-admin\command-executor.js](plugins\server-admin\command-executor.md) - * Command Executor for Server Admin
+- [plugins\server-admin\command-generator.js](plugins\server-admin\command-generator.md) - * Command Generator for Server Admin
+- [plugins\server-admin\command-validator.js](plugins\server-admin\command-validator.md) - * Command Validator for Server Admin
+- [plugins\server-admin\commands.js](plugins\server-admin\commands.md) - * Server Admin Slash Commands
+- [plugins\server-admin\credential-store.js](plugins\server-admin\credential-store.md) - * Credential Store for Server Admin
+- [plugins\server-admin\discord\channel-manager.js](plugins\server-admin\discord\channel-manager.md) - * Discord Channel Manager
+- [plugins\server-admin\discord\member-manager.js](plugins\server-admin\discord\member-manager.md) - * Discord Member Manager
+- [plugins\server-admin\discord\role-manager.js](plugins\server-admin\discord\role-manager.md) - * Discord Role Manager
+- [plugins\server-admin\discord\server-settings.js](plugins\server-admin\discord\server-settings.md) - * Discord Server Settings
+- [plugins\server-admin\discord-admin.js](plugins\server-admin\discord-admin.md) - * Discord Admin Handler
+- [plugins\server-admin\nlp-parser.js](plugins\server-admin\nlp-parser.md) - * NLP Parser for Server Admin
+- [plugins\server-admin\platform-detector.js](plugins\server-admin\platform-detector.md) - * Platform Detector for Server Admin
+- [plugins\server-admin\plugin.js](plugins\server-admin\plugin.md) - * Server Admin Plugin
+- [plugins\server-admin\rate-limiter.js](plugins\server-admin\rate-limiter.md) - * Rate Limiter for Server Admin
+- [plugins\server-admin\status-formatter.js](plugins\server-admin\status-formatter.md) - * Status Formatter for Server Admin
+- [plugins\smart-reminders\commands.js](plugins\smart-reminders\commands.md) - * Smart Reminders Plugin Commands - Simplified with queued loading
+- [plugins\smart-reminders\plugin.js](plugins\smart-reminders\plugin.md) - 1 exports, 0 functions
+- [plugins\speed-alerts\commands.js](plugins\speed-alerts\commands.md) - * Speed Alerts Plugin Commands
+- [plugins\speed-alerts\plugin.js](plugins\speed-alerts\plugin.md) - 1 exports, 0 functions
+- [plugins\user-profiles\button-handler.js](plugins\user-profiles\button-handler.md) - * Profile Button/Select Handler
+- [plugins\user-profiles\commands.js](plugins\user-profiles\commands.md) - * User Profile Commands
+- [plugins\user-profiles\plugin.js](plugins\user-profiles\plugin.md) - * Start profile setup mode for a user
+- [plugins\user-profiles\profile-components.js](plugins\user-profiles\profile-components.md) - * Interactive Profile Setup Components
+- [plugins\user-profiles\profile-handler.js](plugins\user-profiles\profile-handler.md) - * Profile Message Handler
+
