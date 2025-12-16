@@ -641,15 +641,32 @@ export default class MusicPlayerPlugin extends Plugin {
    */
   async handleButton(interaction) {
     const { customId } = interaction;
+    this.logger.info(`Button pressed: ${customId}`);
     
     switch (customId) {
       case 'music_playpause':
         if (!this.isPlaying && !this.isPaused) {
-          const member = interaction.member;
-          if (member?.voice?.channel) {
-            await this.start(member.voice.channel, interaction.channel);
+          // Try to use saved voice channel first, then user's channel
+          let voiceChannel = null;
+          
+          if (this.voiceChannelId && this.guildId) {
+            try {
+              const guild = await this.client.guilds.fetch(this.guildId);
+              voiceChannel = await guild.channels.fetch(this.voiceChannelId);
+            } catch (e) {
+              this.logger.warn('Could not fetch saved voice channel');
+            }
+          }
+          
+          // Fallback to user's voice channel
+          if (!voiceChannel) {
+            voiceChannel = interaction.member?.voice?.channel;
+          }
+          
+          if (voiceChannel) {
+            await this.start(voiceChannel, interaction.channel);
           } else {
-            await interaction.reply({ content: '❌ Join a voice channel first!', ephemeral: true });
+            await interaction.reply({ content: '❌ No voice channel configured! Join a voice channel first.', ephemeral: true });
             return;
           }
         } else {
