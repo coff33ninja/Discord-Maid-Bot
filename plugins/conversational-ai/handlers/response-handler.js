@@ -321,7 +321,8 @@ ${isGroupPlay ? `Embrace the ${totalWithAI}some dynamic and make it HOT for ever
     }
     
     // 2. Reconstruct context (pass isNsfw for memory isolation)
-    const context = this.contextReconstructor.reconstruct({
+    // Use await since reconstruct is now async to ensure DB is loaded
+    const context = await this.contextReconstructor.reconstruct({
       channelId,
       userId,
       content,
