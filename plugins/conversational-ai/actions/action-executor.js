@@ -1013,8 +1013,11 @@ Return ONLY the JSON, no other text.`;
               const generateFn = async (prompt) => {
                 logger.debug('NSFW intro: Generating AI response...');
                 const genResult = await aiPlugin.requestFromCore('gemini-generate', { prompt });
-                logger.debug(`NSFW intro: Got result type=${typeof genResult}`);
-                return genResult?.text || genResult || 'Hello~ Ready to play?';
+                logger.debug(`NSFW intro: Got result type=${typeof genResult}, keys=${Object.keys(genResult || {})}`);
+                // The result structure is { result: { response: { text: () => string } }, keyUsed: string }
+                const text = genResult?.result?.response?.text?.() || genResult?.text || genResult?.result?.text || 'Hello~ Ready to play?';
+                logger.debug(`NSFW intro: Extracted text (${text?.length || 0} chars)`);
+                return text;
               };
               
               // Send intro message (don't await - let it happen in background)
