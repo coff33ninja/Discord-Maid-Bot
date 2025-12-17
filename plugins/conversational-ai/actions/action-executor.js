@@ -4316,23 +4316,97 @@ Return ONLY the JSON, no other text.`;
       
       // Use smart channel helper with AI
       try {
-        const { createSmartChannel } = await import('../utils/channel-helper.js');
+        const { createSmartChannel, findOrCreateCategory } = await import('../utils/channel-helper.js');
         
         // Determine channel type from query
         const lowerQuery = query.toLowerCase();
         const channelType = lowerQuery.includes('voice') ? 'voice' : 'text';
         
+        // Parse user-specified category from query (e.g., "in admin tools category", "under bot category")
+        let userCategory = null;
+        const categoryPatterns = [
+          /(?:in|under|into)\s+(?:the\s+)?["']?([^"']+?)["']?\s+category/i,
+          /category\s*[:=]\s*["']?([^"']+?)["']?/i
+        ];
+        
+        for (const pattern of categoryPatterns) {
+          const match = query.match(pattern);
+          if (match && match[1]) {
+            let catName = match[1].trim();
+            // Don't use generic words as category names
+            if (!['the', 'a', 'an', 'your', 'my'].includes(catName.toLowerCase())) {
+              // Add appropriate emoji based on category name if not present
+              if (!catName.match(/^[\p{Emoji}]/u)) {
+                const catLower = catName.toLowerCase();
+                if (catLower.includes('admin') || catLower.includes('staff') || catLower.includes('mod')) {
+                  catName = `🔒 ${catName}`;
+                } else if (catLower.includes('bot')) {
+                  catName = `🤖 ${catName}`;
+                } else if (catLower.includes('tool')) {
+                  catName = `🛠️ ${catName}`;
+                } else if (catLower.includes('music') || catLower.includes('audio')) {
+                  catName = `🎵 ${catName}`;
+                } else if (catLower.includes('game') || catLower.includes('gaming')) {
+                  catName = `🎮 ${catName}`;
+                } else if (catLower.includes('chat') || catLower.includes('general')) {
+                  catName = `💬 ${catName}`;
+                } else {
+                  catName = `📁 ${catName}`;
+                }
+              }
+              userCategory = catName;
+              break;
+            }
+          }
+        }
+        
         // Extract purpose from query - keep important context words like "admin", "private"
-        // Only remove action words, not descriptive words
+        // Remove action words and category specification
         let purpose = query
           .replace(/\b(create|make|new|add|setup|please|can you|could you)\b/gi, '')
           .replace(/\b(a|the|channel)\b/gi, '')
+          .replace(/(?:in|under|into)\s+(?:the\s+)?["']?[^"']+?["']?\s+category/gi, '') // Remove category spec
           .replace(/\s+/g, ' ')
           .trim() || 'general bot channel';
         
-        logger.info(`Creating smart channel for purpose: "${purpose}" (type: ${channelType})`);
+        logger.info(`Creating smart channel for purpose: "${purpose}" (type: ${channelType})${userCategory ? ` in category: ${userCategory}` : ''}`);
         
-        // Create channel with AI-decided config
+        // If user specified a category, use it directly
+        if (userCategory) {
+          const { ChannelType } = await import('discord.js');
+          const category = await findOrCreateCategory(context.guild, userCategory, false);
+          
+          // Get AI config for channel name and other settings
+          const { getAIChannelConfig } = await import('../utils/channel-helper.js');
+          const config = await getAIChannelConfig(purpose, channelType, {
+            guildName: context.guild.name,
+            existingCategories: context.guild.channels.cache.filter(c => c.type === 4).map(c => c.name)
+          });
+          
+          // Create channel in user-specified category
+          const discordChannelType = channelType === 'voice' ? ChannelType.GuildVoice : ChannelType.GuildText;
+          const channel = await context.guild.channels.create({
+            name: config.channelName,
+            type: discordChannelType,
+            parent: category.id,
+            topic: config.description || `Created by ${context.username || 'User'}`,
+            reason: `Channel created by ${context.username || 'User'} via AI`
+          });
+          
+          return {
+            success: true,
+            channelName: channel.name,
+            channelType: channelType,
+            categoryName: category.name,
+            isPrivate: config.isPrivate,
+            existed: false,
+            aiReason: config.reason,
+            channelId: channel.id,
+            userSpecifiedCategory: true
+          };
+        }
+        
+        // Create channel with AI-decided config (no user-specified category)
         const result = await createSmartChannel(context.guild, purpose, channelType, {
           topic: `Created by ${context.username || 'User'}`
         });
