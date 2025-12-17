@@ -997,6 +997,14 @@ Return ONLY the JSON, no other text.`;
         const result = await enableNsfw(guild.id, channel.id);
         
         if (result.success) {
+          // Send the personality selector dropdown
+          try {
+            const { sendPersonalitySelector } = await import('../utils/nsfw-personality-selector.js');
+            await sendPersonalitySelector(channel);
+          } catch (e) {
+            logger.warn('Could not send personality selector:', e.message);
+          }
+          
           return { 
             success: true, 
             channelName: channel.name,
@@ -1015,11 +1023,12 @@ Return ONLY the JSON, no other text.`;
       
       return `🔞 **NSFW Mode Enabled**\n\n` +
         `Channel **#${result.channelName}** is now unlocked for adult content.\n\n` +
-        `⚠️ **Important:**\n` +
-        `• My content filters are relaxed in this channel only\n` +
-        `• I can discuss mature themes and explicit content if asked\n` +
-        `• Illegal content is still prohibited\n` +
-        `• Use \`disable nsfw\` to turn this off`;
+        `**What's different:**\n` +
+        `• I can be EXPLICITLY sexual and use vulgar language\n` +
+        `• No content filters - I'll write graphic scenes if asked\n` +
+        `• Use the pinned dropdown to change my personality\n` +
+        `• Bot commands are disabled (chat/roleplay only)\n\n` +
+        `_Use \`disable nsfw\` to turn this off_`;
     }
   },
 
@@ -1037,10 +1046,21 @@ Return ONLY the JSON, no other text.`;
       }
       
       try {
-        const { disableNsfw } = await import('../utils/nsfw-manager.js');
+        const { disableNsfw, clearChannelPersonality } = await import('../utils/nsfw-manager.js');
         const result = await disableNsfw(guild.id, channel.id);
         
         if (result.success) {
+          // Remove the personality selector
+          try {
+            const { removePersonalitySelector } = await import('../utils/nsfw-personality-selector.js');
+            await removePersonalitySelector(channel);
+          } catch (e) {
+            // Ignore
+          }
+          
+          // Clear channel-specific personality
+          await clearChannelPersonality(channel.id);
+          
           return { 
             success: true, 
             channelName: channel.name
@@ -1057,7 +1077,8 @@ Return ONLY the JSON, no other text.`;
       if (result.error) return `❌ ${result.error}`;
       
       return `✅ **NSFW Mode Disabled**\n\n` +
-        `Channel **#${result.channelName}** is now back to normal content filters.`;
+        `Channel **#${result.channelName}** is now back to normal.\n` +
+        `Content filters restored, bot commands re-enabled.`;
     }
   },
 
@@ -6662,19 +6683,30 @@ Return ONLY the JSON, no other text.`;
     async execute(context) {
       const query = context.query?.toLowerCase() || '';
       
-      // Available personalities
-      const personalities = {
-        'maid': { name: 'Maid', emoji: '🌸' },
-        'tsundere': { name: 'Tsundere', emoji: '💢' },
-        'kuudere': { name: 'Kuudere', emoji: '❄️' },
-        'dandere': { name: 'Dandere', emoji: '🥺' },
-        'yandere': { name: 'Yandere', emoji: '🖤' },
-        'genki': { name: 'Genki', emoji: '⭐' },
-        'oneesan': { name: 'Onee-san', emoji: '💋' },
-        'chuunibyou': { name: 'Chuunibyou', emoji: '🔮' },
-        'butler': { name: 'Butler', emoji: '🎩' },
-        'catgirl': { name: 'Catgirl', emoji: '🐱' }
-      };
+      // Get personalities from the personality plugin
+      let personalities = {};
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const personalityPlugin = getPlugin('personality');
+        if (personalityPlugin?.getPersonalityOptions) {
+          const options = personalityPlugin.getPersonalityOptions();
+          for (const opt of options) {
+            personalities[opt.key] = { name: opt.name, emoji: opt.emoji, description: opt.description };
+          }
+        }
+      } catch (e) {
+        // Fallback if plugin not available
+        logger.warn('Could not load personalities from plugin:', e.message);
+      }
+      
+      // Fallback if no personalities loaded
+      if (Object.keys(personalities).length === 0) {
+        personalities = {
+          'maid': { name: 'Devoted Maid', emoji: '🌸' },
+          'tsundere': { name: 'Tsundere', emoji: '💢' },
+          'yandere': { name: 'Yandere', emoji: '🖤' }
+        };
+      }
       
       // Try to detect which personality they want
       let selectedKey = null;
@@ -6686,7 +6718,7 @@ Return ONLY the JSON, no other text.`;
       }
       
       if (!selectedKey) {
-        return { needsSelection: true, personalities, isNsfwChannel: context.isNsfwChannel };
+        return { needsSelection: true, personalities, isNsfwChannel: context.isNsfwChannel, channelId: context.channelId };
       }
       
       // Check if this is an NSFW channel - use channel-specific personality

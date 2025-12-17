@@ -122,6 +122,20 @@ export class EventRouter {
   async handleSelectMenu(interaction) {
     const customId = interaction.customId;
     
+    // Route NSFW personality selector
+    if (customId === 'nsfw_personality_select') {
+      try {
+        const { handlePersonalitySelect } = await import('../../plugins/conversational-ai/utils/nsfw-personality-selector.js');
+        await handlePersonalitySelect(interaction);
+      } catch (error) {
+        this.logger.error('NSFW personality select handler error:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
+        }
+      }
+      return;
+    }
+    
     // Route profile select menus
     if (customId.startsWith('profile_select_')) {
       try {
