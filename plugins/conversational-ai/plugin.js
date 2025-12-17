@@ -81,8 +81,11 @@ export default class ConversationalAIPlugin extends Plugin {
     this.responseHandler = new ResponseHandler({
       shortTermMemory: this.shortTermMemory,
       semanticMemory: this.semanticMemory,
-      generateFn: async (prompt) => {
-        const { result } = await this.requestFromCore('gemini-generate', { prompt });
+      generateFn: async (prompt, options = {}) => {
+        const { result } = await this.requestFromCore('gemini-generate', { 
+          prompt, 
+          options: { nsfw: options.nsfw || false }
+        });
         return result.response.text();
       },
       config: this.config

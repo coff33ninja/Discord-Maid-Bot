@@ -605,7 +605,10 @@ export async function setupAIChatChannel(guild, options = {}) {
           const aiPlugin = getPlugin('conversational-ai');
           if (aiPlugin?.requestFromCore) {
             const generateFn = async (prompt) => {
-              const genResult = await aiPlugin.requestFromCore('gemini-generate', { prompt });
+              const genResult = await aiPlugin.requestFromCore('gemini-generate', { 
+                prompt,
+                options: { nsfw: true } // Disable content filtering for NSFW
+              });
               return genResult?.result?.response?.text?.() || genResult?.text || 'Hello~ Ready to play?';
             };
             

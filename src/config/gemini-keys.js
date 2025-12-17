@@ -1,4 +1,20 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+
+// Safety settings for NSFW content - set to BLOCK_NONE to allow explicit content
+const NSFW_SAFETY_SETTINGS = [
+  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+];
+
+// Default safety settings (more restrictive)
+const DEFAULT_SAFETY_SETTINGS = [
+  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+];
 
 // Gemini API Key Rotation Manager
 class GeminiKeyManager {
@@ -92,14 +108,21 @@ class GeminiKeyManager {
   }
   
   // Get a model instance for the current key
-  getModel(modelName = 'gemini-2.5-flash') {
+  // options.nsfw = true will use relaxed safety settings for NSFW content
+  getModel(modelName = 'gemini-2.5-flash', options = {}) {
     const key = this.getNextKey();
-    const cacheKey = `${key.id}_${modelName}`;
+    const isNsfw = options.nsfw || false;
+    const cacheKey = `${key.id}_${modelName}_${isNsfw ? 'nsfw' : 'sfw'}`;
     
     if (!this.models.has(cacheKey)) {
       const genAI = new GoogleGenerativeAI(key.apiKey);
+      const safetySettings = isNsfw ? NSFW_SAFETY_SETTINGS : DEFAULT_SAFETY_SETTINGS;
+      
       this.models.set(cacheKey, {
-        model: genAI.getGenerativeModel({ model: modelName }),
+        model: genAI.getGenerativeModel({ 
+          model: modelName,
+          safetySettings
+        }),
         keyId: key.id,
         label: key.label
       });
@@ -145,6 +168,7 @@ class GeminiKeyManager {
   }
   
   // Generate content with automatic retry on different key
+  // options.nsfw = true will use relaxed safety settings for explicit content
   async generateContent(prompt, options = {}) {
     // Ensure keys are loaded
     this.loadKeys();
@@ -157,7 +181,7 @@ class GeminiKeyManager {
     let lastError = null;
     
     for (let attempt = 0; attempt < maxRetries; attempt++) {
-      const { model, keyId, label } = this.getModel(options.model);
+      const { model, keyId, label } = this.getModel(options.model, { nsfw: options.nsfw });
       
       try {
         const result = await model.generateContent(prompt);

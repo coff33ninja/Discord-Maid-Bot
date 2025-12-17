@@ -711,8 +711,23 @@ ${scenario ? scenario.setting : 'A private, intimate space'}
 Write 2-3 paragraphs. Be descriptive about your appearance, movements, and the setting.
 This is NSFW - be sensual and suggestive!`;
 
-      const result = await aiPlugin.requestFromCore('gemini-generate', { prompt });
+      const result = await aiPlugin.requestFromCore('gemini-generate', { 
+        prompt,
+        options: { nsfw: true } // Disable content filtering for NSFW
+      });
       const response = result?.result?.response?.text?.() || result?.text || 'Hello~ Ready to play?';
+      
+      // Handle empty response (content filtering)
+      if (!response || response.trim() === '') {
+        await channel.send({
+          embeds: [{
+            color: 0xFF1493,
+            description: '*I step into the room, my eyes meeting yours with a knowing smile...*\n\nReady to begin, darling? Tell me what you desire~',
+            footer: { text: `${personality?.emoji || '💋'} ${personality?.name || 'Your Partner'} • Scene has begun~` }
+          }]
+        });
+        return;
+      }
       
       // Send the intro
       const introEmbed = new EmbedBuilder()

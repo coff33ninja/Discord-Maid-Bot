@@ -245,8 +245,16 @@ The user clicked "Continue" - they want you to advance the scene on your own.
 Take initiative, describe what happens next, and invite them to respond.
 Be descriptive, sensual, and in character. Don't ask what they want - just DO something exciting!`;
       
-      const result = await aiPlugin.requestFromCore('gemini-generate', { prompt });
-      const response = result?.result?.response?.text?.() || result?.text || 'I continue where we left off...';
+      const result = await aiPlugin.requestFromCore('gemini-generate', { 
+        prompt,
+        options: { nsfw: true } // Disable content filtering for NSFW
+      });
+      let response = result?.result?.response?.text?.() || result?.text || '';
+      
+      // Handle empty response (content filtering)
+      if (!response || response.trim() === '') {
+        response = '*I move closer, my breath warm against your skin...*\n\nWhat happens next is up to you~';
+      }
       
       await interaction.editReply({
         embeds: [{

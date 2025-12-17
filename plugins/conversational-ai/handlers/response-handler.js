@@ -486,8 +486,8 @@ ${isGroupPlay ? `Embrace the ${totalWithAI}some dynamic and make it HOT for ever
       appearanceContext
     });
     
-    // 8. Generate response
-    const response = await this.generateFn(prompt);
+    // 8. Generate response (pass nsfw flag to disable content filtering for NSFW channels)
+    const response = await this.generateFn(prompt, { nsfw: nsfwMode });
     
     // 9. Update short-term memory with user message (include reply reference)
     // Pass guildId so memory can check NSFW status for isolation
