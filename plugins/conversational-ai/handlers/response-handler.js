@@ -231,6 +231,13 @@ ${isGroupPlay ? `Embrace the ${totalWithAI}some dynamic and make it HOT for ever
 
       parts.push(nsfwModifier);
       parts.push('');
+      
+      // Add scene context (scenarios, intensity, clothing, etc.)
+      if (extras.sceneContext) {
+        parts.push('**🎬 CURRENT SCENE STATE:**');
+        parts.push(extras.sceneContext);
+        parts.push('');
+      }
     }
     
     // Add plugin awareness (what the bot can do)
@@ -426,6 +433,30 @@ ${isGroupPlay ? `Embrace the ${totalWithAI}some dynamic and make it HOT for ever
       logger.debug(`Multi-user NSFW context: ${totalWithAI}some (${humanCount} human(s) + AI)`);
     }
     
+    // 6b. Get scene context for NSFW channels (scenarios, intensity, clothing, etc.)
+    let sceneContext = null;
+    if (nsfwMode) {
+      try {
+        const { buildSceneContext, isScenePaused, getSceneState } = await import('../utils/nsfw-scene-manager.js');
+        sceneContext = buildSceneContext(channelId);
+        
+        // Record activity for auto-initiate
+        try {
+          const { recordActivity } = await import('../utils/nsfw-auto-initiate.js');
+          recordActivity(channelId);
+        } catch (e) {
+          // Auto-initiate not available
+        }
+        
+        // Check if scene is paused (safe word)
+        if (isScenePaused(channelId)) {
+          sceneContext += '\n\n**⚠️ SCENE PAUSED - Safe word was used. Be supportive and check in.**';
+        }
+      } catch (e) {
+        // Scene manager not available
+      }
+    }
+    
     // 7. Build prompt with all context
     const prompt = this.buildPrompt(content, context, personality, {
       networkContext,
@@ -435,7 +466,8 @@ ${isGroupPlay ? `Embrace the ${totalWithAI}some dynamic and make it HOT for ever
       suggestedCommand,
       userProfile,
       nsfwMode,
-      multiUserContext
+      multiUserContext,
+      sceneContext
     });
     
     // 8. Generate response

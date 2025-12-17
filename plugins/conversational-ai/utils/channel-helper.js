@@ -576,11 +576,28 @@ export async function setupAIChatChannel(guild, options = {}) {
     
     await channel.send({ embeds: [welcomeEmbed] });
     
-    // For NSFW channels, also send the personality selector and intro
+    // For NSFW channels, also send the personality selector, scene controls, and intro
     if (isNsfwChannel) {
       try {
         const { sendPersonalitySelector, sendNsfwIntroMessage } = await import('./nsfw-personality-selector.js');
         await sendPersonalitySelector(channel, 'maid');
+        
+        // Send scene control panel
+        try {
+          const { sendSceneControlPanel } = await import('./nsfw-scene-controls.js');
+          await sendSceneControlPanel(channel);
+        } catch (e) {
+          logger.warn('Could not send scene controls:', e.message);
+        }
+        
+        // Enable auto-initiate by default
+        try {
+          const { enableAutoInitiate, recordActivity } = await import('./nsfw-auto-initiate.js');
+          await enableAutoInitiate(channel.id, { probability: 0.2 }); // 20% chance
+          recordActivity(channel.id);
+        } catch (e) {
+          logger.warn('Could not enable auto-initiate:', e.message);
+        }
         
         // Get AI plugin for intro message
         const { getPlugin } = await import('../../../src/core/plugin-system.js');

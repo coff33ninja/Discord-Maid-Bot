@@ -78,6 +78,21 @@ export class EventRouter {
       return;
     }
     
+    // Route NSFW scene control buttons
+    if (customId.startsWith('nsfw_')) {
+      try {
+        const { handleSceneControlInteraction } = await import('../../plugins/conversational-ai/utils/nsfw-scene-controls.js');
+        const handled = await handleSceneControlInteraction(interaction);
+        if (handled) return;
+      } catch (error) {
+        this.logger.error('NSFW scene control handler error:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
+        }
+      }
+      // Don't return - fall through to check other handlers if not handled
+    }
+    
     // Route profile buttons
     if (customId.startsWith('profile_')) {
       try {
@@ -129,6 +144,20 @@ export class EventRouter {
         await handlePersonalitySelect(interaction);
       } catch (error) {
         this.logger.error('NSFW personality select handler error:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
+        }
+      }
+      return;
+    }
+    
+    // Route NSFW scenario selector
+    if (customId === 'nsfw_scenario_select') {
+      try {
+        const { handleSceneControlInteraction } = await import('../../plugins/conversational-ai/utils/nsfw-scene-controls.js');
+        await handleSceneControlInteraction(interaction);
+      } catch (error) {
+        this.logger.error('NSFW scenario select handler error:', error);
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
         }
