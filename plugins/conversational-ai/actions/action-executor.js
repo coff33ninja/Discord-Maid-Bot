@@ -1007,16 +1007,23 @@ Return ONLY the JSON, no other text.`;
             // Get the AI generate function from the conversational-ai plugin
             const { getPlugin } = await import('../../../src/core/plugin-system.js');
             const aiPlugin = getPlugin('conversational-ai');
+            logger.debug(`NSFW intro: aiPlugin found=${!!aiPlugin}, hasRequestFromCore=${!!aiPlugin?.requestFromCore}`);
+            
             if (aiPlugin?.requestFromCore) {
               const generateFn = async (prompt) => {
+                logger.debug('NSFW intro: Generating AI response...');
                 const genResult = await aiPlugin.requestFromCore('gemini-generate', { prompt });
+                logger.debug(`NSFW intro: Got result type=${typeof genResult}`);
                 return genResult?.text || genResult || 'Hello~ Ready to play?';
               };
               
               // Send intro message (don't await - let it happen in background)
+              logger.info('NSFW intro: Starting intro message generation...');
               sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey })
-                .then(() => logger.info('NSFW intro message sent'))
-                .catch(e => logger.warn('Could not send NSFW intro:', e.message));
+                .then(() => logger.info('NSFW intro message sent successfully'))
+                .catch(e => logger.error('Could not send NSFW intro:', e.message, e.stack));
+            } else {
+              logger.warn('NSFW intro: AI plugin not available for intro message');
             }
           } catch (e) {
             logger.warn('Could not send personality selector:', e.message);
