@@ -344,12 +344,12 @@ export class MessageHandler {
       let actionResult = null;
       let actionContext = null;
       
-      // Check for personality change request (allowed in NSFW channels)
-      const isPersonalityRequest = this.isPersonalityChangeRequest(content);
+      // Check for allowed actions in NSFW channels
+      const isAllowedNsfwAction = this.isAllowedNsfwAction(content);
       
-      // Only check for actions if NOT in NSFW channel, OR if it's a personality change
-      // NSFW channels are for chat/roleplay only, except personality switching
-      if (!isNsfwChannel || isPersonalityRequest) {
+      // Only check for actions if NOT in NSFW channel, OR if it's an allowed NSFW action
+      // NSFW channels allow: personality changes, nsfw toggle, kick/ban/invite
+      if (!isNsfwChannel || isAllowedNsfwAction) {
         // First, check if this is an actionable request
         actionResult = await this.actionExecutor.processQuery(content, {
           message,
@@ -425,12 +425,15 @@ export class MessageHandler {
   }
 
   /**
-   * Check if a message is requesting a personality change
+   * Check if a message is requesting an action allowed in NSFW channels
+   * Allowed: personality changes, nsfw toggle, kick/ban/invite users
    * @param {string} content - Message content
    * @returns {boolean}
    */
-  isPersonalityChangeRequest(content) {
+  isAllowedNsfwAction(content) {
     const lowerContent = content.toLowerCase();
+    
+    // Personality change keywords
     const personalityKeywords = [
       'change personality', 'switch personality', 'be more', 'act like',
       'personality to', 'set personality', 'use personality',
@@ -440,7 +443,21 @@ export class MessageHandler {
       'different personality', 'another personality'
     ];
     
-    return personalityKeywords.some(kw => lowerContent.includes(kw));
+    // NSFW toggle keywords
+    const nsfwKeywords = [
+      'enable nsfw', 'disable nsfw', 'nsfw on', 'nsfw off',
+      'unlock nsfw', 'lock nsfw', 'adult mode'
+    ];
+    
+    // Moderation keywords (kick/ban/invite)
+    const moderationKeywords = [
+      'kick', 'ban', 'unban', 'invite', 'remove user', 'boot',
+      'kick user', 'ban user', 'invite user'
+    ];
+    
+    const allAllowedKeywords = [...personalityKeywords, ...nsfwKeywords, ...moderationKeywords];
+    
+    return allAllowedKeywords.some(kw => lowerContent.includes(kw));
   }
 
   /**
