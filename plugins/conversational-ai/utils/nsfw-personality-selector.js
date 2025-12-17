@@ -132,6 +132,9 @@ export async function handlePersonalitySelect(interaction) {
   
   const selectedKey = interaction.values[0];
   const channelId = interaction.channelId;
+  const channel = interaction.channel;
+  const guild = interaction.guild;
+  const userId = interaction.user.id;
   
   try {
     // Set channel-specific personality
@@ -142,24 +145,59 @@ export async function handlePersonalitySelect(interaction) {
     const personalities = await getPersonalities();
     const selected = personalities.find(p => p.key === selectedKey);
     
-    // Update the selector message
+    // Acknowledge the interaction first (before clearing messages)
+    await interaction.deferUpdate();
+    
+    // Clear channel messages (except pinned ones like the selector)
+    try {
+      const messages = await channel.messages.fetch({ limit: 100 });
+      const toDelete = messages.filter(m => !m.pinned && m.deletable);
+      if (toDelete.size > 0) {
+        await channel.bulkDelete(toDelete, true);
+        logger.info(`Cleared ${toDelete.size} messages from ${channel.name} for personality change`);
+      }
+    } catch (e) {
+      logger.warn('Could not clear channel messages:', e.message);
+    }
+    
+    // Update the selector message (re-send since we cleared)
     const { embed, components } = await createPersonalitySelector(selectedKey);
-    await interaction.update({ embeds: [embed], components });
+    await sendPersonalitySelector(channel, selectedKey);
     
-    // Send confirmation (ephemeral)
-    await interaction.followUp({
-      content: `${selected?.emoji || '🎭'} Personality changed to **${selected?.name || selectedKey}** for this channel!`,
-      ephemeral: true
-    });
+    // Send new intro message with the new personality
+    try {
+      const { getPlugin } = await import('../../../src/core/plugin-system.js');
+      const aiPlugin = getPlugin('conversational-ai');
+      if (aiPlugin?.requestFromCore) {
+        const generateFn = async (prompt) => {
+          const genResult = await aiPlugin.requestFromCore('gemini-generate', { prompt });
+          return genResult?.result?.response?.text?.() || genResult?.text || 'Hello~ Ready to play?';
+        };
+        
+        // Send new intro with the selected personality
+        await sendNsfwIntroMessage(channel, { 
+          guild, 
+          generateFn, 
+          personalityKey: selectedKey,
+          userId 
+        });
+      }
+    } catch (e) {
+      logger.warn('Could not send new intro after personality change:', e.message);
+    }
     
-    logger.info(`Personality changed to ${selectedKey} in channel ${channelId}`);
+    logger.info(`Personality changed to ${selectedKey} in channel ${channelId}, channel cleared`);
     return true;
   } catch (error) {
     logger.error('Failed to handle personality select:', error);
-    await interaction.reply({
-      content: '❌ Failed to change personality. Please try again.',
-      ephemeral: true
-    });
+    try {
+      await interaction.followUp({
+        content: '❌ Failed to change personality. Please try again.',
+        ephemeral: true
+      });
+    } catch (e) {
+      // Ignore followup errors
+    }
     return true;
   }
 }
