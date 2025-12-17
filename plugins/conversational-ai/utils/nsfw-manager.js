@@ -206,6 +206,111 @@ Remember: This permission ONLY applies to this specific channel.
 `;
 }
 
+// ============ CHANNEL PARTICIPANTS ============
+// Store participants for NSFW channels so AI knows who's in the room
+
+const CHANNEL_PARTICIPANTS_KEY = 'channel_participants';
+
+// Cache for channel participants
+let participantsCache = new Map();
+
+/**
+ * Get the participants for a specific NSFW channel - sync version
+ * @param {string} channelId - Channel ID
+ * @returns {Array<{userId: string, username: string}>} Array of participants
+ */
+export function getChannelParticipants(channelId) {
+  // Check cache first
+  if (participantsCache.has(channelId)) {
+    return participantsCache.get(channelId);
+  }
+  
+  // If configOps is loaded, use it synchronously
+  if (configOpsRef) {
+    try {
+      const data = configOpsRef.get(`${CHANNEL_PARTICIPANTS_KEY}_${channelId}`);
+      const result = data ? JSON.parse(data) : [];
+      
+      // Update cache
+      participantsCache.set(channelId, result);
+      
+      return result;
+    } catch (e) {
+      logger.error('Failed to get channel participants:', e.message);
+      return [];
+    }
+  }
+  
+  return [];
+}
+
+/**
+ * Get the participants for a specific NSFW channel - async version
+ * @param {string} channelId - Channel ID
+ * @returns {Promise<Array<{userId: string, username: string}>>} Array of participants
+ */
+export async function getChannelParticipantsAsync(channelId) {
+  try {
+    if (!configOpsRef) {
+      await initNsfwManager();
+    }
+    const data = configOpsRef.get(`${CHANNEL_PARTICIPANTS_KEY}_${channelId}`);
+    const result = data ? JSON.parse(data) : [];
+    
+    // Update cache
+    participantsCache.set(channelId, result);
+    
+    return result;
+  } catch (e) {
+    logger.error('Failed to get channel participants:', e.message);
+    return [];
+  }
+}
+
+/**
+ * Set the participants for a specific NSFW channel
+ * @param {string} channelId - Channel ID
+ * @param {Array<{userId: string, username: string}>} participants - Array of participants
+ * @returns {Object} Result with success status
+ */
+export async function setChannelParticipants(channelId, participants) {
+  try {
+    if (!configOpsRef) {
+      await initNsfwManager();
+    }
+    configOpsRef.set(`${CHANNEL_PARTICIPANTS_KEY}_${channelId}`, JSON.stringify(participants));
+    
+    // Update cache
+    participantsCache.set(channelId, participants);
+    
+    logger.info(`Channel ${channelId} participants set: ${participants.length} users`);
+    return { success: true };
+  } catch (e) {
+    logger.error('Failed to set channel participants:', e.message);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * Clear the participants for a specific channel
+ * @param {string} channelId - Channel ID
+ */
+export async function clearChannelParticipants(channelId) {
+  try {
+    if (!configOpsRef) {
+      await initNsfwManager();
+    }
+    configOpsRef.delete(`${CHANNEL_PARTICIPANTS_KEY}_${channelId}`);
+    
+    // Clear from cache
+    participantsCache.delete(channelId);
+    
+    logger.info(`Channel ${channelId} participants cleared`);
+  } catch (e) {
+    logger.error('Failed to clear channel participants:', e.message);
+  }
+}
+
 // ============ CHANNEL-SPECIFIC PERSONALITY ============
 // In NSFW channels, personality is per-channel, not per-user
 
@@ -319,6 +424,10 @@ export default {
   enableNsfw,
   disableNsfw,
   getNsfwPromptModifier,
+  getChannelParticipants,
+  getChannelParticipantsAsync,
+  setChannelParticipants,
+  clearChannelParticipants,
   getChannelPersonality,
   getChannelPersonalityAsync,
   setChannelPersonality,

@@ -183,15 +183,23 @@ NOW GO BE FILTHY. The user wants explicit content - DELIVER IT.
           .filter(p => p.isActive)
           .map(p => p.username);
         
+        const invitedUsers = extras.multiUserContext.participants
+          .filter(p => p.isInvited)
+          .map(p => p.username);
+        
+        const allUsernames = extras.multiUserContext.participants.map(p => p.username);
+        
         nsfwModifier += `
 **🔥 MULTI-USER ROLEPLAY ACTIVE (${extras.multiUserContext.participantCount} participants)**
 
-Multiple users are engaging in this NSFW channel. This is a GROUP roleplay scenario!
+Multiple users are in this NSFW channel. This is a GROUP roleplay scenario!
 
-**Active Participants:** ${activeUsers.join(', ')}
+**All Participants in this room:** ${allUsernames.join(', ')}
+${invitedUsers.length > 0 ? `**Invited to this session:** ${invitedUsers.join(', ')}` : ''}
+${activeUsers.length > 0 ? `**Currently active:** ${activeUsers.join(', ')}` : ''}
 
 **MULTI-USER RULES:**
-- Acknowledge ALL active participants in the roleplay when appropriate
+- Acknowledge ALL participants in the room, even if they haven't spoken yet
 - You can interact with multiple users simultaneously (threesome, foursome, etc.)
 - Address users by their usernames when switching focus between them
 - Describe interactions between yourself and multiple partners
@@ -199,12 +207,14 @@ Multiple users are engaging in this NSFW channel. This is a GROUP roleplay scena
 - If one user is watching while another participates, acknowledge that
 - Keep track of what each user is doing/requesting
 - Make each participant feel included in the action
+- Welcome participants who haven't spoken yet - they're in the room!
 
 **EXAMPLE SCENARIOS:**
 - User A is behind you while User B is in front
 - Taking turns with different users
 - One user giving commands while others participate
 - Group activities where everyone is involved
+- Acknowledging a quiet participant watching from the side
 
 Embrace the group dynamic and make it HOT for everyone involved!
 `;
@@ -341,18 +351,66 @@ Embrace the group dynamic and make it HOT for everyone involved!
     // 6. Get multi-user participant context for NSFW channels (3some/4some+ support)
     let multiUserContext = null;
     if (nsfwMode) {
-      const participants = this.shortTermMemory.getParticipants(channelId, true);
-      if (participants.length > 1) {
-        // Multiple users active in NSFW channel - enable multi-user roleplay context
-        multiUserContext = {
-          participantCount: participants.length,
-          participants: participants.map(p => ({
+      // Get participants from memory (those who have messaged)
+      const memoryParticipants = this.shortTermMemory.getParticipants(channelId, true);
+      
+      // Also get stored channel participants (all invited users, even if they haven't messaged)
+      let storedParticipants = [];
+      try {
+        const { getChannelParticipants } = await import('../utils/nsfw-manager.js');
+        storedParticipants = getChannelParticipants(channelId) || [];
+      } catch (e) {
+        // NSFW manager not available
+      }
+      
+      // Merge both lists - stored participants + active participants from memory
+      const participantMap = new Map();
+      
+      // Add stored participants first (all invited users)
+      for (const p of storedParticipants) {
+        participantMap.set(p.userId, {
+          userId: p.userId,
+          username: p.username,
+          messageCount: 0,
+          lastMessage: 0,
+          isActive: false,
+          isInvited: true
+        });
+      }
+      
+      // Update/add from memory participants (those who have actually messaged)
+      for (const p of memoryParticipants) {
+        const existing = participantMap.get(p.userId);
+        if (existing) {
+          existing.messageCount = p.messageCount;
+          existing.lastMessage = p.lastMessage;
+          existing.isActive = Date.now() - p.lastMessage < 5 * 60 * 1000;
+        } else {
+          participantMap.set(p.userId, {
+            userId: p.userId,
             username: p.username,
             messageCount: p.messageCount,
-            isActive: Date.now() - p.lastMessage < 5 * 60 * 1000 // Active in last 5 mins
+            lastMessage: p.lastMessage,
+            isActive: Date.now() - p.lastMessage < 5 * 60 * 1000,
+            isInvited: false
+          });
+        }
+      }
+      
+      const allParticipants = Array.from(participantMap.values());
+      
+      if (allParticipants.length > 1) {
+        // Multiple users in NSFW channel - enable multi-user roleplay context
+        multiUserContext = {
+          participantCount: allParticipants.length,
+          participants: allParticipants.map(p => ({
+            username: p.username,
+            messageCount: p.messageCount,
+            isActive: p.isActive || p.isInvited, // Invited users are considered "present"
+            isInvited: p.isInvited
           }))
         };
-        logger.debug(`Multi-user NSFW context: ${participants.length} participants`);
+        logger.debug(`Multi-user NSFW context: ${allParticipants.length} participants (${storedParticipants.length} invited)`);
       }
     }
     

@@ -475,9 +475,43 @@ export async function setupAIChatChannel(guild, options = {}) {
   // Enable NSFW mode in our system if requested
   if (isNsfwChannel) {
     try {
-      const { enableNsfw } = await import('./nsfw-manager.js');
+      const { enableNsfw, setChannelParticipants } = await import('./nsfw-manager.js');
       await enableNsfw(guild.id, channel.id);
       logger.info(`NSFW mode enabled for new channel ${channel.name}`);
+      
+      // Store participants so AI knows who's in the room even before they message
+      if (participants.length > 0 || requesterId) {
+        const allParticipants = [];
+        
+        // Add requester
+        if (requesterId) {
+          try {
+            const requesterMember = await guild.members.fetch(requesterId);
+            allParticipants.push({
+              userId: requesterId,
+              username: requesterMember.displayName || requesterMember.user.username
+            });
+          } catch (e) {
+            allParticipants.push({ userId: requesterId, username: 'User' });
+          }
+        }
+        
+        // Add other participants
+        for (const participantId of participants) {
+          try {
+            const member = await guild.members.fetch(participantId);
+            allParticipants.push({
+              userId: participantId,
+              username: member.displayName || member.user.username
+            });
+          } catch (e) {
+            allParticipants.push({ userId: participantId, username: 'User' });
+          }
+        }
+        
+        await setChannelParticipants(channel.id, allParticipants);
+        logger.info(`Stored ${allParticipants.length} participants for NSFW channel ${channel.name}`);
+      }
     } catch (e) {
       logger.warn('Could not enable NSFW mode:', e.message);
     }
