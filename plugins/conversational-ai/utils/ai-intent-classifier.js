@@ -427,6 +427,10 @@ const ACTION_CATEGORIES = {
     description: 'Setup 24/7 music in this server - creates voice and control channels, starts playing automatically',
     examples: ['setup music', 'setup music channel', 'create music channel', 'setup 24/7 music', 'configure music']
   },
+  'ai-chat-setup': {
+    description: 'Create a dedicated AI chat channel where the bot responds to all messages without needing @mention',
+    examples: ['setup chat channel', 'create your chat room', 'make ai channel', 'setup ai chat', 'create dedicated channel for you', 'your own channel']
+  },
   
   // Not implemented / Coming soon (music removed)
   'not-implemented': {
@@ -624,6 +628,7 @@ function fallbackClassification(query) {
     { keywords: ['playlist', 'play rock', 'play country', 'play christmas', 'change playlist'], action: 'music-playlist' },
     { keywords: ['what song', 'whats playing', 'now playing', 'current song'], action: 'music-nowplaying' },
     { keywords: ['setup music', 'setup music channel', 'create music channel', '24/7 music', 'configure music'], action: 'music-setup' },
+    { keywords: ['setup chat channel', 'create chat room', 'your own channel', 'ai chat channel', 'dedicated channel', 'setup ai chat'], action: 'ai-chat-setup' },
     // Not implemented
     { keywords: ['calendar', 'schedule meeting', 'appointment', 'schedule event'], action: 'not-implemented' },
     { keywords: ['push notification', 'mobile alert', 'notify my phone'], action: 'not-implemented' },

@@ -45,7 +45,8 @@ Respond in JSON format ONLY (no markdown, no explanation):
   "categoryName": "🎵 Category Name",
   "categoryEmoji": "🎵",
   "isPrivate": false,
-  "reason": "Brief explanation"
+  "description": "Brief channel description for the topic (max 100 chars)",
+  "reason": "Brief explanation of your choices"
 }
 
 Rules:
@@ -264,11 +265,14 @@ export async function createSmartChannel(guild, purpose, channelType = 'text', o
   
   logger.info(`Creating channel: ${config.channelName} in ${category.name}`);
   
+  // Use AI-generated description or fallback
+  const topic = config.description || options.topic || `${purpose} - Created by bot`;
+  
   channel = await guild.channels.create({
     name: config.channelName,
     type: discordChannelType,
     parent: category.id,
-    topic: options.topic || `${purpose} - Created by bot`,
+    topic: topic,
     reason: config.reason || 'Bot auto-created channel'
   });
   
@@ -282,9 +286,145 @@ export async function suggestChannelConfig(purpose, channelType = 'text') {
   return await getAIChannelConfig(purpose, channelType, {});
 }
 
+/**
+ * Setup an AI auto-chat channel for a guild
+ * In this channel, the bot responds to ALL messages without needing @mention
+ * 
+ * @param {Guild} guild - Discord guild
+ * @param {Object} options - Setup options
+ * @returns {Object} { channel, category, config }
+ */
+export async function setupAIChatChannel(guild, options = {}) {
+  const { configOps } = await import('../../../src/database/db.js');
+  
+  // Check if already has an AI chat channel
+  const existingConfig = configOps.get(`ai_chat_channel_${guild.id}`);
+  if (existingConfig) {
+    try {
+      const existingChannel = await guild.channels.fetch(existingConfig);
+      if (existingChannel) {
+        logger.info(`AI chat channel already exists: ${existingChannel.name}`);
+        return { 
+          channel: existingChannel, 
+          existed: true,
+          message: 'AI chat channel already set up!'
+        };
+      }
+    } catch (e) {
+      // Channel was deleted, continue to create new one
+    }
+  }
+  
+  // Create the AI chat channel
+  const result = await createSmartChannel(guild, 'AI chat room conversation assistant', 'text', {
+    topic: `💬 Chat with me here! No @mention needed - I respond to every message in this channel.`
+  });
+  
+  // Override with specific config for AI chat
+  const channelName = options.channelName || '💬-chat-with-akeno';
+  const categoryName = '🤖 Bot';
+  
+  // Rename if needed
+  if (result.channel.name !== channelName) {
+    await result.channel.setName(channelName);
+  }
+  
+  // Set a welcoming topic
+  const topic = `💬 This is my chat room! Talk to me here without @mentioning - I'll respond to every message. ` +
+    `Ask me anything, have a conversation, or just hang out! 🌟`;
+  await result.channel.setTopic(topic);
+  
+  // Save this channel as the AI auto-respond channel for this guild
+  configOps.set(`ai_chat_channel_${guild.id}`, result.channel.id);
+  
+  // Send welcome message
+  try {
+    const welcomeEmbed = {
+      color: 0x667eea,
+      title: '💬 Welcome to my Chat Room!',
+      description: `Hey there! This is my personal chat channel. You can talk to me here without using @mentions - I'll respond to every message!\n\n` +
+        `**How to use:**\n` +
+        `• Just type normally - no need to @mention me\n` +
+        `• I remember our conversation context\n` +
+        `• Ask me anything or just chat!\n\n` +
+        `**Tips:**\n` +
+        `• For commands, you can still use @mention in other channels\n` +
+        `• I'm here 24/7, so feel free to drop by anytime\n` +
+        `• Be nice and have fun! 🎉`,
+      footer: { text: 'Your friendly AI assistant' },
+      timestamp: new Date().toISOString()
+    };
+    
+    await result.channel.send({ embeds: [welcomeEmbed] });
+  } catch (e) {
+    logger.warn('Could not send welcome message:', e.message);
+  }
+  
+  logger.info(`Created AI chat channel: ${result.channel.name} in ${guild.name}`);
+  
+  return {
+    channel: result.channel,
+    category: result.category,
+    config: {
+      ...result.config,
+      isAIChatChannel: true,
+      channelName: result.channel.name
+    },
+    existed: false
+  };
+}
+
+/**
+ * Check if a channel is an AI auto-chat channel
+ * @param {string} guildId - Guild ID
+ * @param {string} channelId - Channel ID
+ * @returns {boolean}
+ */
+export async function isAIChatChannel(guildId, channelId) {
+  try {
+    const { configOps } = await import('../../../src/database/db.js');
+    const savedChannelId = configOps.get(`ai_chat_channel_${guildId}`);
+    return savedChannelId === channelId;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Get the AI chat channel for a guild
+ * @param {string} guildId - Guild ID
+ * @returns {string|null} Channel ID or null
+ */
+export async function getAIChatChannelId(guildId) {
+  try {
+    const { configOps } = await import('../../../src/database/db.js');
+    return configOps.get(`ai_chat_channel_${guildId}`) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Remove AI chat channel config (when channel is deleted)
+ * @param {string} guildId - Guild ID
+ */
+export async function removeAIChatChannel(guildId) {
+  try {
+    const { configOps } = await import('../../../src/database/db.js');
+    configOps.delete(`ai_chat_channel_${guildId}`);
+    logger.info(`Removed AI chat channel config for guild ${guildId}`);
+  } catch (e) {
+    logger.error('Failed to remove AI chat channel config:', e.message);
+  }
+}
+
 export default {
   createSmartChannel,
   findOrCreateCategory,
   getAIChannelConfig,
-  suggestChannelConfig
+  suggestChannelConfig,
+  setupAIChatChannel,
+  isAIChatChannel,
+  getAIChatChannelId,
+  removeAIChatChannel
 };

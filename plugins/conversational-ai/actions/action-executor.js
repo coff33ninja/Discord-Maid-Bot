@@ -891,6 +891,50 @@ Return ONLY the JSON, no other text.`;
     }
   },
 
+  'ai-chat-setup': {
+    keywords: ['setup chat channel', 'create chat room', 'setup your channel', 'make ai channel', 'create ai chat', 'setup ai room', 'your own channel', 'dedicated channel'],
+    plugin: 'conversational-ai',
+    description: 'Create a dedicated AI chat channel where the bot responds to all messages',
+    permission: 'admin',
+    async execute(context) {
+      const guild = context.message?.guild || context.guild;
+      if (!guild) {
+        return { error: 'This command must be used in a server' };
+      }
+      
+      try {
+        const { setupAIChatChannel } = await import('../utils/channel-helper.js');
+        const result = await setupAIChatChannel(guild);
+        return { 
+          success: true, 
+          channelName: result.channel.name,
+          channelId: result.channel.id,
+          existed: result.existed
+        };
+      } catch (error) {
+        logger.error('AI chat setup failed:', error);
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      
+      if (result.existed) {
+        return `💬 **AI Chat Channel Already Exists!**\n\n` +
+          `You already have a chat channel set up: **#${result.channelName}**\n\n` +
+          `Head over there to chat with me without @mentions!`;
+      }
+      
+      return `💬 **AI Chat Channel Created!**\n\n` +
+        `✅ Channel: **#${result.channelName}**\n\n` +
+        `This is now my dedicated chat room! In that channel:\n` +
+        `• I respond to **every message** - no @mention needed\n` +
+        `• I remember conversation context\n` +
+        `• Just chat naturally!\n\n` +
+        `Head over and say hi! 👋`;
+    }
+  },
+
   // Not implemented / Coming soon features (music removed since implemented)
   'not-implemented': {
     keywords: ['calendar', 'schedule meeting', 'send notification', 'push notification', 'monitor traffic', 'bandwidth monitor', 'create automation', 'workflow', 'alert when down'],

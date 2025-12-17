@@ -206,14 +206,14 @@ export class MessageHandler {
     
     // Use smart response filter to decide if we should respond
     const classification = { type: 'natural' };
-    const decision = this.responseFilter.shouldRespond(message, classification);
+    const decision = await this.responseFilter.shouldRespond(message, classification);
     
     if (!decision.respond) {
       logger.debug(`Skipping natural message: ${decision.reason} (confidence: ${decision.confidence?.toFixed(2) || 'N/A'})`);
       return;
     }
     
-    logger.debug(`Responding to natural message: ${decision.reason}`);
+    logger.debug(`Responding to natural message: ${decision.reason}${decision.reason === 'ai_chat_channel' ? ' (auto-chat channel)' : ''}`);
     await this.generateAndReply(message, message.content);
   }
 

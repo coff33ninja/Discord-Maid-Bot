@@ -204,13 +204,27 @@ export class ResponseFilter {
    * @param {Object} classification - Message classification from router
    * @returns {Object} Decision result
    */
-  shouldRespond(message, classification) {
+  async shouldRespond(message, classification) {
     const channelId = message.channelId || message.channel?.id;
+    const guildId = message.guild?.id || message.guildId;
     const isDM = message.channel?.type === 1 || message.channel?.type === 'DM';
 
     // Always respond in DMs
     if (isDM) {
       return { respond: true, reason: 'dm_channel' };
+    }
+
+    // Check if this is an AI auto-chat channel (respond to ALL messages)
+    if (guildId && channelId) {
+      try {
+        const { isAIChatChannel } = await import('../utils/channel-helper.js');
+        const isAutoChat = await isAIChatChannel(guildId, channelId);
+        if (isAutoChat) {
+          return { respond: true, reason: 'ai_chat_channel' };
+        }
+      } catch (e) {
+        // Channel helper not available, continue with normal logic
+      }
     }
 
     // Always respond to explicit mentions
