@@ -978,6 +978,144 @@ Return ONLY the JSON, no other text.`;
     }
   },
 
+  // ============ NSFW CHANNEL MANAGEMENT ============
+  'nsfw-enable': {
+    keywords: ['nsfw enable', 'unlock nsfw', 'enable adult', 'adult mode on', 'nsfw on', 'unlock adult content', 'enable explicit'],
+    plugin: 'conversational-ai',
+    description: 'Enable NSFW/adult content mode for a channel (admin only)',
+    permission: 'admin',
+    async execute(context) {
+      const guild = context.message?.guild || context.guild;
+      const channel = context.message?.channel || context.channel;
+      
+      if (!guild || !channel) {
+        return { error: 'This command must be used in a server channel' };
+      }
+      
+      try {
+        const { enableNsfw } = await import('../utils/nsfw-manager.js');
+        const result = await enableNsfw(guild.id, channel.id);
+        
+        if (result.success) {
+          return { 
+            success: true, 
+            channelName: channel.name,
+            channelId: channel.id
+          };
+        } else {
+          return { error: result.error };
+        }
+      } catch (error) {
+        logger.error('NSFW enable failed:', error);
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      
+      return `🔞 **NSFW Mode Enabled**\n\n` +
+        `Channel **#${result.channelName}** is now unlocked for adult content.\n\n` +
+        `⚠️ **Important:**\n` +
+        `• My content filters are relaxed in this channel only\n` +
+        `• I can discuss mature themes and explicit content if asked\n` +
+        `• Illegal content is still prohibited\n` +
+        `• Use \`disable nsfw\` to turn this off`;
+    }
+  },
+
+  'nsfw-disable': {
+    keywords: ['nsfw disable', 'lock nsfw', 'disable adult', 'adult mode off', 'nsfw off', 'lock adult content', 'disable explicit'],
+    plugin: 'conversational-ai',
+    description: 'Disable NSFW/adult content mode for a channel (admin only)',
+    permission: 'admin',
+    async execute(context) {
+      const guild = context.message?.guild || context.guild;
+      const channel = context.message?.channel || context.channel;
+      
+      if (!guild || !channel) {
+        return { error: 'This command must be used in a server channel' };
+      }
+      
+      try {
+        const { disableNsfw } = await import('../utils/nsfw-manager.js');
+        const result = await disableNsfw(guild.id, channel.id);
+        
+        if (result.success) {
+          return { 
+            success: true, 
+            channelName: channel.name
+          };
+        } else {
+          return { error: result.error };
+        }
+      } catch (error) {
+        logger.error('NSFW disable failed:', error);
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      
+      return `✅ **NSFW Mode Disabled**\n\n` +
+        `Channel **#${result.channelName}** is now back to normal content filters.`;
+    }
+  },
+
+  'nsfw-list': {
+    keywords: ['nsfw list', 'list nsfw', 'nsfw channels', 'show nsfw', 'which channels nsfw'],
+    plugin: 'conversational-ai',
+    description: 'List all NSFW-unlocked channels in this server (admin only)',
+    permission: 'admin',
+    async execute(context) {
+      const guild = context.message?.guild || context.guild;
+      
+      if (!guild) {
+        return { error: 'This command must be used in a server' };
+      }
+      
+      try {
+        const { getNsfwChannels } = await import('../utils/nsfw-manager.js');
+        const channelIds = await getNsfwChannels(guild.id);
+        
+        // Resolve channel names
+        const channels = [];
+        for (const id of channelIds) {
+          try {
+            const channel = await guild.channels.fetch(id);
+            if (channel) {
+              channels.push({ id, name: channel.name });
+            } else {
+              channels.push({ id, name: '(deleted channel)' });
+            }
+          } catch (e) {
+            channels.push({ id, name: '(inaccessible)' });
+          }
+        }
+        
+        return { 
+          success: true, 
+          channels,
+          count: channels.length
+        };
+      } catch (error) {
+        logger.error('NSFW list failed:', error);
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      
+      if (result.count === 0) {
+        return `🔞 **NSFW Channels**\n\nNo channels have NSFW mode enabled in this server.\n\nUse \`enable nsfw\` in a channel to unlock it.`;
+      }
+      
+      const channelList = result.channels.map(c => `• #${c.name}`).join('\n');
+      
+      return `🔞 **NSFW Channels** (${result.count})\n\n${channelList}\n\n` +
+        `Use \`disable nsfw\` in a channel to lock it.`;
+    }
+  },
+
   // Not implemented / Coming soon features (music removed since implemented)
   'not-implemented': {
     keywords: ['calendar', 'schedule meeting', 'send notification', 'push notification', 'monitor traffic', 'bandwidth monitor', 'create automation', 'workflow', 'alert when down'],

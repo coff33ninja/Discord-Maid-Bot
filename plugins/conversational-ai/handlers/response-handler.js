@@ -126,7 +126,7 @@ export class ResponseHandler {
    * @param {string} userMessage - User's message
    * @param {Object} context - Reconstructed context
    * @param {Object} personality - Personality config
-   * @param {Object} [extras] - Extra context (network, replyContext, pluginAwareness, etc.)
+   * @param {Object} [extras] - Extra context (network, replyContext, pluginAwareness, nsfwMode, etc.)
    * @returns {string}
    */
   buildPrompt(userMessage, context, personality, extras = {}) {
@@ -135,6 +135,13 @@ export class ResponseHandler {
     // System prompt from personality
     parts.push(personality.prompt);
     parts.push('');
+    
+    // Add NSFW mode modifier if channel is unlocked
+    if (extras.nsfwMode) {
+      const { getNsfwPromptModifier } = require('../utils/nsfw-manager.js');
+      parts.push(getNsfwPromptModifier());
+      parts.push('');
+    }
     
     // Add plugin awareness (what the bot can do)
     if (extras.pluginAwareness) {
@@ -194,7 +201,7 @@ export class ResponseHandler {
    * @returns {Promise<ResponseResult>}
    */
   async generateResponse(options) {
-    const { channelId, userId, username, content, networkContext, replyContext } = options;
+    const { channelId, userId, username, content, networkContext, replyContext, guildId } = options;
     
     // 1. Reconstruct context
     const context = this.contextReconstructor.reconstruct({
@@ -223,6 +230,20 @@ export class ResponseHandler {
       // Profile plugin not available, continue without
     }
     
+    // 4.5. Check if this is an NSFW-unlocked channel
+    let nsfwMode = false;
+    if (guildId) {
+      try {
+        const { isNsfwChannel, getNsfwPromptModifier } = await import('../utils/nsfw-manager.js');
+        nsfwMode = await isNsfwChannel(guildId, channelId);
+        if (nsfwMode) {
+          logger.debug(`NSFW mode active for channel ${channelId}`);
+        }
+      } catch (e) {
+        // NSFW manager not available, continue without
+      }
+    }
+    
     // 5. Build prompt with all context
     const prompt = this.buildPrompt(content, context, personality, {
       networkContext,
@@ -230,7 +251,8 @@ export class ResponseHandler {
       replyContext,
       pluginAwareness,
       suggestedCommand,
-      userProfile
+      userProfile,
+      nsfwMode
     });
     
     // 5. Generate response

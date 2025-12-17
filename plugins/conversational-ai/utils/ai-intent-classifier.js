@@ -432,6 +432,20 @@ const ACTION_CATEGORIES = {
     examples: ['setup chat channel', 'create your chat room', 'make ai channel', 'setup ai chat', 'create dedicated channel for you', 'your own channel']
   },
   
+  // NSFW channel management
+  'nsfw-enable': {
+    description: 'Enable NSFW/adult content mode for the current channel - relaxes AI content filters',
+    examples: ['enable nsfw', 'unlock nsfw', 'nsfw on', 'adult mode', 'enable adult content', 'unlock explicit']
+  },
+  'nsfw-disable': {
+    description: 'Disable NSFW/adult content mode for the current channel - restores normal content filters',
+    examples: ['disable nsfw', 'lock nsfw', 'nsfw off', 'disable adult', 'lock explicit']
+  },
+  'nsfw-list': {
+    description: 'List all channels with NSFW mode enabled in this server',
+    examples: ['list nsfw channels', 'show nsfw', 'which channels are nsfw', 'nsfw list']
+  },
+  
   // Not implemented / Coming soon (music removed)
   'not-implemented': {
     description: 'Feature that is planned but not yet implemented (calendar, notifications, traffic monitoring, automations)',
@@ -629,6 +643,10 @@ function fallbackClassification(query) {
     { keywords: ['what song', 'whats playing', 'now playing', 'current song'], action: 'music-nowplaying' },
     { keywords: ['setup music', 'setup music channel', 'create music channel', '24/7 music', 'configure music'], action: 'music-setup' },
     { keywords: ['setup chat channel', 'create chat room', 'your own channel', 'ai chat channel', 'dedicated channel', 'setup ai chat'], action: 'ai-chat-setup' },
+    // NSFW management
+    { keywords: ['enable nsfw', 'unlock nsfw', 'nsfw on', 'adult mode on', 'enable adult', 'unlock explicit'], action: 'nsfw-enable' },
+    { keywords: ['disable nsfw', 'lock nsfw', 'nsfw off', 'adult mode off', 'disable adult', 'lock explicit'], action: 'nsfw-disable' },
+    { keywords: ['list nsfw', 'nsfw list', 'nsfw channels', 'show nsfw', 'which nsfw'], action: 'nsfw-list' },
     // Not implemented
     { keywords: ['calendar', 'schedule meeting', 'appointment', 'schedule event'], action: 'not-implemented' },
     { keywords: ['push notification', 'mobile alert', 'notify my phone'], action: 'not-implemented' },

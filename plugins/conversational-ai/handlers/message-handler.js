@@ -371,7 +371,8 @@ export class MessageHandler {
         userId: message.author.id,
         username: message.author.username,
         content: actionContext ? `${content}\n\n[${actionContext}]` : content,
-        replyContext
+        replyContext,
+        guildId: message.guild?.id
       });
       
       // Build embed response
