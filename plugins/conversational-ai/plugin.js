@@ -52,6 +52,15 @@ export default class ConversationalAIPlugin extends Plugin {
     this.config = loadConfig();
     this.logger.info(`   Config: maxTokens=${this.config.shortTermMaxTokens}, maxMessages=${this.config.shortTermMaxMessages}`);
     
+    // Initialize NSFW manager (loads configOps reference for sync access)
+    try {
+      const { initNsfwManager } = await import('./utils/nsfw-manager.js');
+      await initNsfwManager();
+      this.logger.info('   NSFW manager initialized');
+    } catch (e) {
+      this.logger.warn('   Could not initialize NSFW manager:', e.message);
+    }
+    
     // Initialize short-term memory
     this.shortTermMemory = new ShortTermMemory({
       maxTokens: this.config.shortTermMaxTokens,
