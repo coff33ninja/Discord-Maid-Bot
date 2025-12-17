@@ -1021,8 +1021,10 @@ Return ONLY the JSON, no other text.`;
               };
               
               // Send intro message (don't await - let it happen in background)
+              // Pass userId so intro can use their profile (gender, pronouns, name)
+              const userId = context.userId || context.message?.author?.id;
               logger.info('NSFW intro: Starting intro message generation...');
-              sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey })
+              sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey, userId })
                 .then(() => logger.info('NSFW intro message sent successfully'))
                 .catch(e => logger.error('Could not send NSFW intro:', e.message, e.stack));
             } else {

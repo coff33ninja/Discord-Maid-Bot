@@ -195,7 +195,7 @@ export async function removePersonalitySelector(channel) {
  * @param {Function} options.generateFn - AI generation function
  * @param {string} options.personalityKey - Current personality key
  */
-export async function sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey = 'maid' }) {
+export async function sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey = 'maid', userId = null }) {
   logger.info('sendNsfwIntroMessage: Starting...');
   try {
     // Get personality info first (fast)
@@ -203,9 +203,25 @@ export async function sendNsfwIntroMessage(channel, { guild, generateFn, persona
     const personality = personalities.find(p => p.key === personalityKey) || personalities[0];
     logger.debug(`sendNsfwIntroMessage: Using personality ${personality?.name}`);
     
+    // Try to get user profile for personalization
+    let userProfile = null;
+    if (userId) {
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const profilePlugin = getPlugin('user-profiles');
+        if (profilePlugin?.getProfileForContext) {
+          userProfile = await profilePlugin.getProfileForContext(userId);
+          logger.debug(`sendNsfwIntroMessage: Got user profile for ${userId}`);
+        }
+      } catch (e) {
+        logger.debug('sendNsfwIntroMessage: Could not get user profile');
+      }
+    }
+    
     // Try to get online member count, but don't block on it
     let onlineCount = 1; // Default to solo
     let onlineNames = [];
+    let onlineProfiles = []; // Profiles of online users
     
     try {
       // Use cached members if available, with a short timeout
@@ -218,6 +234,29 @@ export async function sendNsfwIntroMessage(channel, { guild, generateFn, persona
         );
         onlineCount = onlineMembers.size || 1;
         onlineNames = onlineMembers.map(m => m.displayName).slice(0, 5);
+        
+        // Try to get profiles for online users (for group play context)
+        if (onlineCount > 1) {
+          try {
+            const { getPlugin } = await import('../../../src/core/plugin-system.js');
+            const profilePlugin = getPlugin('user-profiles');
+            if (profilePlugin?.getProfileForContext) {
+              for (const member of onlineMembers.values()) {
+                const profile = await profilePlugin.getProfileForContext(member.user.id);
+                if (profile) {
+                  onlineProfiles.push({
+                    name: profile.name || member.displayName,
+                    gender: profile.gender,
+                    pronouns: profile.pronouns
+                  });
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore profile fetch errors
+          }
+        }
+        
         logger.debug(`sendNsfwIntroMessage: ${onlineCount} online members from cache`);
       }
     } catch (e) {
@@ -226,6 +265,31 @@ export async function sendNsfwIntroMessage(channel, { guild, generateFn, persona
     
     // Build context for AI intro
     const isGroupPlay = onlineCount > 1;
+    
+    // Build user profile context
+    let userContext = '';
+    if (userProfile) {
+      const parts = [];
+      if (userProfile.name) parts.push(`Their preferred name is "${userProfile.name}"`);
+      if (userProfile.gender) parts.push(`Gender: ${userProfile.gender}`);
+      if (userProfile.pronouns) parts.push(`Use ${userProfile.pronouns} pronouns (${userProfile.pronounSubject}/${userProfile.pronounObject}/${userProfile.pronounPossessive})`);
+      if (parts.length > 0) {
+        userContext = `\n**User Profile (USE THIS!):**\n${parts.join('. ')}.\nIMPORTANT: Address them correctly using their name and pronouns!`;
+      }
+    }
+    
+    // Build group profile context
+    let groupContext = '';
+    if (isGroupPlay && onlineProfiles.length > 0) {
+      const profileDescriptions = onlineProfiles.map(p => {
+        const parts = [p.name];
+        if (p.gender) parts.push(`(${p.gender})`);
+        if (p.pronouns) parts.push(`- ${p.pronouns}`);
+        return parts.join(' ');
+      });
+      groupContext = `\n**Participants:**\n${profileDescriptions.join('\n')}\nUse correct pronouns for each person!`;
+    }
+    
     const introPrompt = `You are ${personality.name} (${personality.description}). 
 NSFW mode was just enabled in this channel. You need to greet the users and invite them to start a roleplay scenario.
 
@@ -233,14 +297,16 @@ NSFW mode was just enabled in this channel. You need to greet the users and invi
 - Online users who can see this channel: ${onlineCount}
 ${onlineNames.length > 0 ? `- Some names: ${onlineNames.join(', ')}` : ''}
 - This is ${isGroupPlay ? 'a potential GROUP play scenario (multiple users online)' : 'likely a SOLO play scenario (one user)'}
+${userContext}${groupContext}
 
 **Your Task:**
 1. Greet in character as ${personality.name}
-2. Acknowledge ${isGroupPlay ? 'that multiple people are here and group play is possible' : 'the user'}
-3. Ask what kind of scenario they'd like to explore
-4. Offer a few sexy/naughty scenario suggestions fitting your personality
-5. Be flirty and inviting - this is NSFW so be suggestive!
-6. If group play is possible, mention threesome/group scenarios as an option
+2. ${userProfile?.name ? `Address ${userProfile.name} by name and use correct pronouns` : 'Greet the user warmly'}
+3. ${isGroupPlay ? 'Acknowledge that multiple people are here and group play is possible' : 'Make them feel special as your sole focus'}
+4. Ask what kind of scenario they'd like to explore
+5. Offer a few sexy/naughty scenario suggestions fitting your personality
+6. Be flirty and inviting - this is NSFW so be suggestive!
+${isGroupPlay ? '7. Mention threesome/group scenarios as an exciting option' : ''}
 
 Keep it to 2-3 short paragraphs. Be in character and seductive!`;
 
