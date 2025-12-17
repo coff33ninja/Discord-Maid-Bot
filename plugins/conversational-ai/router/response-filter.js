@@ -225,6 +225,17 @@ export class ResponseFilter {
       } catch (e) {
         // Channel helper not available, continue with normal logic
       }
+      
+      // Also check if this is an NSFW channel (always respond in NSFW channels)
+      try {
+        const { isNsfwChannel } = await import('../utils/nsfw-manager.js');
+        const isNsfw = isNsfwChannel(guildId, channelId);
+        if (isNsfw) {
+          return { respond: true, reason: 'nsfw_channel' };
+        }
+      } catch (e) {
+        // NSFW manager not available, continue with normal logic
+      }
     }
 
     // Always respond to explicit mentions
