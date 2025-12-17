@@ -118,7 +118,7 @@ export async function isNsfwChannelAsync(guildId, channelId) {
  */
 export function invalidateNsfwCache() {
   nsfwChannelCache.clear();
-  cacheExpiry = 0;
+  cacheTimestamps.clear();
 }
 
 /**
