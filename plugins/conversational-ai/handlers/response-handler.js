@@ -138,8 +138,21 @@ export class ResponseHandler {
     
     // Add NSFW mode modifier if channel is unlocked
     if (extras.nsfwMode) {
-      const { getNsfwPromptModifier } = require('../utils/nsfw-manager.js');
-      parts.push(getNsfwPromptModifier());
+      // NSFW prompt modifier - inline to avoid async import in sync function
+      const nsfwModifier = `
+**NSFW MODE ACTIVE - ADULT CONTENT ALLOWED**
+This channel has been unlocked by an admin for mature/adult content.
+In this channel ONLY:
+- You may discuss adult themes, explicit content, and mature topics
+- You can be more suggestive, flirty, or explicit if the user requests
+- Content filters are relaxed - you can write explicit scenarios if asked
+- Still respect the user's boundaries and consent
+- Do NOT generate illegal content (minors, non-consensual, etc.)
+- Stay in character with your personality while being more open
+
+Remember: This permission ONLY applies to this specific channel.
+`;
+      parts.push(nsfwModifier);
       parts.push('');
     }
     
