@@ -399,6 +399,16 @@ export class MessageHandler {
         guildId: message.guild?.id
       });
       
+      // Handle empty response (can happen with rate limits or content filtering)
+      if (!result.response || result.response.trim() === '') {
+        logger.warn('Empty response from AI, sending fallback');
+        await message.reply({
+          content: '💭 *I got a bit tongue-tied there... could you say that again?*',
+          allowedMentions: { repliedUser: false }
+        });
+        return;
+      }
+      
       // Build embed response
       const embed = new EmbedBuilder()
         .setColor('#FFB6C1')
