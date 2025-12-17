@@ -244,6 +244,9 @@ ${onlineNames.length > 0 ? `- Some names: ${onlineNames.join(', ')}` : ''}
 
 Keep it to 2-3 short paragraphs. Be in character and seductive!`;
 
+    // Show typing indicator while generating
+    await channel.sendTyping();
+    
     // Generate the intro
     logger.debug('sendNsfwIntroMessage: Calling generateFn...');
     const introResponse = await generateFn(introPrompt);
