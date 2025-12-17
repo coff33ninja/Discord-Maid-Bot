@@ -292,6 +292,8 @@ export async function suggestChannelConfig(purpose, channelType = 'text') {
  * 
  * @param {Guild} guild - Discord guild
  * @param {Object} options - Setup options
+ * @param {string} options.categoryName - User-specified category name (optional)
+ * @param {string} options.channelName - Custom channel name (optional)
  * @returns {Object} { channel, category, config }
  */
 export async function setupAIChatChannel(guild, options = {}) {
@@ -315,27 +317,47 @@ export async function setupAIChatChannel(guild, options = {}) {
     }
   }
   
-  // Create the AI chat channel
-  const result = await createSmartChannel(guild, 'AI chat room conversation assistant', 'text', {
-    topic: `💬 Chat with me here! No @mention needed - I respond to every message in this channel.`
-  });
+  // Discord doesn't support emojis in channel names, so use text-based name
+  // Format: chat-with-akeno (clean, no emoji prefix since Discord strips them)
+  const channelName = options.channelName || 'chat-with-akeno';
   
-  // Override with specific config for AI chat
-  const channelName = options.channelName || '💬-chat-with-akeno';
-  const categoryName = '🤖 Bot';
+  // Use user-specified category or default to Bot category
+  const categoryName = options.categoryName || '🤖 Bot';
   
-  // Rename if needed
-  if (result.channel.name !== channelName) {
-    await result.channel.setName(channelName);
+  // Find or create the category
+  const category = await findOrCreateCategory(guild, categoryName, false);
+  
+  // Check if channel already exists in category
+  let channel = category.children.cache.find(c => 
+    c.name.toLowerCase() === channelName.toLowerCase().replace(/\s+/g, '-')
+  );
+  
+  if (channel) {
+    // Channel exists, just save config and return
+    configOps.set(`ai_chat_channel_${guild.id}`, channel.id);
+    logger.info(`Found existing AI chat channel: ${channel.name}`);
+    return { 
+      channel, 
+      category,
+      existed: true,
+      message: 'AI chat channel already exists!'
+    };
   }
   
-  // Set a welcoming topic
+  // Create the channel
   const topic = `💬 This is my chat room! Talk to me here without @mentioning - I'll respond to every message. ` +
     `Ask me anything, have a conversation, or just hang out! 🌟`;
-  await result.channel.setTopic(topic);
+  
+  channel = await guild.channels.create({
+    name: channelName,
+    type: ChannelType.GuildText,
+    parent: category.id,
+    topic: topic,
+    reason: 'AI chat channel - bot responds to all messages here'
+  });
   
   // Save this channel as the AI auto-respond channel for this guild
-  configOps.set(`ai_chat_channel_${guild.id}`, result.channel.id);
+  configOps.set(`ai_chat_channel_${guild.id}`, channel.id);
   
   // Send welcome message
   try {
@@ -355,20 +377,20 @@ export async function setupAIChatChannel(guild, options = {}) {
       timestamp: new Date().toISOString()
     };
     
-    await result.channel.send({ embeds: [welcomeEmbed] });
+    await channel.send({ embeds: [welcomeEmbed] });
   } catch (e) {
     logger.warn('Could not send welcome message:', e.message);
   }
   
-  logger.info(`Created AI chat channel: ${result.channel.name} in ${guild.name}`);
+  logger.info(`Created AI chat channel: ${channel.name} in category ${category.name} for ${guild.name}`);
   
   return {
-    channel: result.channel,
-    category: result.category,
+    channel,
+    category,
     config: {
-      ...result.config,
       isAIChatChannel: true,
-      channelName: result.channel.name
+      channelName: channel.name,
+      categoryName: category.name
     },
     existed: false
   };

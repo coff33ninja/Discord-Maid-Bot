@@ -904,11 +904,52 @@ Return ONLY the JSON, no other text.`;
       
       try {
         const { setupAIChatChannel } = await import('../utils/channel-helper.js');
-        const result = await setupAIChatChannel(guild);
+        
+        // Parse category from user query (e.g., "in admin tools category", "under bot category")
+        const query = context.query?.toLowerCase() || '';
+        let categoryName = null;
+        
+        // Match patterns like "in X category", "under X", "in the X category"
+        const categoryPatterns = [
+          /(?:in|under|into)\s+(?:the\s+)?["']?([^"']+?)["']?\s+category/i,
+          /category\s*[:=]\s*["']?([^"']+?)["']?/i,
+          /(?:in|under)\s+["']?([^"']+?)["']?$/i
+        ];
+        
+        for (const pattern of categoryPatterns) {
+          const match = context.query?.match(pattern);
+          if (match && match[1]) {
+            // Clean up the category name and add emoji if not present
+            let catName = match[1].trim();
+            // Don't use generic words as category names
+            if (!['the', 'a', 'an', 'your', 'my'].includes(catName.toLowerCase())) {
+              // Add appropriate emoji based on category name
+              if (!catName.match(/^[\p{Emoji}]/u)) {
+                const catLower = catName.toLowerCase();
+                if (catLower.includes('admin') || catLower.includes('staff') || catLower.includes('mod')) {
+                  catName = `🔒 ${catName}`;
+                } else if (catLower.includes('bot')) {
+                  catName = `🤖 ${catName}`;
+                } else if (catLower.includes('tool')) {
+                  catName = `🛠️ ${catName}`;
+                } else if (catLower.includes('chat') || catLower.includes('general')) {
+                  catName = `💬 ${catName}`;
+                } else {
+                  catName = `📁 ${catName}`;
+                }
+              }
+              categoryName = catName;
+              break;
+            }
+          }
+        }
+        
+        const result = await setupAIChatChannel(guild, { categoryName });
         return { 
           success: true, 
           channelName: result.channel.name,
           channelId: result.channel.id,
+          categoryName: result.category?.name || categoryName,
           existed: result.existed
         };
       } catch (error) {
@@ -925,8 +966,10 @@ Return ONLY the JSON, no other text.`;
           `Head over there to chat with me without @mentions!`;
       }
       
+      const categoryInfo = result.categoryName ? `\n📁 Category: **${result.categoryName}**` : '';
+      
       return `💬 **AI Chat Channel Created!**\n\n` +
-        `✅ Channel: **#${result.channelName}**\n\n` +
+        `✅ Channel: **#${result.channelName}**${categoryInfo}\n\n` +
         `This is now my dedicated chat room! In that channel:\n` +
         `• I respond to **every message** - no @mention needed\n` +
         `• I remember conversation context\n` +
