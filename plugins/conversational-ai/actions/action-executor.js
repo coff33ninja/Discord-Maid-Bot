@@ -1009,18 +1009,14 @@ Return ONLY the JSON, no other text.`;
             const aiPlugin = getPlugin('conversational-ai');
             if (aiPlugin?.requestFromCore) {
               const generateFn = async (prompt) => {
-                const result = await aiPlugin.requestFromCore('gemini-generate', { prompt });
-                return result?.text || result || 'Hello~ Ready to play?';
+                const genResult = await aiPlugin.requestFromCore('gemini-generate', { prompt });
+                return genResult?.text || genResult || 'Hello~ Ready to play?';
               };
               
-              // Small delay so the selector appears first
-              setTimeout(async () => {
-                try {
-                  await sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey });
-                } catch (e) {
-                  logger.warn('Could not send NSFW intro:', e.message);
-                }
-              }, 1000);
+              // Send intro message (don't await - let it happen in background)
+              sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey })
+                .then(() => logger.info('NSFW intro message sent'))
+                .catch(e => logger.warn('Could not send NSFW intro:', e.message));
             }
           } catch (e) {
             logger.warn('Could not send personality selector:', e.message);
