@@ -4215,9 +4215,9 @@ Return ONLY the JSON, no other text.`;
 
   // ============ DISCORD CHANNEL CREATION ============
   'discord-create-channel': {
-    keywords: ['create channel', 'make channel', 'new channel', 'add channel', 'create a channel', 'make a channel'],
+    keywords: ['create channel', 'make channel', 'new channel', 'add channel', 'create a channel', 'make a channel', 'setup channel'],
     plugin: 'server-admin',
-    description: 'Create a new Discord channel',
+    description: 'Create a new Discord channel with AI-decided category and permissions',
     permission: 'admin',
     async execute(context) {
       const query = context.query || '';
@@ -4227,109 +4227,54 @@ Return ONLY the JSON, no other text.`;
         return { needsGuild: true };
       }
       
-      // Use AI to parse the channel creation request
+      // Use smart channel helper with AI
       try {
-        // Get the conversational-ai plugin to use core handler for Gemini
-        const { getPlugin } = await import('../../../src/core/plugin-system.js');
-        const aiPlugin = getPlugin('conversational-ai');
+        const { createSmartChannel } = await import('../utils/channel-helper.js');
         
-        if (!aiPlugin) {
-          logger.warn('Conversational AI plugin not available, using fallback parsing');
-          return await this.fallbackParse(query, context);
-        }
+        // Determine channel type from query
+        const lowerQuery = query.toLowerCase();
+        const channelType = lowerQuery.includes('voice') ? 'voice' : 'text';
         
-        const prompt = `You are parsing a Discord channel creation request. Extract the following from the user's message:
-
-USER MESSAGE: "${query}"
-
-Return ONLY a JSON object with these fields:
-{
-  "channelName": "the-channel-name-in-kebab-case",
-  "channelType": "text" or "voice",
-  "description": "A brief description of what this channel is for (1 sentence, max 100 chars)",
-  "category": "suggested category name if mentioned, or null"
-}
-
-RULES:
-1. channelName MUST be lowercase with hyphens instead of spaces (Discord format)
-2. Remove words like "channel", "called", "named", "for" from the name
-3. Keep the name concise (2-4 words max)
-4. If they say "voice" anywhere, set channelType to "voice"
-5. Generate a helpful description based on the purpose they mentioned
-6. If no clear name is given, use the main topic/purpose as the name
-
-Examples:
-- "create a channel for bot testing" → {"channelName": "bot-testing", "channelType": "text", "description": "Channel for testing bot commands and features", "category": null}
-- "make a voice channel for gaming" → {"channelName": "gaming", "channelType": "voice", "description": "Voice chat for gaming sessions", "category": null}
-- "new channel announcements" → {"channelName": "announcements", "channelType": "text", "description": "Server announcements and updates", "category": null}
-
-Return ONLY the JSON, no other text.`;
-
-        const { result } = await aiPlugin.requestFromCore('gemini-generate', { 
-          prompt,
-          options: {
-            maxOutputTokens: 200,
-            temperature: 0.1
-          }
+        // Extract purpose from query (remove common words)
+        let purpose = query
+          .replace(/create|make|new|add|setup|a|the|channel|for|called|named/gi, '')
+          .trim() || 'general bot channel';
+        
+        logger.info(`Creating smart channel for purpose: "${purpose}" (type: ${channelType})`);
+        
+        // Create channel with AI-decided config
+        const result = await createSmartChannel(context.guild, purpose, channelType, {
+          topic: `Created by ${context.username || 'User'}`
         });
         
-        const responseText = result?.response?.text?.() || '';
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        
-        if (!jsonMatch) {
-          // Fallback to simple parsing
-          logger.warn('AI response did not contain valid JSON, using fallback');
-          return await this.fallbackParse(query, context);
-        }
-        
-        const parsed = JSON.parse(jsonMatch[0]);
-        
-        if (!parsed.channelName) {
-          return { needsName: true };
-        }
-        
-        logger.info(`AI parsed channel request: name="${parsed.channelName}", type="${parsed.channelType}", topic="${parsed.description}"`);
-        
-        // Create the channel with AI-generated name and description
-        const { createChannel } = await import('../../server-admin/discord/channel-manager.js');
-        const createResult = await createChannel(
-          context.guild, 
-          parsed.channelName, 
-          parsed.channelType || 'text', 
-          null, // categoryId - we don't use the AI's category suggestion for now
-          {
-            executorId: context.userId,
-            executorName: context.username || 'User',
-            topic: parsed.description // Set channel topic/description
-          }
-        );
-        
         return {
-          ...createResult,
-          aiParsed: true,
-          description: parsed.description,
-          originalQuery: query
+          success: true,
+          channelName: result.channel.name,
+          channelType: channelType,
+          categoryName: result.category.name,
+          isPrivate: result.config.isPrivate,
+          existed: result.existed,
+          aiReason: result.config.reason,
+          channelId: result.channel.id
         };
         
       } catch (error) {
-        // Fallback to simple regex parsing if AI fails
-        logger.warn('AI parsing failed for channel creation, using fallback:', error.message);
-        return await this.fallbackParse(query, context);
+        logger.error('Smart channel creation failed:', error.message);
+        // Fallback to basic creation
+        return await this.fallbackCreate(query, context);
       }
     },
     
-    // Fallback parsing without AI
-    async fallbackParse(query, context) {
+    // Fallback creation without AI categorization
+    async fallbackCreate(query, context) {
       const lowerQuery = query.toLowerCase();
       
+      // Extract channel name
       const patterns = [
-        /create\s+(?:a\s+)?(?:(text|voice)\s+)?channel\s+(?:called\s+|named\s+|for\s+)?["']?([a-zA-Z0-9_\-\s]+)["']?/i,
-        /make\s+(?:a\s+)?(?:(text|voice)\s+)?channel\s+(?:called\s+|named\s+|for\s+)?["']?([a-zA-Z0-9_\-\s]+)["']?/i,
-        /new\s+(?:(text|voice)\s+)?channel\s+(?:called\s+|named\s+|for\s+)?["']?([a-zA-Z0-9_\-\s]+)["']?/i,
-        /add\s+(?:a\s+)?(?:(text|voice)\s+)?channel\s+(?:called\s+|named\s+|for\s+)?["']?([a-zA-Z0-9_\-\s]+)["']?/i
+        /(?:create|make|new|add|setup)\s+(?:a\s+)?(?:(text|voice)\s+)?channel\s+(?:called\s+|named\s+|for\s+)?["']?([a-zA-Z0-9_\-\s]+)["']?/i
       ];
       
-      let channelType = 'text';
+      let channelType = lowerQuery.includes('voice') ? 'voice' : 'text';
       let channelName = null;
       
       for (const pattern of patterns) {
@@ -4337,7 +4282,6 @@ Return ONLY the JSON, no other text.`;
         if (match) {
           if (match[1]) channelType = match[1].toLowerCase();
           if (match[2]) {
-            // Convert to kebab-case
             channelName = match[2].trim()
               .toLowerCase()
               .replace(/\s+/g, '-')
@@ -4347,12 +4291,8 @@ Return ONLY the JSON, no other text.`;
         }
       }
       
-      if (lowerQuery.includes('voice')) {
-        channelType = 'voice';
-      }
-      
       if (!channelName) {
-        return { needsName: true };
+        channelName = 'new-channel';
       }
       
       try {
@@ -4362,7 +4302,7 @@ Return ONLY the JSON, no other text.`;
           executorName: context.username || 'User'
         });
         
-        return { ...result, aiParsed: false };
+        return { ...result, aiParsed: false, fallback: true };
       } catch (error) {
         return { error: error.message };
       }
@@ -4373,25 +4313,36 @@ Return ONLY the JSON, no other text.`;
         return `📢 I can only create channels in a server. Please use this command in a Discord server, not DMs.`;
       }
       
-      if (result.needsName) {
-        return `📢 What should I name the channel?\n\n` +
-          `Try: "Create channel general" or "Create voice channel gaming"`;
-      }
-      
       if (result.error) {
         return `❌ Failed to create channel: ${result.error}`;
       }
       
       if (result.success) {
-        const emoji = result.channel?.type === 'voice' ? '🔊' : '💬';
-        let response = `${emoji} **Channel Created!**\n\n` +
-          `Created ${result.channel?.type || 'text'} channel **#${result.channel?.name}**`;
+        const emoji = result.channelType === 'voice' ? '🔊' : '💬';
+        const privacyEmoji = result.isPrivate ? '🔒' : '🌐';
         
-        if (result.description) {
-          response += `\n📝 **Topic:** ${result.description}`;
+        let response = `${emoji} **Channel Created!**\n\n`;
+        
+        if (result.existed) {
+          response += `Found existing channel **#${result.channelName}**`;
+        } else {
+          response += `Created ${result.channelType} channel **#${result.channelName}**`;
+        }
+        
+        response += `\n📁 **Category:** ${result.categoryName}`;
+        response += `\n${privacyEmoji} **Access:** ${result.isPrivate ? 'Private (Admin only)' : 'Public'}`;
+        
+        if (result.aiReason) {
+          response += `\n💡 *${result.aiReason}*`;
         }
         
         return response;
+      }
+      
+      // Fallback result format
+      if (result.channel) {
+        const emoji = result.channel?.type === 'voice' ? '🔊' : '💬';
+        return `${emoji} **Channel Created!**\n\nCreated channel **#${result.channel?.name}**`;
       }
       
       return `❌ Something went wrong creating the channel.`;
