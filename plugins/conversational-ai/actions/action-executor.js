@@ -6806,6 +6806,198 @@ Return ONLY the JSON, no other text.`;
     }
   },
 
+  // ============ MEMORY CONTROL ============
+  'memory-disable-user': {
+    keywords: ['disable memory for', 'turn off memory for', 'stop remembering', 'no memory for'],
+    plugin: 'conversational-ai',
+    description: 'Disable conversation memory for a specific user (admin only)',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      const guild = context.message?.guild || context.guild;
+      
+      if (!guild) return { error: 'Must be used in a server' };
+      
+      // Try to extract user mention or ID
+      const userMatch = query.match(/<@!?(\d+)>/) || query.match(/(\d{17,19})/);
+      if (!userMatch) {
+        return { needsUser: true };
+      }
+      
+      const targetUserId = userMatch[1];
+      
+      try {
+        const { disableUserMemory, clearUserHistory } = await import('../utils/memory-settings.js');
+        await disableUserMemory(guild.id, targetUserId);
+        await clearUserHistory(targetUserId); // Also clear existing history
+        
+        return { success: true, userId: targetUserId };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsUser) {
+        return `🧠 Who should I stop remembering? Mention the user or provide their ID.\n\nExample: "disable memory for @user"`;
+      }
+      if (result.error) return `❌ ${result.error}`;
+      return `🧠 **Memory Disabled**\n\nI will no longer remember conversations with <@${result.userId}>.\nTheir history has been cleared.`;
+    }
+  },
+
+  'memory-enable-user': {
+    keywords: ['enable memory for', 'turn on memory for', 'start remembering', 'remember'],
+    plugin: 'conversational-ai',
+    description: 'Enable conversation memory for a specific user (admin only)',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      const guild = context.message?.guild || context.guild;
+      
+      if (!guild) return { error: 'Must be used in a server' };
+      
+      const userMatch = query.match(/<@!?(\d+)>/) || query.match(/(\d{17,19})/);
+      if (!userMatch) {
+        return { needsUser: true };
+      }
+      
+      const targetUserId = userMatch[1];
+      
+      try {
+        const { enableUserMemory } = await import('../utils/memory-settings.js');
+        await enableUserMemory(guild.id, targetUserId);
+        
+        return { success: true, userId: targetUserId };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsUser) {
+        return `🧠 Who should I start remembering? Mention the user.\n\nExample: "enable memory for @user"`;
+      }
+      if (result.error) return `❌ ${result.error}`;
+      return `🧠 **Memory Enabled**\n\nI will now remember conversations with <@${result.userId}>.`;
+    }
+  },
+
+  'memory-clear-user': {
+    keywords: ['clear memory for', 'forget', 'delete history for', 'erase memory'],
+    plugin: 'conversational-ai',
+    description: 'Clear conversation history for a user (admin only)',
+    permission: 'admin',
+    async execute(context) {
+      const query = context.query || '';
+      
+      const userMatch = query.match(/<@!?(\d+)>/) || query.match(/(\d{17,19})/);
+      if (!userMatch) {
+        return { needsUser: true };
+      }
+      
+      const targetUserId = userMatch[1];
+      
+      try {
+        const { clearUserHistory } = await import('../utils/memory-settings.js');
+        const result = await clearUserHistory(targetUserId);
+        
+        return { success: true, userId: targetUserId, deleted: result.deleted };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.needsUser) {
+        return `🧠 Whose history should I clear? Mention the user.\n\nExample: "clear memory for @user"`;
+      }
+      if (result.error) return `❌ ${result.error}`;
+      return `🧠 **Memory Cleared**\n\nDeleted ${result.deleted} messages from <@${result.userId}>'s history.`;
+    }
+  },
+
+  'memory-optout': {
+    keywords: ['forget me', 'dont remember me', 'opt out of memory', 'stop tracking me', 'privacy'],
+    plugin: 'conversational-ai',
+    description: 'Opt out of conversation memory (user self-service)',
+    async execute(context) {
+      try {
+        const { userOptOut, clearUserHistory } = await import('../utils/memory-settings.js');
+        await userOptOut(context.userId);
+        await clearUserHistory(context.userId);
+        
+        return { success: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      return `🔒 **Privacy Mode Enabled**\n\nI will no longer remember our conversations.\nYour history has been cleared.\n\n_Say "remember me" to opt back in._`;
+    }
+  },
+
+  'memory-optin': {
+    keywords: ['remember me', 'opt in to memory', 'start tracking', 'enable my memory'],
+    plugin: 'conversational-ai',
+    description: 'Opt back in to conversation memory (user self-service)',
+    async execute(context) {
+      try {
+        const { userOptIn } = await import('../utils/memory-settings.js');
+        await userOptIn(context.userId);
+        
+        return { success: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      return `🧠 **Memory Enabled**\n\nI will now remember our conversations for better context!`;
+    }
+  },
+
+  'memory-status': {
+    keywords: ['memory status', 'my memory settings', 'am i being tracked', 'memory info'],
+    plugin: 'conversational-ai',
+    description: 'Check your memory/privacy settings',
+    async execute(context) {
+      const guild = context.message?.guild || context.guild;
+      
+      try {
+        const { getUserMemorySettings } = await import('../utils/memory-settings.js');
+        const settings = await getUserMemorySettings(guild?.id || 'global', context.userId);
+        
+        return { success: true, settings };
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    formatResult(result) {
+      if (result.error) return `❌ ${result.error}`;
+      
+      const s = result.settings;
+      const status = s.enabled ? '✅ Enabled' : '❌ Disabled';
+      
+      let details = `**Memory Status:** ${status}\n\n`;
+      
+      if (s.adminDisabled) {
+        details += `⚠️ An admin has disabled memory for you in this server.\n`;
+      }
+      if (s.userOptout) {
+        details += `🔒 You have opted out of memory tracking.\n`;
+      }
+      if (s.customLimit) {
+        details += `📊 Custom limit: ${s.customLimit} messages\n`;
+      }
+      if (s.usingDefault && s.enabled) {
+        details += `📊 Using default settings (50 messages, 24h retention)\n`;
+      }
+      
+      details += `\n_Say "forget me" to opt out, or "remember me" to opt in._`;
+      
+      return `🧠 **Memory Settings**\n\n${details}`;
+    }
+  },
+
   // ============ DEVICE HEALTH EXTENDED ============
   'device-health-summary': {
     keywords: ['health summary', 'network health summary', 'overall health', 'health overview'],

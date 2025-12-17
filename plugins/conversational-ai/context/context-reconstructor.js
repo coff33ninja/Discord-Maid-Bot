@@ -103,9 +103,10 @@ export class ContextReconstructor {
    * @param {string} options.userId - User ID
    * @param {string} options.content - Message content
    * @param {Object} [options.userPrefs] - User preferences
+   * @param {boolean} [options.isNsfw] - Whether this is an NSFW channel (uses isolated memory)
    * @returns {ReconstructedContext}
    */
-  reconstruct({ channelId, userId, content, userPrefs = null }) {
+  reconstruct({ channelId, userId, content, userPrefs = null, isNsfw = false }) {
     const context = {
       shortTerm: [],
       semantic: [],
@@ -114,8 +115,9 @@ export class ContextReconstructor {
     };
 
     // 1. Always include short-term context (highest priority)
+    // Pass isNsfw flag to use isolated NSFW memory if applicable
     if (this.shortTermMemory) {
-      context.shortTerm = this.shortTermMemory.getContext(channelId, this.shortTermBudget);
+      context.shortTerm = this.shortTermMemory.getContext(channelId, this.shortTermBudget, isNsfw);
       context.totalTokens += this.estimateArrayTokens(context.shortTerm);
     }
 

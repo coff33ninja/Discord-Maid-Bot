@@ -86,7 +86,8 @@ export class MessageHandler {
           username: message.author.username,
           content: message.content,
           timestamp: message.createdTimestamp,
-          isBot: false
+          isBot: false,
+          guildId: message.guild?.id // For memory settings check
         });
       }
       
@@ -335,7 +336,7 @@ export class MessageHandler {
       if (message.guild?.id) {
         try {
           const { isNsfwChannel: checkNsfw } = await import('../utils/nsfw-manager.js');
-          isNsfwChannel = await checkNsfw(message.guild.id, message.channelId);
+          isNsfwChannel = checkNsfw(message.guild.id, message.channelId);
         } catch (e) {
           // NSFW manager not available
         }

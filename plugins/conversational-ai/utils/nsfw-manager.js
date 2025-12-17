@@ -14,16 +14,57 @@ const logger = createLogger('nsfw-manager');
 // Config key prefix for NSFW channels
 const NSFW_CONFIG_KEY = 'nsfw_channels';
 
+// Cache for NSFW channels to avoid repeated DB reads
+let nsfwChannelCache = new Map();
+let cacheExpiry = 0;
+const CACHE_TTL = 30000; // 30 seconds
+
 /**
- * Get all NSFW-enabled channel IDs for a guild
+ * Get all NSFW-enabled channel IDs for a guild (sync version with caching)
  * @param {string} guildId - Guild ID
  * @returns {string[]} Array of channel IDs
  */
-export async function getNsfwChannels(guildId) {
+export function getNsfwChannels(guildId) {
+  try {
+    // Check cache first
+    if (Date.now() < cacheExpiry && nsfwChannelCache.has(guildId)) {
+      return nsfwChannelCache.get(guildId);
+    }
+    
+    // Dynamic import workaround - use require-style for sync
+    // This works because db.js is already loaded at this point
+    const dbModule = require('../../../src/database/db.js');
+    const channels = dbModule.configOps.get(`${NSFW_CONFIG_KEY}_${guildId}`);
+    const result = channels ? JSON.parse(channels) : [];
+    
+    // Update cache
+    nsfwChannelCache.set(guildId, result);
+    cacheExpiry = Date.now() + CACHE_TTL;
+    
+    return result;
+  } catch (e) {
+    // Fallback to async import if require fails (ESM environment)
+    logger.debug('Sync import failed, NSFW check may be delayed');
+    return [];
+  }
+}
+
+/**
+ * Get all NSFW-enabled channel IDs for a guild (async version)
+ * @param {string} guildId - Guild ID
+ * @returns {Promise<string[]>} Array of channel IDs
+ */
+export async function getNsfwChannelsAsync(guildId) {
   try {
     const { configOps } = await import('../../../src/database/db.js');
     const channels = configOps.get(`${NSFW_CONFIG_KEY}_${guildId}`);
-    return channels ? JSON.parse(channels) : [];
+    const result = channels ? JSON.parse(channels) : [];
+    
+    // Update cache
+    nsfwChannelCache.set(guildId, result);
+    cacheExpiry = Date.now() + CACHE_TTL;
+    
+    return result;
   } catch (e) {
     logger.error('Failed to get NSFW channels:', e.message);
     return [];
@@ -31,14 +72,33 @@ export async function getNsfwChannels(guildId) {
 }
 
 /**
- * Check if a channel is NSFW-unlocked
+ * Check if a channel is NSFW-unlocked (sync version)
  * @param {string} guildId - Guild ID
  * @param {string} channelId - Channel ID
  * @returns {boolean}
  */
-export async function isNsfwChannel(guildId, channelId) {
-  const channels = await getNsfwChannels(guildId);
+export function isNsfwChannel(guildId, channelId) {
+  const channels = getNsfwChannels(guildId);
   return channels.includes(channelId);
+}
+
+/**
+ * Check if a channel is NSFW-unlocked (async version)
+ * @param {string} guildId - Guild ID
+ * @param {string} channelId - Channel ID
+ * @returns {Promise<boolean>}
+ */
+export async function isNsfwChannelAsync(guildId, channelId) {
+  const channels = await getNsfwChannelsAsync(guildId);
+  return channels.includes(channelId);
+}
+
+/**
+ * Invalidate the NSFW channel cache (call after enable/disable)
+ */
+export function invalidateNsfwCache() {
+  nsfwChannelCache.clear();
+  cacheExpiry = 0;
 }
 
 /**
@@ -50,7 +110,7 @@ export async function isNsfwChannel(guildId, channelId) {
 export async function enableNsfw(guildId, channelId) {
   try {
     const { configOps } = await import('../../../src/database/db.js');
-    const channels = await getNsfwChannels(guildId);
+    const channels = await getNsfwChannelsAsync(guildId);
     
     if (channels.includes(channelId)) {
       return { success: false, error: 'Channel is already NSFW-unlocked' };
@@ -58,6 +118,9 @@ export async function enableNsfw(guildId, channelId) {
     
     channels.push(channelId);
     configOps.set(`${NSFW_CONFIG_KEY}_${guildId}`, JSON.stringify(channels));
+    
+    // Invalidate cache
+    invalidateNsfwCache();
     
     logger.info(`NSFW enabled for channel ${channelId} in guild ${guildId}`);
     return { success: true };
@@ -76,7 +139,7 @@ export async function enableNsfw(guildId, channelId) {
 export async function disableNsfw(guildId, channelId) {
   try {
     const { configOps } = await import('../../../src/database/db.js');
-    const channels = await getNsfwChannels(guildId);
+    const channels = await getNsfwChannelsAsync(guildId);
     
     if (!channels.includes(channelId)) {
       return { success: false, error: 'Channel is not NSFW-unlocked' };
@@ -84,6 +147,9 @@ export async function disableNsfw(guildId, channelId) {
     
     const updated = channels.filter(id => id !== channelId);
     configOps.set(`${NSFW_CONFIG_KEY}_${guildId}`, JSON.stringify(updated));
+    
+    // Invalidate cache
+    invalidateNsfwCache();
     
     logger.info(`NSFW disabled for channel ${channelId} in guild ${guildId}`);
     return { success: true };
@@ -119,15 +185,48 @@ Remember: This permission ONLY applies to this specific channel.
 
 const CHANNEL_PERSONALITY_KEY = 'channel_personality';
 
+// Cache for channel personalities
+let personalityCache = new Map();
+
 /**
- * Get the personality for a specific channel (NSFW channels only)
+ * Get the personality for a specific channel (NSFW channels only) - sync version
  * @param {string} channelId - Channel ID
  * @returns {string|null} Personality key or null if not set
  */
-export async function getChannelPersonality(channelId) {
+export function getChannelPersonality(channelId) {
+  try {
+    // Check cache first
+    if (personalityCache.has(channelId)) {
+      return personalityCache.get(channelId);
+    }
+    
+    const dbModule = require('../../../src/database/db.js');
+    const result = dbModule.configOps.get(`${CHANNEL_PERSONALITY_KEY}_${channelId}`) || null;
+    
+    // Update cache
+    personalityCache.set(channelId, result);
+    
+    return result;
+  } catch (e) {
+    logger.debug('Sync import failed for channel personality');
+    return null;
+  }
+}
+
+/**
+ * Get the personality for a specific channel (async version)
+ * @param {string} channelId - Channel ID
+ * @returns {Promise<string|null>} Personality key or null if not set
+ */
+export async function getChannelPersonalityAsync(channelId) {
   try {
     const { configOps } = await import('../../../src/database/db.js');
-    return configOps.get(`${CHANNEL_PERSONALITY_KEY}_${channelId}`) || null;
+    const result = configOps.get(`${CHANNEL_PERSONALITY_KEY}_${channelId}`) || null;
+    
+    // Update cache
+    personalityCache.set(channelId, result);
+    
+    return result;
   } catch (e) {
     logger.error('Failed to get channel personality:', e.message);
     return null;
@@ -144,6 +243,10 @@ export async function setChannelPersonality(channelId, personalityKey) {
   try {
     const { configOps } = await import('../../../src/database/db.js');
     configOps.set(`${CHANNEL_PERSONALITY_KEY}_${channelId}`, personalityKey);
+    
+    // Update cache
+    personalityCache.set(channelId, personalityKey);
+    
     logger.info(`Channel ${channelId} personality set to: ${personalityKey}`);
     return { success: true };
   } catch (e) {
@@ -160,6 +263,10 @@ export async function clearChannelPersonality(channelId) {
   try {
     const { configOps } = await import('../../../src/database/db.js');
     configOps.delete(`${CHANNEL_PERSONALITY_KEY}_${channelId}`);
+    
+    // Clear from cache
+    personalityCache.delete(channelId);
+    
     logger.info(`Channel ${channelId} personality cleared`);
   } catch (e) {
     logger.error('Failed to clear channel personality:', e.message);
@@ -168,11 +275,15 @@ export async function clearChannelPersonality(channelId) {
 
 export default {
   getNsfwChannels,
+  getNsfwChannelsAsync,
   isNsfwChannel,
+  isNsfwChannelAsync,
+  invalidateNsfwCache,
   enableNsfw,
   disableNsfw,
   getNsfwPromptModifier,
   getChannelPersonality,
+  getChannelPersonalityAsync,
   setChannelPersonality,
   clearChannelPersonality
 };

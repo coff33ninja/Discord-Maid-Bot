@@ -231,14 +231,58 @@ export class ShortTermMemory {
    * @param {string} message.content - Message content
    * @param {number} [message.timestamp] - Timestamp (defaults to now)
    * @param {boolean} [message.isBot] - Whether from bot
+   * @param {string} [message.guildId] - Guild ID for memory settings check
    */
   addMessage(channelId, message) {
-    // Ensure we've loaded existing history first
-    if (!this.loadedChannels.has(channelId)) {
-      this.loadFromDatabase(channelId).catch(() => {});
+    // Check if memory is disabled for this user (async check, but we proceed anyway for in-memory)
+    // The persistence will be skipped if disabled
+    this.checkAndAddMessage(channelId, message);
+  }
+
+  /**
+   * Internal method to check memory settings and add message
+   * @private
+   */
+  async checkAndAddMessage(channelId, message) {
+    // Check if memory is disabled for this user
+    let memoryDisabled = false;
+    let customLimit = null;
+    let isNsfwChannel = false;
+    
+    if (message.guildId && message.userId && !message.isBot) {
+      try {
+        const { isMemoryDisabled, getUserMemoryLimit } = await import('../utils/memory-settings.js');
+        memoryDisabled = await isMemoryDisabled(message.guildId, message.userId);
+        customLimit = await getUserMemoryLimit(message.guildId, message.userId);
+      } catch (e) {
+        // Memory settings not available, continue with defaults
+      }
+      
+      // Check if this is an NSFW channel
+      try {
+        const { isNsfwChannel: checkNsfw } = await import('../utils/nsfw-manager.js');
+        isNsfwChannel = checkNsfw(message.guildId, channelId);
+      } catch (e) {
+        // NSFW manager not available
+      }
     }
     
-    let context = this.channelContexts.get(channelId) || [];
+    // If memory is disabled for this user, don't store their messages
+    if (memoryDisabled && !message.isBot) {
+      logger.debug(`Memory disabled for user ${message.userId}, skipping storage`);
+      return;
+    }
+    
+    // For NSFW channels, use a separate memory key to isolate from regular channels
+    // This ensures NSFW conversations don't leak into regular channel context
+    const memoryKey = isNsfwChannel ? `nsfw_${channelId}` : channelId;
+    
+    // Ensure we've loaded existing history first
+    if (!this.loadedChannels.has(memoryKey)) {
+      await this.loadFromDatabase(memoryKey);
+    }
+    
+    let context = this.channelContexts.get(memoryKey) || [];
     
     const storedMessage = {
       userId: message.userId,
@@ -246,23 +290,65 @@ export class ShortTermMemory {
       content: message.content,
       timestamp: message.timestamp || Date.now(),
       tokens: this.estimateTokens(message.content),
-      isBot: message.isBot || false
+      isBot: message.isBot || false,
+      isNsfw: isNsfwChannel // Tag NSFW messages
     };
     
     context.push(storedMessage);
+    
+    // Use custom limit if set, otherwise default
+    const maxMessages = customLimit || this.maxMessages;
     
     // Trim to token budget
     context = this.trimToTokenBudget(context, this.maxTokens);
     
     // Hard limit on message count
-    if (context.length > this.maxMessages) {
-      context = context.slice(-this.maxMessages);
+    if (context.length > maxMessages) {
+      context = context.slice(-maxMessages);
     }
     
-    this.channelContexts.set(channelId, context);
+    this.channelContexts.set(memoryKey, context);
     
-    // Persist to database (async, don't wait)
-    this.saveToDatabase(channelId, storedMessage).catch(() => {});
+    // Persist to database (skip if memory disabled for user)
+    // Use the memoryKey (with nsfw_ prefix) for isolation
+    if (!memoryDisabled) {
+      this.saveToDatabase(memoryKey, storedMessage).catch(() => {});
+    }
+  }
+
+  /**
+   * Get unique participants in a channel's recent conversation
+   * Useful for multi-user roleplay scenarios
+   * @param {string} channelId - Channel ID
+   * @param {boolean} isNsfw - Whether this is an NSFW channel
+   * @returns {Array} Array of { userId, username, messageCount }
+   */
+  getParticipants(channelId, isNsfw = false) {
+    const memoryKey = isNsfw ? `nsfw_${channelId}` : channelId;
+    const context = this.channelContexts.get(memoryKey) || [];
+    
+    const participants = new Map();
+    
+    for (const msg of context) {
+      if (msg.isBot) continue; // Skip bot messages
+      
+      if (!participants.has(msg.userId)) {
+        participants.set(msg.userId, {
+          userId: msg.userId,
+          username: msg.username,
+          messageCount: 0,
+          lastMessage: 0
+        });
+      }
+      
+      const p = participants.get(msg.userId);
+      p.messageCount++;
+      p.lastMessage = Math.max(p.lastMessage, msg.timestamp);
+    }
+    
+    // Sort by most recent activity
+    return Array.from(participants.values())
+      .sort((a, b) => b.lastMessage - a.lastMessage);
   }
 
   /**
@@ -270,16 +356,19 @@ export class ShortTermMemory {
    * Loads from database if not already loaded
    * @param {string} channelId - Discord channel ID
    * @param {number} [maxTokens] - Maximum tokens to return (default: 2000)
+   * @param {boolean} [isNsfw] - Whether this is an NSFW channel (uses isolated memory)
    * @returns {StoredMessage[]} Messages within budget, most recent prioritized
    */
-  getContext(channelId, maxTokens = 2000) {
+  getContext(channelId, maxTokens = 2000, isNsfw = false) {
+    const memoryKey = isNsfw ? `nsfw_${channelId}` : channelId;
+    
     // Load from database if not already loaded (sync check, async load)
-    if (!this.loadedChannels.has(channelId)) {
+    if (!this.loadedChannels.has(memoryKey)) {
       // For sync access, we can't await - but we trigger the load
-      this.loadFromDatabase(channelId).catch(() => {});
+      this.loadFromDatabase(memoryKey).catch(() => {});
     }
     
-    const context = this.channelContexts.get(channelId) || [];
+    const context = this.channelContexts.get(memoryKey) || [];
     return this.trimToTokenBudget(context, maxTokens);
   }
 
@@ -287,15 +376,18 @@ export class ShortTermMemory {
    * Get context for a channel (async version that ensures DB is loaded)
    * @param {string} channelId - Discord channel ID
    * @param {number} [maxTokens] - Maximum tokens to return (default: 2000)
+   * @param {boolean} [isNsfw] - Whether this is an NSFW channel (uses isolated memory)
    * @returns {Promise<StoredMessage[]>} Messages within budget
    */
-  async getContextAsync(channelId, maxTokens = 2000) {
+  async getContextAsync(channelId, maxTokens = 2000, isNsfw = false) {
+    const memoryKey = isNsfw ? `nsfw_${channelId}` : channelId;
+    
     // Ensure loaded from database
-    if (!this.loadedChannels.has(channelId)) {
-      await this.loadFromDatabase(channelId);
+    if (!this.loadedChannels.has(memoryKey)) {
+      await this.loadFromDatabase(memoryKey);
     }
     
-    const context = this.channelContexts.get(channelId) || [];
+    const context = this.channelContexts.get(memoryKey) || [];
     return this.trimToTokenBudget(context, maxTokens);
   }
 

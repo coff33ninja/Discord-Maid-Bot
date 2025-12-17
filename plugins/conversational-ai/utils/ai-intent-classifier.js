@@ -652,7 +652,14 @@ function fallbackClassification(query) {
     { keywords: ['push notification', 'mobile alert', 'notify my phone'], action: 'not-implemented' },
     { keywords: ['monitor traffic', 'bandwidth monitor', 'network usage', 'data usage'], action: 'not-implemented' },
     { keywords: ['alert when down', 'notify when offline', 'service down alert', 'uptime monitor'], action: 'not-implemented' },
-    { keywords: ['create automation', 'workflow', 'if this then that', 'auto trigger'], action: 'not-implemented' }
+    { keywords: ['create automation', 'workflow', 'if this then that', 'auto trigger'], action: 'not-implemented' },
+    // Memory control
+    { keywords: ['disable memory for', 'turn off memory for', 'stop remembering'], action: 'memory-disable-user' },
+    { keywords: ['enable memory for', 'turn on memory for', 'start remembering'], action: 'memory-enable-user' },
+    { keywords: ['clear memory for', 'forget user', 'delete history for', 'erase memory for'], action: 'memory-clear-user' },
+    { keywords: ['forget me', 'dont remember me', 'opt out', 'stop tracking me'], action: 'memory-optout' },
+    { keywords: ['remember me', 'opt in', 'start tracking me', 'enable my memory'], action: 'memory-optin' },
+    { keywords: ['memory status', 'my memory settings', 'am i being tracked'], action: 'memory-status' }
   ];
 
   for (const match of quickMatches) {
