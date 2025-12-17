@@ -198,25 +198,31 @@ export async function removePersonalitySelector(channel) {
 export async function sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey = 'maid' }) {
   logger.info('sendNsfwIntroMessage: Starting...');
   try {
-    // Get online members in the channel (who can see it)
-    logger.debug('sendNsfwIntroMessage: Fetching guild members...');
-    const members = await guild.members.fetch();
-    logger.debug(`sendNsfwIntroMessage: Got ${members.size} members`);
-    
-    const onlineMembers = members.filter(m => 
-      !m.user.bot && 
-      (m.presence?.status === 'online' || m.presence?.status === 'idle' || m.presence?.status === 'dnd') &&
-      channel.permissionsFor(m)?.has('ViewChannel')
-    );
-    
-    const onlineCount = onlineMembers.size;
-    const onlineNames = onlineMembers.map(m => m.displayName).slice(0, 5); // Max 5 names
-    logger.debug(`sendNsfwIntroMessage: ${onlineCount} online members`);
-    
-    // Get personality info
+    // Get personality info first (fast)
     const personalities = await getPersonalities();
     const personality = personalities.find(p => p.key === personalityKey) || personalities[0];
     logger.debug(`sendNsfwIntroMessage: Using personality ${personality?.name}`);
+    
+    // Try to get online member count, but don't block on it
+    let onlineCount = 1; // Default to solo
+    let onlineNames = [];
+    
+    try {
+      // Use cached members if available, with a short timeout
+      const cachedMembers = guild.members.cache;
+      if (cachedMembers.size > 0) {
+        const onlineMembers = cachedMembers.filter(m => 
+          !m.user.bot && 
+          (m.presence?.status === 'online' || m.presence?.status === 'idle' || m.presence?.status === 'dnd') &&
+          channel.permissionsFor(m)?.has('ViewChannel')
+        );
+        onlineCount = onlineMembers.size || 1;
+        onlineNames = onlineMembers.map(m => m.displayName).slice(0, 5);
+        logger.debug(`sendNsfwIntroMessage: ${onlineCount} online members from cache`);
+      }
+    } catch (e) {
+      logger.debug('sendNsfwIntroMessage: Could not get member count, using default');
+    }
     
     // Build context for AI intro
     const isGroupPlay = onlineCount > 1;
