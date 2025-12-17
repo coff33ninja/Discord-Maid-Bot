@@ -14,29 +14,15 @@ const logger = createLogger('profile-components');
  */
 export const GENDER_OPTIONS = [
   { label: '👨 Male', value: 'male', emoji: '👨' },
-  { label: '👩 Female', value: 'female', emoji: '👩' },
-  { label: '🧑 Non-binary', value: 'non-binary', emoji: '🧑' },
-  { label: '❓ Other', value: 'other', emoji: '❓' },
-  { label: '🤐 Prefer not to say', value: 'prefer-not-to-say', emoji: '🤐' }
+  { label: '👩 Female', value: 'female', emoji: '👩' }
 ];
 
 /**
- * Pronoun options - Extended
+ * Pronoun options
  */
 export const PRONOUN_OPTIONS = [
   { label: 'he/him', value: 'he/him' },
-  { label: 'she/her', value: 'she/her' },
-  { label: 'they/them', value: 'they/them' },
-  { label: 'he/they', value: 'he/they' },
-  { label: 'she/they', value: 'she/they' },
-  { label: 'they/he', value: 'they/he' },
-  { label: 'they/she', value: 'they/she' },
-  { label: 'xe/xem', value: 'xe/xem' },
-  { label: 'ze/zir', value: 'ze/zir' },
-  { label: 'it/its', value: 'it/its' },
-  { label: 'any pronouns', value: 'any' },
-  { label: 'ask me', value: 'ask' },
-  { label: 'no pronouns (use name)', value: 'name-only' }
+  { label: 'she/her', value: 'she/her' }
 ];
 
 /**
