@@ -382,13 +382,12 @@ export async function setupAIChatChannel(guild, options = {}) {
   }
   
   // Generate channel name based on participants for NSFW
+  // AI counts as a participant! So: creator + AI = 2some, creator + 1 invitee + AI = 3some, etc.
   let channelName = options.channelName || 'chat-with-akeno';
-  if (isNsfwChannel && participants.length > 0) {
-    // Create unique channel name with participant count
-    const participantCount = participants.length + 1; // +1 for requester
-    channelName = `nsfw-${participantCount}some-${Date.now().toString(36).slice(-4)}`;
-  } else if (isNsfwChannel) {
-    channelName = 'nsfw-chat-with-akeno';
+  if (isNsfwChannel) {
+    // +1 for requester, +1 for AI, + invitees
+    const totalParticipants = 1 + 1 + participants.length; // requester + AI + invitees
+    channelName = `nsfw-${totalParticipants}some-${Date.now().toString(36).slice(-4)}`;
   }
   
   // Use user-specified category or default
@@ -463,7 +462,7 @@ export async function setupAIChatChannel(guild, options = {}) {
     nsfw: isNsfwChannel, // Mark as NSFW in Discord
     permissionOverwrites: permissionOverwrites.length > 0 ? permissionOverwrites : undefined,
     reason: isNsfwChannel 
-      ? `NSFW AI chat channel for ${participants.length + 1} participants`
+      ? `NSFW AI chat channel - ${1 + 1 + participants.length}some (requester + AI + ${participants.length} invitee(s))`
       : 'AI chat channel - bot responds to all messages here'
   });
   
@@ -522,37 +521,38 @@ export async function setupAIChatChannel(guild, options = {}) {
     let welcomeEmbed;
     
     if (isNsfwChannel && participants.length > 0) {
-      // Multi-participant NSFW welcome
+      // Multi-participant NSFW welcome (AI counts as participant!)
       const participantMentions = participants.map(id => `<@${id}>`).join(', ');
       const requesterMention = requesterId ? `<@${requesterId}>` : 'you';
+      const totalCount = 1 + 1 + participants.length; // requester + AI + invitees
       
       welcomeEmbed = {
         color: 0xFF1493, // Deep pink
         title: '🔞 Private NSFW Room Created!',
         description: `Welcome to your private room!\n\n` +
-          `**Participants:** ${requesterMention}${participants.length > 0 ? ', ' + participantMentions : ''}\n\n` +
-          `This is a private NSFW channel where I can be much more... expressive~ 💋\n\n` +
+          `**Participants:** ${requesterMention}, ${participantMentions}, and me~ 💋\n\n` +
+          `This is a private NSFW channel where I can be much more... expressive~\n\n` +
           `**Rules:**\n` +
           `• Only invited participants can see this channel\n` +
           `• I respond to every message - no @mention needed\n` +
           `• Use the personality dropdown above to change my character\n` +
           `• Have fun and be respectful to each other! 🔥`,
-        footer: { text: `${participants.length + 1} participants • NSFW enabled` },
+        footer: { text: `${totalCount}some (${totalCount} participants including me~) • NSFW enabled` },
         timestamp: new Date().toISOString()
       };
     } else if (isNsfwChannel) {
-      // Solo NSFW welcome
+      // Solo NSFW welcome (just requester + AI = 2some)
       welcomeEmbed = {
         color: 0xFF1493,
         title: '🔞 NSFW Chat Room Created!',
         description: `Welcome to your private NSFW room!\n\n` +
-          `In this channel, I can be much more... expressive~ 💋\n\n` +
+          `Just the two of us~ I can be much more... expressive here 💋\n\n` +
           `**How to use:**\n` +
           `• Just type normally - no @mention needed\n` +
           `• Use the personality dropdown to change my character\n` +
           `• I'll remember our conversation context\n` +
           `• Let's have some fun! 🔥`,
-        footer: { text: 'NSFW enabled • Your naughty AI assistant' },
+        footer: { text: '2some (just you and me~) • NSFW enabled' },
         timestamp: new Date().toISOString()
       };
     } else {
@@ -606,8 +606,9 @@ export async function setupAIChatChannel(guild, options = {}) {
     logger.warn('Could not send welcome message:', e.message);
   }
   
+  const totalParticipants = isNsfwChannel ? (1 + 1 + participants.length) : 0; // requester + AI + invitees
   logger.info(`Created AI chat channel: ${channel.name} in category ${category.name} for ${guild.name}` +
-    (isNsfwChannel ? ` (NSFW, ${participants.length + 1} participants)` : ''));
+    (isNsfwChannel ? ` (NSFW, ${totalParticipants}some)` : ''));
   
   return {
     channel,

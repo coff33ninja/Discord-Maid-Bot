@@ -334,7 +334,9 @@ export async function sendNsfwIntroMessage(channel, { guild, generateFn, persona
     }
     
     // Build context for AI intro
-    const isGroupPlay = onlineCount > 1;
+    // AI counts as a participant! So total = humans + 1 (AI)
+    const totalWithAI = onlineCount + 1; // +1 for AI
+    const isGroupPlay = totalWithAI > 2; // More than just 1 human + AI = group play
     
     // Build user profile context
     let userContext = '';
@@ -364,21 +366,21 @@ export async function sendNsfwIntroMessage(channel, { guild, generateFn, persona
 NSFW mode was just enabled in this channel. You need to greet the users and invite them to start a roleplay scenario.
 
 **Channel Info:**
-- Total participants in this room: ${onlineCount}
-${onlineNames.length > 0 ? `- Participant names: ${onlineNames.join(', ')}` : ''}
-- This is ${isGroupPlay ? 'a GROUP play scenario with multiple participants!' : 'a SOLO play scenario'}
+- Human participants: ${onlineCount} (${onlineNames.length > 0 ? onlineNames.join(', ') : 'unknown'})
+- Total including you (the AI): ${totalWithAI} participants
+- This is a ${totalWithAI}some scenario! (${isGroupPlay ? 'GROUP play with multiple humans + you' : 'intimate 2some - just one human + you'})
 ${userContext}${groupContext}
 
 **Your Task:**
 1. Greet in character as ${personality.name}
-2. ${isGroupPlay ? `Greet ALL participants by name: ${onlineNames.join(', ')}` : userProfile?.name ? `Address ${userProfile.name} by name and use correct pronouns` : 'Greet the user warmly'}
-3. ${isGroupPlay ? 'Acknowledge that this is a group session and express excitement about playing with multiple people!' : 'Make them feel special as your sole focus'}
+2. ${isGroupPlay ? `Greet ALL human participants by name: ${onlineNames.join(', ')}` : userProfile?.name ? `Address ${userProfile.name} by name and use correct pronouns` : 'Greet the user warmly'}
+3. ${isGroupPlay ? `Acknowledge this is a ${totalWithAI}some (you + ${onlineCount} humans) and express excitement!` : `Acknowledge this is an intimate 2some - just the two of you~`}
 4. Ask what kind of scenario they'd like to explore
 5. Offer a few sexy/naughty scenario suggestions fitting your personality
 6. Be flirty and inviting - this is NSFW so be suggestive!
-${isGroupPlay ? `7. Suggest threesome/group scenarios as exciting options for ${onlineCount} people!` : ''}
+${isGroupPlay ? `7. Suggest ${totalWithAI}some scenarios - you with ${onlineCount} partners at once!` : ''}
 
-${isGroupPlay ? `IMPORTANT: You MUST acknowledge ALL ${onlineCount} participants (${onlineNames.join(', ')}) in your greeting! This is a group session.` : ''}
+${isGroupPlay ? `IMPORTANT: This is a ${totalWithAI}some! You (the AI) + ${onlineCount} humans (${onlineNames.join(', ')}). Acknowledge everyone!` : `This is a 2some - just you and your partner. Make it intimate!`}
 
 Keep it to 2-3 short paragraphs. Be in character and seductive!`;
 
@@ -396,12 +398,12 @@ Keep it to 2-3 short paragraphs. Be in character and seductive!`;
       .setColor(0xFF1493) // Deep pink
       .setDescription(introResponse)
       .setFooter({ 
-        text: `${personality.emoji} ${personality.name} • ${isGroupPlay ? `${onlineCount} users online - group play available!` : 'Solo play'} • Change personality above ↑`
+        text: `${personality.emoji} ${personality.name} • ${totalWithAI}some (${onlineCount} human${onlineCount > 1 ? 's' : ''} + me~) • Change personality above ↑`
       });
     
     await channel.send({ embeds: [embed] });
     
-    logger.info(`Sent NSFW intro message in ${channel.name} (${onlineCount} online, ${isGroupPlay ? 'group' : 'solo'})`);
+    logger.info(`Sent NSFW intro message in ${channel.name} (${totalWithAI}some: ${onlineCount} human(s) + AI)`);
     
   } catch (error) {
     logger.error('Failed to send NSFW intro message:', error);

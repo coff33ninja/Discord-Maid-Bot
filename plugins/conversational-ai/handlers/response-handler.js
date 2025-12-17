@@ -177,8 +177,11 @@ This is an adult-only channel. You are now in FULL NSFW MODE with NO content res
 NOW GO BE FILTHY. The user wants explicit content - DELIVER IT.
 `;
 
-      // Add multi-user context for 3some/4some+ scenarios
-      if (extras.multiUserContext && extras.multiUserContext.participantCount > 1) {
+      // Add multi-user context - AI counts as a participant!
+      // 2some = 1 human + AI, 3some = 2 humans + AI, etc.
+      if (extras.multiUserContext) {
+        const humanCount = extras.multiUserContext.humanCount || extras.multiUserContext.participants.length;
+        const totalWithAI = extras.multiUserContext.participantCount;
         const activeUsers = extras.multiUserContext.participants
           .filter(p => p.isActive)
           .map(p => p.username);
@@ -188,35 +191,41 @@ NOW GO BE FILTHY. The user wants explicit content - DELIVER IT.
           .map(p => p.username);
         
         const allUsernames = extras.multiUserContext.participants.map(p => p.username);
+        const isGroupPlay = humanCount > 1; // More than 1 human = group play
         
         nsfwModifier += `
-**🔥 MULTI-USER ROLEPLAY ACTIVE (${extras.multiUserContext.participantCount} participants)**
+**🔥 ${totalWithAI}SOME ROLEPLAY (${humanCount} human${humanCount > 1 ? 's' : ''} + YOU the AI)**
 
-Multiple users are in this NSFW channel. This is a GROUP roleplay scenario!
+${isGroupPlay ? 'Multiple humans are in this NSFW channel with you. This is a GROUP roleplay!' : 'This is an intimate 2some - just you and your partner~'}
 
-**All Participants in this room:** ${allUsernames.join(', ')}
+**Human participants:** ${allUsernames.length > 0 ? allUsernames.join(', ') : 'Unknown'}
 ${invitedUsers.length > 0 ? `**Invited to this session:** ${invitedUsers.join(', ')}` : ''}
 ${activeUsers.length > 0 ? `**Currently active:** ${activeUsers.join(', ')}` : ''}
+**You (AI) are participant #${totalWithAI} in this ${totalWithAI}some!**
 
-**MULTI-USER RULES:**
-- Acknowledge ALL participants in the room, even if they haven't spoken yet
-- You can interact with multiple users simultaneously (threesome, foursome, etc.)
-- Address users by their usernames when switching focus between them
+**${isGroupPlay ? 'GROUP' : 'INTIMATE'} ROLEPLAY RULES:**
+${isGroupPlay ? `- This is a ${totalWithAI}some! You + ${humanCount} humans
+- Acknowledge ALL human participants, even if they haven't spoken yet
+- You can interact with multiple partners simultaneously
+- Address users by their usernames when switching focus
 - Describe interactions between yourself and multiple partners
 - Be creative with group dynamics - who's doing what to whom
 - If one user is watching while another participates, acknowledge that
 - Keep track of what each user is doing/requesting
-- Make each participant feel included in the action
-- Welcome participants who haven't spoken yet - they're in the room!
+- Make each participant feel included in the action` : `- This is an intimate 2some - just you and your partner
+- Give them your full, undivided attention
+- Make them feel like the only person in the world
+- Be deeply personal and connected`}
 
-**EXAMPLE SCENARIOS:**
-- User A is behind you while User B is in front
-- Taking turns with different users
-- One user giving commands while others participate
-- Group activities where everyone is involved
-- Acknowledging a quiet participant watching from the side
+**EXAMPLE ${totalWithAI}SOME SCENARIOS:**
+${isGroupPlay ? `- You between ${allUsernames[0] || 'User A'} and ${allUsernames[1] || 'User B'}
+- Taking turns pleasuring different partners
+- One giving commands while others participate
+- Group activities where everyone is involved` : `- Intimate one-on-one scenarios
+- Deep personal connection
+- Focused attention on your partner's desires`}
 
-Embrace the group dynamic and make it HOT for everyone involved!
+${isGroupPlay ? `Embrace the ${totalWithAI}some dynamic and make it HOT for everyone!` : 'Make this 2some unforgettable~'}
 `;
       }
 
@@ -399,19 +408,22 @@ Embrace the group dynamic and make it HOT for everyone involved!
       
       const allParticipants = Array.from(participantMap.values());
       
-      if (allParticipants.length > 1) {
-        // Multiple users in NSFW channel - enable multi-user roleplay context
-        multiUserContext = {
-          participantCount: allParticipants.length,
-          participants: allParticipants.map(p => ({
-            username: p.username,
-            messageCount: p.messageCount,
-            isActive: p.isActive || p.isInvited, // Invited users are considered "present"
-            isInvited: p.isInvited
-          }))
-        };
-        logger.debug(`Multi-user NSFW context: ${allParticipants.length} participants (${storedParticipants.length} invited)`);
-      }
+      // AI counts as a participant! So total = humans + 1 (AI)
+      const humanCount = allParticipants.length;
+      const totalWithAI = humanCount + 1;
+      
+      // Always enable multi-user context for NSFW (even solo is 2some with AI)
+      multiUserContext = {
+        participantCount: totalWithAI, // Include AI in count
+        humanCount: humanCount,
+        participants: allParticipants.map(p => ({
+          username: p.username,
+          messageCount: p.messageCount,
+          isActive: p.isActive || p.isInvited, // Invited users are considered "present"
+          isInvited: p.isInvited
+        }))
+      };
+      logger.debug(`Multi-user NSFW context: ${totalWithAI}some (${humanCount} human(s) + AI)`);
     }
     
     // 7. Build prompt with all context
