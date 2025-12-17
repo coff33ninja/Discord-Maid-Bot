@@ -196,9 +196,13 @@ export async function removePersonalitySelector(channel) {
  * @param {string} options.personalityKey - Current personality key
  */
 export async function sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey = 'maid' }) {
+  logger.info('sendNsfwIntroMessage: Starting...');
   try {
     // Get online members in the channel (who can see it)
+    logger.debug('sendNsfwIntroMessage: Fetching guild members...');
     const members = await guild.members.fetch();
+    logger.debug(`sendNsfwIntroMessage: Got ${members.size} members`);
+    
     const onlineMembers = members.filter(m => 
       !m.user.bot && 
       (m.presence?.status === 'online' || m.presence?.status === 'idle' || m.presence?.status === 'dnd') &&
@@ -207,10 +211,12 @@ export async function sendNsfwIntroMessage(channel, { guild, generateFn, persona
     
     const onlineCount = onlineMembers.size;
     const onlineNames = onlineMembers.map(m => m.displayName).slice(0, 5); // Max 5 names
+    logger.debug(`sendNsfwIntroMessage: ${onlineCount} online members`);
     
     // Get personality info
     const personalities = await getPersonalities();
     const personality = personalities.find(p => p.key === personalityKey) || personalities[0];
+    logger.debug(`sendNsfwIntroMessage: Using personality ${personality?.name}`);
     
     // Build context for AI intro
     const isGroupPlay = onlineCount > 1;
@@ -233,7 +239,9 @@ ${onlineNames.length > 0 ? `- Some names: ${onlineNames.join(', ')}` : ''}
 Keep it to 2-3 short paragraphs. Be in character and seductive!`;
 
     // Generate the intro
+    logger.debug('sendNsfwIntroMessage: Calling generateFn...');
     const introResponse = await generateFn(introPrompt);
+    logger.debug(`sendNsfwIntroMessage: Got response (${introResponse?.length || 0} chars)`);
     
     // Send as an embed
     const { EmbedBuilder } = await import('discord.js');
