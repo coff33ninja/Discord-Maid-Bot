@@ -375,6 +375,11 @@ async function createStep4(channelId) {
   
   const currentIntensity = INTENSITY_LEVELS[sceneState.intensity] || INTENSITY_LEVELS.passionate;
   
+  // Build intensity options dynamically from INTENSITY_LEVELS
+  const intensityList = Object.values(INTENSITY_LEVELS)
+    .map(level => `${level.name} - ${level.description}`)
+    .join('\n');
+  
   const embed = new EmbedBuilder()
     .setColor(0xFF1493)
     .setTitle('🔥 Step 4/5: Set the Intensity')
@@ -382,10 +387,7 @@ async function createStep4(channelId) {
       `How spicy do you want it?\n\n` +
       `**Current Intensity:** ${currentIntensity.name}\n` +
       `*${currentIntensity.description}*\n\n` +
-      `💕 **Gentle** - Soft, romantic, tender\n` +
-      `🔥 **Passionate** - Heated, intense, eager\n` +
-      `💢 **Rough** - Dominant, intense, primal\n` +
-      `⚡ **Extreme** - No holds barred`
+      intensityList
     )
     .setFooter({ text: 'Step 4 of 5 • This affects how explicit and intense I get' });
   
