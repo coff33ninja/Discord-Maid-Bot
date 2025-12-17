@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import dotenv from 'dotenv';
 import { initDatabase } from '../database/db.js';
 import { createLogger } from '../logging/logger.js';
@@ -54,6 +54,10 @@ export class MaidBot {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
+      ],
+      partials: [
+        Partials.Message, // Required for messageUpdate on uncached messages
+        Partials.Channel, // Required for DM channels
       ],
     });
 

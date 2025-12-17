@@ -127,14 +127,25 @@ export class MessageHandler {
    */
   async handleMessageUpdate(oldMessage, newMessage) {
     try {
+      // Fetch the full message if it's a partial
+      if (newMessage.partial) {
+        try {
+          newMessage = await newMessage.fetch();
+        } catch (e) {
+          logger.debug('Could not fetch partial message:', e.message);
+          return;
+        }
+      }
+      
       // Ignore bot messages
       if (newMessage.author?.bot) return;
       
-      // Ignore if content didn't change (could be embed update, etc.)
-      if (oldMessage.content === newMessage.content) return;
-      
       // Ignore empty messages
       if (!newMessage.content || newMessage.content.trim() === '') return;
+      
+      // Ignore if content didn't change (could be embed update, etc.)
+      // oldMessage might be partial, so only compare if we have content
+      if (oldMessage.content && oldMessage.content === newMessage.content) return;
       
       // Check if we have a bot reply to this message that we can edit
       const botReplyId = this.botReplies.get(newMessage.id);
