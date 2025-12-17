@@ -50,8 +50,13 @@ export class MessageHandler {
       client: plugin.client
     });
     
-    // Bind the handler
+    // Bind the handlers
     this.handleMessage = this.handleMessage.bind(this);
+    this.handleMessageUpdate = this.handleMessageUpdate.bind(this);
+    
+    // Track bot responses to user messages for edit handling
+    // Map: userMessageId -> botReplyMessageId
+    this.botReplies = new Map();
   }
 
   /**
@@ -112,6 +117,181 @@ export class MessageHandler {
       }
     } catch (error) {
       logger.error('Error handling message:', error);
+    }
+  }
+
+  /**
+   * Handle message edit - re-respond when user edits their message
+   * @param {Object} oldMessage - Original message (may be partial)
+   * @param {Object} newMessage - Edited message
+   */
+  async handleMessageUpdate(oldMessage, newMessage) {
+    try {
+      // Ignore bot messages
+      if (newMessage.author?.bot) return;
+      
+      // Ignore if content didn't change (could be embed update, etc.)
+      if (oldMessage.content === newMessage.content) return;
+      
+      // Ignore empty messages
+      if (!newMessage.content || newMessage.content.trim() === '') return;
+      
+      // Check if we have a bot reply to this message that we can edit
+      const botReplyId = this.botReplies.get(newMessage.id);
+      
+      // Check if this is a channel where we should respond
+      const classification = this.plugin.classifyMessage(newMessage);
+      
+      // Only re-respond for messages we would normally respond to
+      if (classification.type === 'ignore') {
+        // But still check if it's an NSFW channel or AI chat channel
+        const guildId = newMessage.guild?.id;
+        const channelId = newMessage.channelId;
+        
+        let shouldRespond = false;
+        
+        // Check NSFW channel
+        if (guildId) {
+          try {
+            const { isNsfwChannel } = await import('../utils/nsfw-manager.js');
+            if (isNsfwChannel(guildId, channelId)) {
+              shouldRespond = true;
+            }
+          } catch (e) {
+            // NSFW manager not available
+          }
+        }
+        
+        // Check AI chat channel
+        if (!shouldRespond) {
+          try {
+            const { isAIChatChannel } = await import('../utils/channel-helper.js');
+            if (await isAIChatChannel(guildId, channelId)) {
+              shouldRespond = true;
+            }
+          } catch (e) {
+            // Channel helper not available
+          }
+        }
+        
+        if (!shouldRespond) return;
+      }
+      
+      logger.info(`Message edited by ${newMessage.author?.username} in ${newMessage.channel?.name || channelId}, re-generating response`);
+      
+      // Show typing indicator
+      try {
+        await newMessage.channel.sendTyping();
+      } catch (e) {
+        // Ignore typing errors
+      }
+      
+      // If we have a previous bot reply, try to edit it
+      if (botReplyId) {
+        try {
+          const botReply = await newMessage.channel.messages.fetch(botReplyId);
+          if (botReply && botReply.author.id === this.plugin.client?.user?.id) {
+            // Generate new response
+            const result = await this.generateEditResponse(newMessage);
+            
+            if (result.response && result.response.trim() !== '') {
+              // Edit the bot's reply
+              const embed = new EmbedBuilder()
+                .setColor('#FFB6C1')
+                .setDescription(result.response)
+                .setFooter({
+                  text: result.stats
+                    ? `Context: ${result.stats.shortTermMessages} msgs | ${result.stats.budgetUsed} | ✏️ Edited`
+                    : `Personality: ${result.personalityKey} | ✏️ Edited`
+                })
+                .setTimestamp();
+              
+              await botReply.edit({ embeds: [embed] });
+              logger.debug('Edited bot reply for edited user message');
+              return;
+            }
+          }
+        } catch (e) {
+          logger.debug('Could not edit previous bot reply:', e.message);
+          // Fall through to send new reply
+        }
+      }
+      
+      // Send a new reply if we couldn't edit
+      await this.generateAndReplyForEdit(newMessage);
+      
+    } catch (error) {
+      logger.error('Error handling message edit:', error);
+    }
+  }
+
+  /**
+   * Generate response for an edited message
+   * @param {Object} message - The edited message
+   * @returns {Promise<Object>} Response result
+   */
+  async generateEditResponse(message) {
+    const content = message.content;
+    
+    // Get reply context if this is a reply
+    const replyContext = await this.extractReplyContext(message);
+    
+    // Generate response
+    return await this.responseHandler.generateResponse({
+      channelId: message.channelId,
+      userId: message.author.id,
+      username: message.author.username,
+      content: content,
+      replyContext,
+      guildId: message.guild?.id
+    });
+  }
+
+  /**
+   * Generate and send reply for edited message
+   * @param {Object} message - The edited message
+   */
+  async generateAndReplyForEdit(message) {
+    try {
+      const result = await this.generateEditResponse(message);
+      
+      // Handle empty response
+      if (!result.response || result.response.trim() === '') {
+        logger.warn('Empty response from AI for edited message, sending fallback');
+        const reply = await message.reply({
+          content: '💭 *I got a bit tongue-tied there... could you say that again?*',
+          allowedMentions: { repliedUser: false }
+        });
+        this.botReplies.set(message.id, reply.id);
+        return;
+      }
+      
+      // Build embed response
+      const embed = new EmbedBuilder()
+        .setColor('#FFB6C1')
+        .setDescription(result.response)
+        .setFooter({
+          text: result.stats
+            ? `Context: ${result.stats.shortTermMessages} msgs | ${result.stats.budgetUsed}`
+            : `Personality: ${result.personalityKey}`
+        })
+        .setTimestamp();
+      
+      const reply = await message.reply({ embeds: [embed] });
+      
+      // Track this reply for future edits
+      this.botReplies.set(message.id, reply.id);
+      
+      // Record bot message for attention tracking
+      this.responseFilter.recordBotMessage(message.channelId);
+      
+    } catch (error) {
+      logger.error('Error generating response for edit:', error);
+      
+      await message.reply({
+        content: '❌ Sorry, I encountered an error processing your edited message.',
+        allowedMentions: { repliedUser: false }
+      });
     }
   }
 
@@ -420,7 +600,18 @@ export class MessageHandler {
         })
         .setTimestamp();
       
-      await message.reply({ embeds: [embed] });
+      const reply = await message.reply({ embeds: [embed] });
+      
+      // Track this reply for edit handling
+      this.botReplies.set(message.id, reply.id);
+      
+      // Clean up old entries (keep last 100)
+      if (this.botReplies.size > 100) {
+        const keys = Array.from(this.botReplies.keys());
+        for (let i = 0; i < keys.length - 100; i++) {
+          this.botReplies.delete(keys[i]);
+        }
+      }
       
       // Record bot message for attention tracking
       this.responseFilter.recordBotMessage(message.channelId);
@@ -485,7 +676,8 @@ export class MessageHandler {
     this.actionExecutor.setClient(client);
     
     client.on('messageCreate', this.handleMessage);
-    logger.info('Message handler registered');
+    client.on('messageUpdate', this.handleMessageUpdate);
+    logger.info('Message handler registered (with edit support)');
   }
 
   /**
@@ -494,6 +686,7 @@ export class MessageHandler {
    */
   unregister(client) {
     client.off('messageCreate', this.handleMessage);
+    client.off('messageUpdate', this.handleMessageUpdate);
     logger.info('Message handler unregistered');
   }
 }
