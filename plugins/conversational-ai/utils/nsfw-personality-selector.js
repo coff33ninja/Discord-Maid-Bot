@@ -256,10 +256,20 @@ export async function sendNsfwIntroMessage(channel, { guild, generateFn, persona
       }
     }
     
+    // Get stored channel participants (all invited users)
+    let storedParticipants = [];
+    try {
+      const { getChannelParticipants } = await import('./nsfw-manager.js');
+      storedParticipants = getChannelParticipants(channel.id) || [];
+      logger.debug(`sendNsfwIntroMessage: ${storedParticipants.length} stored participants`);
+    } catch (e) {
+      logger.debug('sendNsfwIntroMessage: Could not get stored participants');
+    }
+    
     // Try to get online member count, but don't block on it
-    let onlineCount = 1; // Default to solo
-    let onlineNames = [];
-    let onlineProfiles = []; // Profiles of online users
+    let onlineCount = storedParticipants.length || 1; // Use stored participants as base
+    let onlineNames = storedParticipants.map(p => p.username);
+    let onlineProfiles = []; // Profiles of participants
     
     try {
       // Use cached members if available, with a short timeout
@@ -270,35 +280,57 @@ export async function sendNsfwIntroMessage(channel, { guild, generateFn, persona
           (m.presence?.status === 'online' || m.presence?.status === 'idle' || m.presence?.status === 'dnd') &&
           channel.permissionsFor(m)?.has('ViewChannel')
         );
-        onlineCount = onlineMembers.size || 1;
-        onlineNames = onlineMembers.map(m => m.displayName).slice(0, 5);
         
-        // Try to get profiles for online users (for group play context)
-        if (onlineCount > 1) {
-          try {
-            const { getPlugin } = await import('../../../src/core/plugin-system.js');
-            const profilePlugin = getPlugin('user-profiles');
-            if (profilePlugin?.getProfileForContext) {
-              for (const member of onlineMembers.values()) {
-                const profile = await profilePlugin.getProfileForContext(member.user.id);
-                if (profile) {
-                  onlineProfiles.push({
-                    name: profile.name || member.displayName,
-                    gender: profile.gender,
-                    pronouns: profile.pronouns
-                  });
-                }
-              }
-            }
-          } catch (e) {
-            // Ignore profile fetch errors
+        // Merge online members with stored participants
+        const participantIds = new Set(storedParticipants.map(p => p.userId));
+        for (const member of onlineMembers.values()) {
+          if (!participantIds.has(member.user.id)) {
+            onlineNames.push(member.displayName);
+            participantIds.add(member.user.id);
           }
         }
+        onlineCount = Math.max(onlineCount, participantIds.size);
         
-        logger.debug(`sendNsfwIntroMessage: ${onlineCount} online members from cache`);
+        logger.debug(`sendNsfwIntroMessage: ${onlineCount} total participants (${storedParticipants.length} stored + online)`);
       }
     } catch (e) {
-      logger.debug('sendNsfwIntroMessage: Could not get member count, using default');
+      logger.debug('sendNsfwIntroMessage: Could not get member count, using stored participants');
+    }
+    
+    // Get profiles for all participants
+    if (onlineCount > 0) {
+      try {
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const profilePlugin = getPlugin('user-profiles');
+        if (profilePlugin?.getProfileForContext) {
+          // Get profiles for stored participants first
+          for (const participant of storedParticipants) {
+            const profile = await profilePlugin.getProfileForContext(participant.userId);
+            if (profile) {
+              onlineProfiles.push({
+                name: profile.name || participant.username,
+                gender: profile.gender,
+                pronouns: profile.pronouns
+              });
+            } else {
+              onlineProfiles.push({
+                name: participant.username,
+                gender: null,
+                pronouns: null
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // Fallback: use stored participant names without profiles
+        for (const participant of storedParticipants) {
+          onlineProfiles.push({
+            name: participant.username,
+            gender: null,
+            pronouns: null
+          });
+        }
+      }
     }
     
     // Build context for AI intro
@@ -332,19 +364,21 @@ export async function sendNsfwIntroMessage(channel, { guild, generateFn, persona
 NSFW mode was just enabled in this channel. You need to greet the users and invite them to start a roleplay scenario.
 
 **Channel Info:**
-- Online users who can see this channel: ${onlineCount}
-${onlineNames.length > 0 ? `- Some names: ${onlineNames.join(', ')}` : ''}
-- This is ${isGroupPlay ? 'a potential GROUP play scenario (multiple users online)' : 'likely a SOLO play scenario (one user)'}
+- Total participants in this room: ${onlineCount}
+${onlineNames.length > 0 ? `- Participant names: ${onlineNames.join(', ')}` : ''}
+- This is ${isGroupPlay ? 'a GROUP play scenario with multiple participants!' : 'a SOLO play scenario'}
 ${userContext}${groupContext}
 
 **Your Task:**
 1. Greet in character as ${personality.name}
-2. ${userProfile?.name ? `Address ${userProfile.name} by name and use correct pronouns` : 'Greet the user warmly'}
-3. ${isGroupPlay ? 'Acknowledge that multiple people are here and group play is possible' : 'Make them feel special as your sole focus'}
+2. ${isGroupPlay ? `Greet ALL participants by name: ${onlineNames.join(', ')}` : userProfile?.name ? `Address ${userProfile.name} by name and use correct pronouns` : 'Greet the user warmly'}
+3. ${isGroupPlay ? 'Acknowledge that this is a group session and express excitement about playing with multiple people!' : 'Make them feel special as your sole focus'}
 4. Ask what kind of scenario they'd like to explore
 5. Offer a few sexy/naughty scenario suggestions fitting your personality
 6. Be flirty and inviting - this is NSFW so be suggestive!
-${isGroupPlay ? '7. Mention threesome/group scenarios as an exciting option' : ''}
+${isGroupPlay ? `7. Suggest threesome/group scenarios as exciting options for ${onlineCount} people!` : ''}
+
+${isGroupPlay ? `IMPORTANT: You MUST acknowledge ALL ${onlineCount} participants (${onlineNames.join(', ')}) in your greeting! This is a group session.` : ''}
 
 Keep it to 2-3 short paragraphs. Be in character and seductive!`;
 
