@@ -448,10 +448,10 @@ ${isGroupPlay ? `Embrace the ${totalWithAI}some dynamic and make it HOT for ever
         const { buildSceneContext, isScenePaused } = await import('../utils/nsfw-scene-manager.js');
         sceneContext = buildSceneContext(channelId);
         
-        // Get appearance context
+        // Get appearance context (async to ensure DB is loaded)
         try {
           const { buildAppearanceDescription } = await import('../utils/nsfw-appearance-designer.js');
-          appearanceContext = buildAppearanceDescription(channelId);
+          appearanceContext = await buildAppearanceDescription(channelId);
         } catch (e) {
           // Appearance designer not available
         }

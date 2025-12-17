@@ -166,13 +166,26 @@ export const PERSONALITY_DEFAULTS = {
 const appearanceStates = new Map();
 
 /**
- * Get appearance state for a channel
+ * Get appearance state for a channel (sync version, uses cached or default)
  */
 export function getAppearance(channelId) {
   if (!appearanceStates.has(channelId)) {
+    // Try to load from DB synchronously (will be async loaded properly elsewhere)
+    // For now return default, but trigger async load
+    loadAppearance(channelId).catch(() => {});
     appearanceStates.set(channelId, { ...PERSONALITY_DEFAULTS.maid });
   }
   return appearanceStates.get(channelId);
+}
+
+/**
+ * Get appearance state for a channel (async version, ensures DB is loaded)
+ */
+export async function getAppearanceAsync(channelId) {
+  if (!appearanceStates.has(channelId)) {
+    await loadAppearance(channelId);
+  }
+  return appearanceStates.get(channelId) || { ...PERSONALITY_DEFAULTS.maid };
 }
 
 /**
@@ -222,10 +235,10 @@ export async function applyPersonalityDefaults(channelId, personalityKey) {
 }
 
 /**
- * Build appearance description for AI prompt
+ * Build appearance description for AI prompt (async to ensure DB is loaded)
  */
-export function buildAppearanceDescription(channelId) {
-  const app = getAppearance(channelId);
+export async function buildAppearanceDescription(channelId) {
+  const app = await getAppearanceAsync(channelId);
   
   const hair = HAIR_OPTIONS[app.hair] || HAIR_OPTIONS.black_long;
   const outfit = OUTFIT_OPTIONS[app.outfit] || OUTFIT_OPTIONS.maid_classic;
@@ -255,10 +268,10 @@ export function buildAppearanceDescription(channelId) {
 }
 
 /**
- * Build appearance preview for embed
+ * Build appearance preview for embed (async to ensure DB is loaded)
  */
-export function buildAppearancePreview(channelId) {
-  const app = getAppearance(channelId);
+export async function buildAppearancePreview(channelId) {
+  const app = await getAppearanceAsync(channelId);
   
   const hair = HAIR_OPTIONS[app.hair] || HAIR_OPTIONS.black_long;
   const outfit = OUTFIT_OPTIONS[app.outfit] || OUTFIT_OPTIONS.maid_classic;

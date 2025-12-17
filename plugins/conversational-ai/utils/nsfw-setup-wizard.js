@@ -139,7 +139,7 @@ async function createStep1(channelId) {
 async function createStep2(channelId) {
   const state = getWizardState(channelId);
   const appearance = getAppearance(channelId);
-  const preview = buildAppearancePreview(channelId);
+  const preview = await buildAppearancePreview(channelId);
   
   // Hair select
   const hairOptions = Object.entries(HAIR_OPTIONS).slice(0, 25).map(([key, opt]) => ({
@@ -229,7 +229,7 @@ async function createStep2(channelId) {
  */
 async function createStep2b(channelId) {
   const appearance = getAppearance(channelId);
-  const preview = buildAppearancePreview(channelId);
+  const preview = await buildAppearancePreview(channelId);
   
   // Accessory select
   const accessoryOptions = Object.entries(ACCESSORY_OPTIONS).map(([key, opt]) => ({
@@ -406,7 +406,7 @@ async function createStep4(channelId) {
 async function createStep5(channelId) {
   const state = getWizardState(channelId);
   const sceneState = getSceneState(channelId);
-  const preview = buildAppearancePreview(channelId);
+  const preview = await buildAppearancePreview(channelId);
   const personalities = await getPersonalities();
   
   const personality = personalities.find(p => p.key === state.personality);
@@ -683,7 +683,7 @@ async function handleStartScene(interaction) {
     const aiPlugin = getPlugin('conversational-ai');
     
     if (aiPlugin?.requestFromCore) {
-      const preview = buildAppearancePreview(channelId);
+      const preview = await buildAppearancePreview(channelId);
       const sceneState = getSceneState(channelId);
       const scenario = sceneState.scenario ? SCENARIO_PRESETS[sceneState.scenario] : null;
       const intensity = INTENSITY_LEVELS[sceneState.intensity] || INTENSITY_LEVELS.passionate;
