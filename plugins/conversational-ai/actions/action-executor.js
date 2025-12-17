@@ -6686,14 +6686,34 @@ Return ONLY the JSON, no other text.`;
       }
       
       if (!selectedKey) {
-        return { needsSelection: true, personalities };
+        return { needsSelection: true, personalities, isNsfwChannel: context.isNsfwChannel };
       }
       
-      // Set the personality
+      // Check if this is an NSFW channel - use channel-specific personality
+      const isNsfwChannel = context.isNsfwChannel;
+      
       try {
-        const { configOps } = await import('../../../src/database/db.js');
-        configOps.set(`personality_${context.userId}`, selectedKey);
-        return { success: true, personality: personalities[selectedKey], key: selectedKey };
+        if (isNsfwChannel && context.channelId) {
+          // NSFW channel: set channel-specific personality (doesn't affect other channels)
+          const { setChannelPersonality } = await import('../utils/nsfw-manager.js');
+          await setChannelPersonality(context.channelId, selectedKey);
+          return { 
+            success: true, 
+            personality: personalities[selectedKey], 
+            key: selectedKey,
+            isChannelSpecific: true
+          };
+        } else {
+          // Normal channel: set user's global personality
+          const { configOps } = await import('../../../src/database/db.js');
+          configOps.set(`personality_${context.userId}`, selectedKey);
+          return { 
+            success: true, 
+            personality: personalities[selectedKey], 
+            key: selectedKey,
+            isChannelSpecific: false
+          };
+        }
       } catch (error) {
         return { error: error.message };
       }
@@ -6703,14 +6723,21 @@ Return ONLY the JSON, no other text.`;
         const list = Object.entries(result.personalities)
           .map(([key, info]) => `${info.emoji} **${info.name}**`)
           .join('\n');
-        return `🎭 Which personality would you like?\n\n${list}\n\nSay "change personality to [name]"`;
+        const note = result.isNsfwChannel 
+          ? '\n\n_Note: In this channel, personality is channel-specific and won\'t affect other channels._'
+          : '';
+        return `🎭 Which personality would you like?\n\n${list}\n\nSay "change personality to [name]"${note}`;
       }
       
       if (result.error) {
         return `❌ Failed to change personality: ${result.error}`;
       }
       
-      return `${result.personality.emoji} **Personality changed to ${result.personality.name}!**\n\n_Try chatting with me to see the difference~_`;
+      const scopeNote = result.isChannelSpecific 
+        ? '\n\n_This personality only applies to this channel._'
+        : '\n\n_Try chatting with me to see the difference~_';
+      
+      return `${result.personality.emoji} **Personality changed to ${result.personality.name}!**${scopeNote}`;
     }
   },
 

@@ -232,8 +232,33 @@ Remember: This is your space to be uninhibited and playful. Let loose!
       content
     });
     
-    // 2. Get personality
-    const personalityKey = await this.getUserPersonality(userId);
+    // 2. Get personality - check for channel-specific personality in NSFW channels first
+    let personalityKey = null;
+    let isChannelPersonality = false;
+    
+    // Check if NSFW channel has a channel-specific personality
+    if (guildId) {
+      try {
+        const { isNsfwChannel, getChannelPersonality } = await import('../utils/nsfw-manager.js');
+        const isNsfw = await isNsfwChannel(guildId, channelId);
+        if (isNsfw) {
+          const channelPersonality = await getChannelPersonality(channelId);
+          if (channelPersonality) {
+            personalityKey = channelPersonality;
+            isChannelPersonality = true;
+            logger.debug(`Using channel-specific personality: ${personalityKey}`);
+          }
+        }
+      } catch (e) {
+        // NSFW manager not available
+      }
+    }
+    
+    // Fall back to user's preferred personality
+    if (!personalityKey) {
+      personalityKey = await this.getUserPersonality(userId);
+    }
+    
     const personality = await this.getPersonality(personalityKey);
     
     // 3. Get plugin awareness and command suggestions

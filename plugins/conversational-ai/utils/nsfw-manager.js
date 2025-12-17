@@ -114,10 +114,65 @@ Remember: This permission ONLY applies to this specific channel.
 `;
 }
 
+// ============ CHANNEL-SPECIFIC PERSONALITY ============
+// In NSFW channels, personality is per-channel, not per-user
+
+const CHANNEL_PERSONALITY_KEY = 'channel_personality';
+
+/**
+ * Get the personality for a specific channel (NSFW channels only)
+ * @param {string} channelId - Channel ID
+ * @returns {string|null} Personality key or null if not set
+ */
+export async function getChannelPersonality(channelId) {
+  try {
+    const { configOps } = await import('../../../src/database/db.js');
+    return configOps.get(`${CHANNEL_PERSONALITY_KEY}_${channelId}`) || null;
+  } catch (e) {
+    logger.error('Failed to get channel personality:', e.message);
+    return null;
+  }
+}
+
+/**
+ * Set the personality for a specific channel (NSFW channels only)
+ * @param {string} channelId - Channel ID
+ * @param {string} personalityKey - Personality key
+ * @returns {Object} Result with success status
+ */
+export async function setChannelPersonality(channelId, personalityKey) {
+  try {
+    const { configOps } = await import('../../../src/database/db.js');
+    configOps.set(`${CHANNEL_PERSONALITY_KEY}_${channelId}`, personalityKey);
+    logger.info(`Channel ${channelId} personality set to: ${personalityKey}`);
+    return { success: true };
+  } catch (e) {
+    logger.error('Failed to set channel personality:', e.message);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * Clear the personality for a specific channel
+ * @param {string} channelId - Channel ID
+ */
+export async function clearChannelPersonality(channelId) {
+  try {
+    const { configOps } = await import('../../../src/database/db.js');
+    configOps.delete(`${CHANNEL_PERSONALITY_KEY}_${channelId}`);
+    logger.info(`Channel ${channelId} personality cleared`);
+  } catch (e) {
+    logger.error('Failed to clear channel personality:', e.message);
+  }
+}
+
 export default {
   getNsfwChannels,
   isNsfwChannel,
   enableNsfw,
   disableNsfw,
-  getNsfwPromptModifier
+  getNsfwPromptModifier,
+  getChannelPersonality,
+  setChannelPersonality,
+  clearChannelPersonality
 };

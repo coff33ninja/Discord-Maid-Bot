@@ -344,9 +344,12 @@ export class MessageHandler {
       let actionResult = null;
       let actionContext = null;
       
-      // Only check for actions if NOT in NSFW channel
-      // NSFW channels are for chat/roleplay only, not bot commands
-      if (!isNsfwChannel) {
+      // Check for personality change request (allowed in NSFW channels)
+      const isPersonalityRequest = this.isPersonalityChangeRequest(content);
+      
+      // Only check for actions if NOT in NSFW channel, OR if it's a personality change
+      // NSFW channels are for chat/roleplay only, except personality switching
+      if (!isNsfwChannel || isPersonalityRequest) {
         // First, check if this is an actionable request
         actionResult = await this.actionExecutor.processQuery(content, {
           message,
@@ -354,7 +357,8 @@ export class MessageHandler {
           userId: message.author.id,
           username: message.author.username,
           guild: message.guild,
-          member: message.member
+          member: message.member,
+          isNsfwChannel // Pass this so personality changes can be channel-specific
         });
         
         // If action was executed successfully, show the result
@@ -378,7 +382,7 @@ export class MessageHandler {
           actionContext = `Note: I tried to ${actionResult.description || 'perform an action'} but encountered an issue: ${actionResult.error}`;
         }
       } else {
-        logger.debug(`Skipping action execution in NSFW channel ${message.channelId}`);
+        logger.debug(`Skipping action execution in NSFW channel ${message.channelId} (not a personality request)`);
       }
       
       // Extract reply context if this is a reply to another message
@@ -418,6 +422,25 @@ export class MessageHandler {
         allowedMentions: { repliedUser: false }
       });
     }
+  }
+
+  /**
+   * Check if a message is requesting a personality change
+   * @param {string} content - Message content
+   * @returns {boolean}
+   */
+  isPersonalityChangeRequest(content) {
+    const lowerContent = content.toLowerCase();
+    const personalityKeywords = [
+      'change personality', 'switch personality', 'be more', 'act like',
+      'personality to', 'set personality', 'use personality',
+      'be a maid', 'be tsundere', 'be yandere', 'be kuudere', 'be dandere',
+      'be sassy', 'be flirty', 'be dominant', 'be submissive',
+      'maid mode', 'tsundere mode', 'change to', 'switch to',
+      'different personality', 'another personality'
+    ];
+    
+    return personalityKeywords.some(kw => lowerContent.includes(kw));
   }
 
   /**
