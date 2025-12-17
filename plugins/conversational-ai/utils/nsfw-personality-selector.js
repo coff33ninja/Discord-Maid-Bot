@@ -186,9 +186,78 @@ export async function removePersonalitySelector(channel) {
   }
 }
 
+/**
+ * Send an AI-generated intro message when NSFW mode is enabled
+ * Checks who's online and invites users to start a scenario
+ * @param {TextChannel} channel - Discord channel
+ * @param {Object} options - Options
+ * @param {Object} options.guild - Discord guild
+ * @param {Function} options.generateFn - AI generation function
+ * @param {string} options.personalityKey - Current personality key
+ */
+export async function sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey = 'maid' }) {
+  try {
+    // Get online members in the channel (who can see it)
+    const members = await guild.members.fetch();
+    const onlineMembers = members.filter(m => 
+      !m.user.bot && 
+      (m.presence?.status === 'online' || m.presence?.status === 'idle' || m.presence?.status === 'dnd') &&
+      channel.permissionsFor(m)?.has('ViewChannel')
+    );
+    
+    const onlineCount = onlineMembers.size;
+    const onlineNames = onlineMembers.map(m => m.displayName).slice(0, 5); // Max 5 names
+    
+    // Get personality info
+    const personalities = await getPersonalities();
+    const personality = personalities.find(p => p.key === personalityKey) || personalities[0];
+    
+    // Build context for AI intro
+    const isGroupPlay = onlineCount > 1;
+    const introPrompt = `You are ${personality.name} (${personality.description}). 
+NSFW mode was just enabled in this channel. You need to greet the users and invite them to start a roleplay scenario.
+
+**Channel Info:**
+- Online users who can see this channel: ${onlineCount}
+${onlineNames.length > 0 ? `- Some names: ${onlineNames.join(', ')}` : ''}
+- This is ${isGroupPlay ? 'a potential GROUP play scenario (multiple users online)' : 'likely a SOLO play scenario (one user)'}
+
+**Your Task:**
+1. Greet in character as ${personality.name}
+2. Acknowledge ${isGroupPlay ? 'that multiple people are here and group play is possible' : 'the user'}
+3. Ask what kind of scenario they'd like to explore
+4. Offer a few sexy/naughty scenario suggestions fitting your personality
+5. Be flirty and inviting - this is NSFW so be suggestive!
+6. If group play is possible, mention threesome/group scenarios as an option
+
+Keep it to 2-3 short paragraphs. Be in character and seductive!`;
+
+    // Generate the intro
+    const introResponse = await generateFn(introPrompt);
+    
+    // Send as an embed
+    const { EmbedBuilder } = await import('discord.js');
+    const embed = new EmbedBuilder()
+      .setColor(0xFF1493) // Deep pink
+      .setDescription(introResponse)
+      .setFooter({ 
+        text: `${personality.emoji} ${personality.name} • ${isGroupPlay ? `${onlineCount} users online - group play available!` : 'Solo play'} • Change personality above ↑`
+      });
+    
+    await channel.send({ embeds: [embed] });
+    
+    logger.info(`Sent NSFW intro message in ${channel.name} (${onlineCount} online, ${isGroupPlay ? 'group' : 'solo'})`);
+    
+  } catch (error) {
+    logger.error('Failed to send NSFW intro message:', error);
+    // Don't throw - this is optional, the NSFW enable still worked
+  }
+}
+
 export default {
   createPersonalitySelector,
   sendPersonalitySelector,
   handlePersonalitySelect,
-  removePersonalitySelector
+  removePersonalitySelector,
+  sendNsfwIntroMessage
 };

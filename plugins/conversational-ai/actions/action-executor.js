@@ -998,9 +998,30 @@ Return ONLY the JSON, no other text.`;
         
         if (result.success) {
           // Send the personality selector dropdown
+          let personalityKey = 'maid';
           try {
-            const { sendPersonalitySelector } = await import('../utils/nsfw-personality-selector.js');
-            await sendPersonalitySelector(channel);
+            const { sendPersonalitySelector, sendNsfwIntroMessage } = await import('../utils/nsfw-personality-selector.js');
+            await sendPersonalitySelector(channel, personalityKey);
+            
+            // Send AI intro message - check who's online and invite to play
+            // Get the AI generate function from the conversational-ai plugin
+            const { getPlugin } = await import('../../../src/core/plugin-system.js');
+            const aiPlugin = getPlugin('conversational-ai');
+            if (aiPlugin?.requestFromCore) {
+              const generateFn = async (prompt) => {
+                const result = await aiPlugin.requestFromCore('gemini-generate', { prompt });
+                return result?.text || result || 'Hello~ Ready to play?';
+              };
+              
+              // Small delay so the selector appears first
+              setTimeout(async () => {
+                try {
+                  await sendNsfwIntroMessage(channel, { guild, generateFn, personalityKey });
+                } catch (e) {
+                  logger.warn('Could not send NSFW intro:', e.message);
+                }
+              }, 1000);
+            }
           } catch (e) {
             logger.warn('Could not send personality selector:', e.message);
           }
@@ -1021,14 +1042,8 @@ Return ONLY the JSON, no other text.`;
     formatResult(result) {
       if (result.error) return `❌ ${result.error}`;
       
-      return `🔞 **NSFW Mode Enabled**\n\n` +
-        `Channel **#${result.channelName}** is now unlocked for adult content.\n\n` +
-        `**What's different:**\n` +
-        `• I can be EXPLICITLY sexual and use vulgar language\n` +
-        `• No content filters - I'll write graphic scenes if asked\n` +
-        `• Use the pinned dropdown to change my personality\n` +
-        `• Bot commands are disabled (chat/roleplay only)\n\n` +
-        `_Use \`disable nsfw\` to turn this off_`;
+      // Shorter message since AI will send the intro
+      return `🔞 **NSFW Mode Enabled** for **#${result.channelName}**`;
     }
   },
 
