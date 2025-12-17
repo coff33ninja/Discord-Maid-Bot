@@ -232,6 +232,12 @@ ${isGroupPlay ? `Embrace the ${totalWithAI}some dynamic and make it HOT for ever
       parts.push(nsfwModifier);
       parts.push('');
       
+      // Add appearance context
+      if (extras.appearanceContext) {
+        parts.push(extras.appearanceContext);
+        parts.push('');
+      }
+      
       // Add scene context (scenarios, intensity, clothing, etc.)
       if (extras.sceneContext) {
         parts.push('**🎬 CURRENT SCENE STATE:**');
@@ -435,10 +441,19 @@ ${isGroupPlay ? `Embrace the ${totalWithAI}some dynamic and make it HOT for ever
     
     // 6b. Get scene context for NSFW channels (scenarios, intensity, clothing, etc.)
     let sceneContext = null;
+    let appearanceContext = null;
     if (nsfwMode) {
       try {
-        const { buildSceneContext, isScenePaused, getSceneState } = await import('../utils/nsfw-scene-manager.js');
+        const { buildSceneContext, isScenePaused } = await import('../utils/nsfw-scene-manager.js');
         sceneContext = buildSceneContext(channelId);
+        
+        // Get appearance context
+        try {
+          const { buildAppearanceDescription } = await import('../utils/nsfw-appearance-designer.js');
+          appearanceContext = buildAppearanceDescription(channelId);
+        } catch (e) {
+          // Appearance designer not available
+        }
         
         // Record activity for auto-initiate
         try {
@@ -467,7 +482,8 @@ ${isGroupPlay ? `Embrace the ${totalWithAI}some dynamic and make it HOT for ever
       userProfile,
       nsfwMode,
       multiUserContext,
-      sceneContext
+      sceneContext,
+      appearanceContext
     });
     
     // 8. Generate response

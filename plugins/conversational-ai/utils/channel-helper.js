@@ -576,20 +576,9 @@ export async function setupAIChatChannel(guild, options = {}) {
     
     await channel.send({ embeds: [welcomeEmbed] });
     
-    // For NSFW channels, also send the personality selector, scene controls, and intro
+    // For NSFW channels, send the setup wizard
     if (isNsfwChannel) {
       try {
-        const { sendPersonalitySelector, sendNsfwIntroMessage } = await import('./nsfw-personality-selector.js');
-        await sendPersonalitySelector(channel, 'maid');
-        
-        // Send scene control panel
-        try {
-          const { sendSceneControlPanel } = await import('./nsfw-scene-controls.js');
-          await sendSceneControlPanel(channel);
-        } catch (e) {
-          logger.warn('Could not send scene controls:', e.message);
-        }
-        
         // Enable auto-initiate by default
         try {
           const { enableAutoInitiate, recordActivity } = await import('./nsfw-auto-initiate.js');
@@ -599,24 +588,37 @@ export async function setupAIChatChannel(guild, options = {}) {
           logger.warn('Could not enable auto-initiate:', e.message);
         }
         
-        // Get AI plugin for intro message
-        const { getPlugin } = await import('../../../src/core/plugin-system.js');
-        const aiPlugin = getPlugin('conversational-ai');
-        if (aiPlugin?.requestFromCore) {
-          const generateFn = async (prompt) => {
-            const genResult = await aiPlugin.requestFromCore('gemini-generate', { prompt });
-            return genResult?.result?.response?.text?.() || genResult?.text || 'Hello~ Ready to play?';
-          };
-          
-          await sendNsfwIntroMessage(channel, { 
-            guild, 
-            generateFn, 
-            personalityKey: 'maid',
-            userId: requesterId
-          });
-        }
+        // Send the setup wizard instead of everything at once
+        const { sendSetupWizard } = await import('./nsfw-setup-wizard.js');
+        await sendSetupWizard(channel, 1);
+        
+        logger.info('Sent NSFW setup wizard');
       } catch (e) {
-        logger.warn('Could not send NSFW components:', e.message);
+        logger.warn('Could not send NSFW setup wizard:', e.message);
+        
+        // Fallback to old behavior if wizard fails
+        try {
+          const { sendPersonalitySelector, sendNsfwIntroMessage } = await import('./nsfw-personality-selector.js');
+          await sendPersonalitySelector(channel, 'maid');
+          
+          const { getPlugin } = await import('../../../src/core/plugin-system.js');
+          const aiPlugin = getPlugin('conversational-ai');
+          if (aiPlugin?.requestFromCore) {
+            const generateFn = async (prompt) => {
+              const genResult = await aiPlugin.requestFromCore('gemini-generate', { prompt });
+              return genResult?.result?.response?.text?.() || genResult?.text || 'Hello~ Ready to play?';
+            };
+            
+            await sendNsfwIntroMessage(channel, { 
+              guild, 
+              generateFn, 
+              personalityKey: 'maid',
+              userId: requesterId
+            });
+          }
+        } catch (e2) {
+          logger.warn('Fallback NSFW setup also failed:', e2.message);
+        }
       }
     }
   } catch (e) {

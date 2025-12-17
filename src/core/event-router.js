@@ -78,6 +78,20 @@ export class EventRouter {
       return;
     }
     
+    // Route NSFW setup wizard buttons
+    if (customId.startsWith('wizard_')) {
+      try {
+        const { handleWizardInteraction } = await import('../../plugins/conversational-ai/utils/nsfw-setup-wizard.js');
+        const handled = await handleWizardInteraction(interaction);
+        if (handled) return;
+      } catch (error) {
+        this.logger.error('NSFW wizard handler error:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
+        }
+      }
+    }
+    
     // Route NSFW scene control buttons
     if (customId.startsWith('nsfw_')) {
       try {
@@ -136,6 +150,20 @@ export class EventRouter {
    */
   async handleSelectMenu(interaction) {
     const customId = interaction.customId;
+    
+    // Route NSFW setup wizard select menus
+    if (customId.startsWith('wizard_')) {
+      try {
+        const { handleWizardInteraction } = await import('../../plugins/conversational-ai/utils/nsfw-setup-wizard.js');
+        const handled = await handleWizardInteraction(interaction);
+        if (handled) return;
+      } catch (error) {
+        this.logger.error('NSFW wizard select handler error:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
+        }
+      }
+    }
     
     // Route NSFW personality selector
     if (customId === 'nsfw_personality_select') {
