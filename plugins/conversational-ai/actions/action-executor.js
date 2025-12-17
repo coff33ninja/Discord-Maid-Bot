@@ -4235,9 +4235,12 @@ Return ONLY the JSON, no other text.`;
         const lowerQuery = query.toLowerCase();
         const channelType = lowerQuery.includes('voice') ? 'voice' : 'text';
         
-        // Extract purpose from query (remove common words)
+        // Extract purpose from query - keep important context words like "admin", "private"
+        // Only remove action words, not descriptive words
         let purpose = query
-          .replace(/create|make|new|add|setup|a|the|channel|for|called|named/gi, '')
+          .replace(/\b(create|make|new|add|setup|please|can you|could you)\b/gi, '')
+          .replace(/\b(a|the|channel)\b/gi, '')
+          .replace(/\s+/g, ' ')
           .trim() || 'general bot channel';
         
         logger.info(`Creating smart channel for purpose: "${purpose}" (type: ${channelType})`);

@@ -75,38 +75,78 @@ Rules:
 function getDefaultConfig(purpose, channelType) {
   const purposeLower = purpose.toLowerCase();
   
-  // Determine category and privacy based on keywords
+  // Check for privacy indicators
+  const isPrivate = purposeLower.includes('admin') || 
+                    purposeLower.includes('private') || 
+                    purposeLower.includes('staff') ||
+                    purposeLower.includes('mod') ||
+                    purposeLower.includes('log') ||
+                    purposeLower.includes('alert') ||
+                    purposeLower.includes('network');
+  
+  // Clean up the purpose to extract channel name
+  let cleanName = purpose
+    .toLowerCase()
+    .replace(/\b(for|the|a|an|only|channel|admins?|staff|mods?|private|public)\b/gi, '')
+    .replace(/\s+/g, '-')
+    .replace(/^-+|-+$/g, '')  // Remove leading/trailing hyphens
+    .replace(/-+/g, '-');     // Collapse multiple hyphens
+  
+  // If name is empty after cleaning, use a default
+  if (!cleanName || cleanName.length < 2) {
+    cleanName = 'new-channel';
+  }
+  
+  // Determine category and emoji based on keywords
   let config = {
-    channelName: `📌-${purpose.replace(/\s+/g, '-').toLowerCase()}`,
+    channelName: cleanName,
     categoryName: '🤖 Bot',
     categoryEmoji: '🤖',
-    isPrivate: false,
+    isPrivate: isPrivate,
     reason: 'Default configuration (AI unavailable)'
   };
+  
+  // Add appropriate emoji prefix to channel name
+  let emoji = '📌';
   
   if (purposeLower.includes('music') || purposeLower.includes('audio')) {
     config.categoryName = '🎵 Music';
     config.categoryEmoji = '🎵';
-    config.channelName = channelType === 'voice' ? '🎵 Music 24/7' : '🎵-music-controls';
-  } else if (purposeLower.includes('admin') || purposeLower.includes('log')) {
+    emoji = '🎵';
+    if (channelType === 'voice') {
+      config.channelName = '🎵 Music 24/7';
+    }
+  } else if (purposeLower.includes('test')) {
+    config.categoryName = isPrivate ? '🔒 Admin' : '🤖 Bot';
+    emoji = '🧪';
+  } else if (purposeLower.includes('log')) {
     config.categoryName = '🔒 Admin';
     config.categoryEmoji = '🔒';
     config.isPrivate = true;
-    config.channelName = '📋-bot-logs';
+    emoji = '📋';
   } else if (purposeLower.includes('alert') || purposeLower.includes('notification')) {
     config.categoryName = '🚨 Alerts';
     config.categoryEmoji = '🚨';
     config.isPrivate = true;
-    config.channelName = '🚨-alerts';
+    emoji = '🚨';
   } else if (purposeLower.includes('network') || purposeLower.includes('device')) {
     config.categoryName = '📡 Network';
     config.categoryEmoji = '📡';
     config.isPrivate = true;
-    config.channelName = '📡-network-status';
+    emoji = '📡';
   } else if (purposeLower.includes('game')) {
     config.categoryName = '🎮 Games';
     config.categoryEmoji = '🎮';
-    config.channelName = '🎮-game-chat';
+    emoji = '🎮';
+  } else if (isPrivate) {
+    config.categoryName = '🔒 Admin';
+    config.categoryEmoji = '🔒';
+    emoji = '🔒';
+  }
+  
+  // Add emoji to channel name if not already there
+  if (!config.channelName.match(/^[\p{Emoji}]/u)) {
+    config.channelName = `${emoji}-${config.channelName}`;
   }
   
   return config;
