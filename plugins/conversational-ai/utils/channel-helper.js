@@ -23,7 +23,14 @@ const logger = createLogger('channel-helper');
  */
 export async function getAIChannelConfig(purpose, channelType = 'text', context = {}) {
   try {
-    const { generateWithGemini } = await import('./gemini-client.js');
+    // Use core handler for Gemini via plugin system
+    const { getPlugin } = await import('../../../src/core/plugin-system.js');
+    const aiPlugin = getPlugin('conversational-ai');
+    
+    if (!aiPlugin) {
+      logger.warn('Conversational AI plugin not available for channel config');
+      return getDefaultConfig(purpose, channelType);
+    }
     
     const prompt = `You are a Discord server organizer. Based on the purpose, suggest a channel configuration.
 
@@ -42,18 +49,27 @@ Respond in JSON format ONLY (no markdown, no explanation):
 }
 
 Rules:
-- Channel names must be lowercase with hyphens, emoji at start
-- Category names should have emoji prefix
-- isPrivate=true for admin/sensitive channels (logs, alerts, network status)
+- Channel names must be lowercase with hyphens, emoji at start (e.g., "🧪-bot-testing")
+- Category names should have emoji prefix (e.g., "🔒 Admin")
+- isPrivate=true for admin/sensitive channels (logs, alerts, network status, testing for admins)
 - isPrivate=false for user-facing channels (music, games, general)
 - Pick appropriate emojis that match the purpose
-- If purpose relates to admin/logs/network/alerts, make it private
-- If purpose relates to music/games/fun, make it public`;
+- If purpose mentions "admin", "private", "staff", "mod", make it private
+- If purpose relates to music/games/fun, make it public
+- Keep channel names short (2-4 words max)`;
 
-    const response = await generateWithGemini(prompt, { maxTokens: 200 });
+    const { result } = await aiPlugin.requestFromCore('gemini-generate', {
+      prompt,
+      options: {
+        maxOutputTokens: 200,
+        temperature: 0.3
+      }
+    });
+    
+    const responseText = result?.response?.text?.() || '';
     
     // Parse JSON response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const config = JSON.parse(jsonMatch[0]);
       logger.info(`AI suggested channel config for "${purpose}": ${config.channelName} in ${config.categoryName}`);
@@ -61,6 +77,7 @@ Rules:
     }
     
     // Fallback if AI response is invalid
+    logger.warn('AI response did not contain valid JSON for channel config');
     return getDefaultConfig(purpose, channelType);
     
   } catch (error) {
