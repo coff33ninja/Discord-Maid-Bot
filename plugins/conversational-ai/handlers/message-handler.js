@@ -330,36 +330,55 @@ export class MessageHandler {
       // Show typing indicator
       await message.channel.sendTyping();
       
-      // First, check if this is an actionable request
-      const actionResult = await this.actionExecutor.processQuery(content, {
-        message,
-        channelId: message.channelId,
-        userId: message.author.id,
-        username: message.author.username,
-        guild: message.guild,
-        member: message.member
-      });
-      
-      // If action was executed successfully, show the result
-      if (actionResult?.executed && actionResult?.success) {
-        logger.info(`Action executed: ${actionResult.actionId}`);
-        
-        const embed = new EmbedBuilder()
-          .setColor('#90EE90')
-          .setTitle(`✨ ${actionResult.description || 'Action Complete'}`)
-          .setDescription(actionResult.formatted)
-          .setFooter({ text: `Action: ${actionResult.actionId}` })
-          .setTimestamp();
-        
-        await message.reply({ embeds: [embed] });
-        this.responseFilter.recordBotMessage(message.channelId);
-        return;
+      // Check if this is an NSFW channel - if so, skip action execution (chat only)
+      let isNsfwChannel = false;
+      if (message.guild?.id) {
+        try {
+          const { isNsfwChannel: checkNsfw } = await import('../utils/nsfw-manager.js');
+          isNsfwChannel = await checkNsfw(message.guild.id, message.channelId);
+        } catch (e) {
+          // NSFW manager not available
+        }
       }
       
-      // If action was detected but failed, include error context
+      let actionResult = null;
       let actionContext = null;
-      if (actionResult?.detected && !actionResult?.success) {
-        actionContext = `Note: I tried to ${actionResult.description || 'perform an action'} but encountered an issue: ${actionResult.error}`;
+      
+      // Only check for actions if NOT in NSFW channel
+      // NSFW channels are for chat/roleplay only, not bot commands
+      if (!isNsfwChannel) {
+        // First, check if this is an actionable request
+        actionResult = await this.actionExecutor.processQuery(content, {
+          message,
+          channelId: message.channelId,
+          userId: message.author.id,
+          username: message.author.username,
+          guild: message.guild,
+          member: message.member
+        });
+        
+        // If action was executed successfully, show the result
+        if (actionResult?.executed && actionResult?.success) {
+          logger.info(`Action executed: ${actionResult.actionId}`);
+          
+          const embed = new EmbedBuilder()
+            .setColor('#90EE90')
+            .setTitle(`✨ ${actionResult.description || 'Action Complete'}`)
+            .setDescription(actionResult.formatted)
+            .setFooter({ text: `Action: ${actionResult.actionId}` })
+            .setTimestamp();
+          
+          await message.reply({ embeds: [embed] });
+          this.responseFilter.recordBotMessage(message.channelId);
+          return;
+        }
+        
+        // If action was detected but failed, include error context
+        if (actionResult?.detected && !actionResult?.success) {
+          actionContext = `Note: I tried to ${actionResult.description || 'perform an action'} but encountered an issue: ${actionResult.error}`;
+        }
+      } else {
+        logger.debug(`Skipping action execution in NSFW channel ${message.channelId}`);
       }
       
       // Extract reply context if this is a reply to another message

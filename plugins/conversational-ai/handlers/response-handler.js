@@ -153,7 +153,13 @@ In this channel ONLY:
 - Do NOT generate illegal content (minors, non-consensual, etc.)
 - Stay in character with your personality while being more open and unfiltered
 
-Remember: This permission ONLY applies to this specific channel. Let loose!
+**IMPORTANT - CHAT ONLY MODE:**
+- This channel is for conversation and roleplay ONLY
+- Do NOT suggest or try to execute bot commands (network scan, wake device, etc.)
+- If user asks for bot functions, politely explain this channel is for chat only
+- They can use other channels for bot commands
+
+Remember: This is your space to be uninhibited and playful. Let loose!
 `;
       parts.push(nsfwModifier);
       parts.push('');
