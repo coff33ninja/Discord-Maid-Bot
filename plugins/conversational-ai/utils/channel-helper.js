@@ -196,6 +196,22 @@ export async function findOrCreateCategory(guild, categoryName, isPrivate = fals
   
   const permissionOverwrites = [];
   
+  // Always allow the bot to see and send in channels it creates
+  const botMember = guild.members.me;
+  if (botMember) {
+    permissionOverwrites.push({
+      id: botMember.id,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.EmbedLinks,
+        PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.AddReactions
+      ]
+    });
+  }
+  
   if (isPrivate) {
     // Private: deny @everyone, allow admins
     permissionOverwrites.push({
@@ -268,11 +284,48 @@ export async function createSmartChannel(guild, purpose, channelType = 'text', o
   // Use AI-generated description or fallback
   const topic = config.description || options.topic || `${purpose} - Created by bot`;
   
+  // Build permission overwrites - always include bot for private channels
+  const permissionOverwrites = [];
+  const botMember = guild.members.me;
+  
+  if (botMember) {
+    permissionOverwrites.push({
+      id: botMember.id,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.EmbedLinks,
+        PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.AddReactions
+      ]
+    });
+  }
+  
+  // If private, deny @everyone and allow admins
+  if (config.isPrivate) {
+    permissionOverwrites.push({
+      id: guild.id, // @everyone role
+      deny: [PermissionFlagsBits.ViewChannel]
+    });
+    
+    const adminRole = guild.roles.cache.find(r => 
+      r.permissions.has(PermissionFlagsBits.Administrator) && r.name !== '@everyone'
+    );
+    if (adminRole) {
+      permissionOverwrites.push({
+        id: adminRole.id,
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]
+      });
+    }
+  }
+  
   channel = await guild.channels.create({
     name: config.channelName,
     type: discordChannelType,
     parent: category.id,
     topic: topic,
+    permissionOverwrites,
     reason: config.reason || 'Bot auto-created channel'
   });
   

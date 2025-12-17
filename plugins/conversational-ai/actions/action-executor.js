@@ -4373,7 +4373,7 @@ Return ONLY the JSON, no other text.`;
         
         // If user specified a category, use it directly
         if (userCategory) {
-          const { ChannelType } = await import('discord.js');
+          const { ChannelType, PermissionFlagsBits } = await import('discord.js');
           const category = await findOrCreateCategory(context.guild, userCategory, false);
           
           // Get AI config for channel name and other settings
@@ -4383,6 +4383,23 @@ Return ONLY the JSON, no other text.`;
             existingCategories: context.guild.channels.cache.filter(c => c.type === 4).map(c => c.name)
           });
           
+          // Build permission overwrites - always include bot
+          const permissionOverwrites = [];
+          const botMember = context.guild.members.me;
+          if (botMember) {
+            permissionOverwrites.push({
+              id: botMember.id,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.EmbedLinks,
+                PermissionFlagsBits.AttachFiles,
+                PermissionFlagsBits.AddReactions
+              ]
+            });
+          }
+          
           // Create channel in user-specified category
           const discordChannelType = channelType === 'voice' ? ChannelType.GuildVoice : ChannelType.GuildText;
           const channel = await context.guild.channels.create({
@@ -4390,6 +4407,7 @@ Return ONLY the JSON, no other text.`;
             type: discordChannelType,
             parent: category.id,
             topic: config.description || `Created by ${context.username || 'User'}`,
+            permissionOverwrites,
             reason: `Channel created by ${context.username || 'User'} via AI`
           });
           
