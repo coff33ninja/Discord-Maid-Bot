@@ -892,7 +892,7 @@ Return ONLY the JSON, no other text.`;
   },
 
   'ai-chat-setup': {
-    keywords: ['setup chat channel', 'create chat room', 'setup your channel', 'make ai channel', 'create ai chat', 'setup ai room', 'your own channel', 'dedicated channel'],
+    keywords: ['setup chat channel', 'create chat room', 'setup your channel', 'make ai channel', 'create ai chat', 'setup ai room', 'your own channel', 'dedicated channel', 'nsfw channel', 'private room'],
     plugin: 'conversational-ai',
     description: 'Create a dedicated AI chat channel where the bot responds to all messages',
     permission: 'admin',
@@ -905,24 +905,64 @@ Return ONLY the JSON, no other text.`;
       try {
         const { setupAIChatChannel } = await import('../utils/channel-helper.js');
         
-        // Parse category from user query (e.g., "in admin tools category", "under bot category")
-        const query = context.query?.toLowerCase() || '';
+        const query = context.query || '';
+        const queryLower = query.toLowerCase();
         let categoryName = null;
+        
+        // Check if NSFW is requested
+        const isNsfw = queryLower.includes('nsfw') || 
+                       queryLower.includes('adult') || 
+                       queryLower.includes('explicit') ||
+                       queryLower.includes('private room');
+        
+        // Extract mentioned users from the message
+        const participants = [];
+        const message = context.message;
+        if (message?.mentions?.users) {
+          for (const [userId, user] of message.mentions.users) {
+            // Don't add the bot itself
+            if (!user.bot) {
+              participants.push(userId);
+            }
+          }
+        }
+        
+        // Also try to extract user IDs from the query text (e.g., <@123456789>)
+        const mentionMatches = query.match(/<@!?(\d+)>/g);
+        if (mentionMatches) {
+          for (const mention of mentionMatches) {
+            const userId = mention.replace(/<@!?(\d+)>/, '$1');
+            if (!participants.includes(userId)) {
+              // Verify it's not a bot
+              try {
+                const member = await guild.members.fetch(userId);
+                if (member && !member.user.bot) {
+                  participants.push(userId);
+                }
+              } catch (e) {
+                // User not found, skip
+              }
+            }
+          }
+        }
+        
+        // Get requester ID
+        const requesterId = context.userId || context.message?.author?.id;
         
         // Match patterns like "in X category", "under X", "in the X category"
         const categoryPatterns = [
           /(?:in|under|into)\s+(?:the\s+)?["']?([^"']+?)["']?\s+category/i,
           /category\s*[:=]\s*["']?([^"']+?)["']?/i,
-          /(?:in|under)\s+["']?([^"']+?)["']?$/i
+          /(?:in|under)\s+["']?([^"'@<]+?)["']?(?:\s+(?:category|and|with|allowing))/i
         ];
         
         for (const pattern of categoryPatterns) {
-          const match = context.query?.match(pattern);
+          const match = query.match(pattern);
           if (match && match[1]) {
             // Clean up the category name and add emoji if not present
             let catName = match[1].trim();
             // Don't use generic words as category names
-            if (!['the', 'a', 'an', 'your', 'my'].includes(catName.toLowerCase())) {
+            if (!['the', 'a', 'an', 'your', 'my', 'nsfw', 'add', 'with'].includes(catName.toLowerCase())) {
               // Add appropriate emoji based on category name
               if (!catName.match(/^[\p{Emoji}]/u)) {
                 const catLower = catName.toLowerCase();
@@ -934,6 +974,8 @@ Return ONLY the JSON, no other text.`;
                   catName = `🛠️ ${catName}`;
                 } else if (catLower.includes('chat') || catLower.includes('general')) {
                   catName = `💬 ${catName}`;
+                } else if (isNsfw) {
+                  catName = `🔞 ${catName}`;
                 } else {
                   catName = `📁 ${catName}`;
                 }
@@ -944,13 +986,26 @@ Return ONLY the JSON, no other text.`;
           }
         }
         
-        const result = await setupAIChatChannel(guild, { categoryName });
+        // If NSFW but no category specified, use NSFW category
+        if (isNsfw && !categoryName) {
+          categoryName = '🔞 NSFW';
+        }
+        
+        const result = await setupAIChatChannel(guild, { 
+          categoryName,
+          nsfw: isNsfw,
+          participants,
+          requesterId
+        });
+        
         return { 
           success: true, 
           channelName: result.channel.name,
           channelId: result.channel.id,
           categoryName: result.category?.name || categoryName,
-          existed: result.existed
+          existed: result.existed,
+          isNsfw,
+          participantCount: participants.length + 1 // +1 for requester
         };
       } catch (error) {
         logger.error('AI chat setup failed:', error);
@@ -967,6 +1022,21 @@ Return ONLY the JSON, no other text.`;
       }
       
       const categoryInfo = result.categoryName ? `\n📁 Category: **${result.categoryName}**` : '';
+      
+      if (result.isNsfw) {
+        const participantInfo = result.participantCount > 1 
+          ? `\n👥 Participants: **${result.participantCount}** (private to invited users only)`
+          : '';
+        
+        return `🔞 **NSFW Chat Channel Created!**\n\n` +
+          `✅ Channel: **#${result.channelName}**${categoryInfo}${participantInfo}\n\n` +
+          `This is your private NSFW room! In that channel:\n` +
+          `• I respond to **every message** - no @mention needed\n` +
+          `• I can be much more... expressive~ 💋\n` +
+          `• Use the personality dropdown to change my character\n` +
+          `• Only invited participants can see this channel\n\n` +
+          `Head over and let's have some fun! 🔥`;
+      }
       
       return `💬 **AI Chat Channel Created!**\n\n` +
         `✅ Channel: **#${result.channelName}**${categoryInfo}\n\n` +

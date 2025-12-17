@@ -347,95 +347,233 @@ export async function suggestChannelConfig(purpose, channelType = 'text') {
  * @param {Object} options - Setup options
  * @param {string} options.categoryName - User-specified category name (optional)
  * @param {string} options.channelName - Custom channel name (optional)
+ * @param {boolean} options.nsfw - Enable NSFW mode for this channel
+ * @param {Array<string>} options.participants - Array of user IDs to add as participants (for private NSFW)
+ * @param {string} options.requesterId - User ID of the person requesting the channel
  * @returns {Object} { channel, category, config }
  */
 export async function setupAIChatChannel(guild, options = {}) {
   const { configOps } = await import('../../../src/database/db.js');
   
-  // Check if already has an AI chat channel
-  const existingConfig = configOps.get(`ai_chat_channel_${guild.id}`);
-  if (existingConfig) {
-    try {
-      const existingChannel = await guild.channels.fetch(existingConfig);
-      if (existingChannel) {
-        logger.info(`AI chat channel already exists: ${existingChannel.name}`);
-        return { 
-          channel: existingChannel, 
-          existed: true,
-          message: 'AI chat channel already set up!'
-        };
+  const isNsfwChannel = options.nsfw || false;
+  const participants = options.participants || [];
+  const requesterId = options.requesterId;
+  
+  // For NSFW with participants, always create a new private channel
+  // Don't reuse existing channels
+  if (!isNsfwChannel || participants.length === 0) {
+    // Check if already has an AI chat channel (only for non-NSFW or NSFW without specific participants)
+    const existingConfig = configOps.get(`ai_chat_channel_${guild.id}`);
+    if (existingConfig && !isNsfwChannel) {
+      try {
+        const existingChannel = await guild.channels.fetch(existingConfig);
+        if (existingChannel) {
+          logger.info(`AI chat channel already exists: ${existingChannel.name}`);
+          return { 
+            channel: existingChannel, 
+            existed: true,
+            message: 'AI chat channel already set up!'
+          };
+        }
+      } catch (e) {
+        // Channel was deleted, continue to create new one
       }
-    } catch (e) {
-      // Channel was deleted, continue to create new one
     }
   }
   
-  // Discord doesn't support emojis in channel names, so use text-based name
-  // Format: chat-with-akeno (clean, no emoji prefix since Discord strips them)
-  const channelName = options.channelName || 'chat-with-akeno';
+  // Generate channel name based on participants for NSFW
+  let channelName = options.channelName || 'chat-with-akeno';
+  if (isNsfwChannel && participants.length > 0) {
+    // Create unique channel name with participant count
+    const participantCount = participants.length + 1; // +1 for requester
+    channelName = `nsfw-${participantCount}some-${Date.now().toString(36).slice(-4)}`;
+  } else if (isNsfwChannel) {
+    channelName = 'nsfw-chat-with-akeno';
+  }
   
-  // Use user-specified category or default to Bot category
-  const categoryName = options.categoryName || '🤖 Bot';
+  // Use user-specified category or default
+  const categoryName = options.categoryName || (isNsfwChannel ? '🔞 NSFW' : '🤖 Bot');
   
-  // Find or create the category
-  const category = await findOrCreateCategory(guild, categoryName, false);
+  // Find or create the category (NSFW channels are private)
+  const category = await findOrCreateCategory(guild, categoryName, isNsfwChannel);
   
-  // Check if channel already exists in category
-  let channel = category.children.cache.find(c => 
-    c.name.toLowerCase() === channelName.toLowerCase().replace(/\s+/g, '-')
-  );
+  // Build permission overwrites for the channel
+  const permissionOverwrites = [];
   
-  if (channel) {
-    // Channel exists, just save config and return
-    configOps.set(`ai_chat_channel_${guild.id}`, channel.id);
-    logger.info(`Found existing AI chat channel: ${channel.name}`);
-    return { 
-      channel, 
-      category,
-      existed: true,
-      message: 'AI chat channel already exists!'
-    };
+  // Always allow the bot
+  const botMember = guild.members.me;
+  if (botMember) {
+    permissionOverwrites.push({
+      id: botMember.id,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.EmbedLinks,
+        PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.AddReactions,
+        PermissionFlagsBits.ManageMessages // For clearing messages on personality change
+      ]
+    });
+  }
+  
+  // For NSFW with participants, make it private to only those users
+  if (isNsfwChannel && (participants.length > 0 || requesterId)) {
+    // Deny @everyone
+    permissionOverwrites.push({
+      id: guild.id,
+      deny: [PermissionFlagsBits.ViewChannel]
+    });
+    
+    // Allow the requester
+    if (requesterId) {
+      permissionOverwrites.push({
+        id: requesterId,
+        allow: [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.SendMessages,
+          PermissionFlagsBits.ReadMessageHistory
+        ]
+      });
+    }
+    
+    // Allow each participant
+    for (const participantId of participants) {
+      permissionOverwrites.push({
+        id: participantId,
+        allow: [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.SendMessages,
+          PermissionFlagsBits.ReadMessageHistory
+        ]
+      });
+    }
   }
   
   // Create the channel
-  const topic = `💬 This is my chat room! Talk to me here without @mentioning - I'll respond to every message. ` +
-    `Ask me anything, have a conversation, or just hang out! 🌟`;
+  const topic = isNsfwChannel 
+    ? `🔞 Private NSFW chat room. Only invited participants can see this channel.`
+    : `💬 This is my chat room! Talk to me here without @mentioning - I'll respond to every message.`;
   
-  channel = await guild.channels.create({
+  const channel = await guild.channels.create({
     name: channelName,
     type: ChannelType.GuildText,
     parent: category.id,
     topic: topic,
-    reason: 'AI chat channel - bot responds to all messages here'
+    nsfw: isNsfwChannel, // Mark as NSFW in Discord
+    permissionOverwrites: permissionOverwrites.length > 0 ? permissionOverwrites : undefined,
+    reason: isNsfwChannel 
+      ? `NSFW AI chat channel for ${participants.length + 1} participants`
+      : 'AI chat channel - bot responds to all messages here'
   });
   
-  // Save this channel as the AI auto-respond channel for this guild
-  configOps.set(`ai_chat_channel_${guild.id}`, channel.id);
+  // Save this channel as the AI auto-respond channel for this guild (only for non-participant NSFW)
+  if (!isNsfwChannel || participants.length === 0) {
+    configOps.set(`ai_chat_channel_${guild.id}`, channel.id);
+  }
+  
+  // Enable NSFW mode in our system if requested
+  if (isNsfwChannel) {
+    try {
+      const { enableNsfw } = await import('./nsfw-manager.js');
+      await enableNsfw(guild.id, channel.id);
+      logger.info(`NSFW mode enabled for new channel ${channel.name}`);
+    } catch (e) {
+      logger.warn('Could not enable NSFW mode:', e.message);
+    }
+  }
   
   // Send welcome message
   try {
-    const welcomeEmbed = {
-      color: 0x667eea,
-      title: '💬 Welcome to my Chat Room!',
-      description: `Hey there! This is my personal chat channel. You can talk to me here without using @mentions - I'll respond to every message!\n\n` +
-        `**How to use:**\n` +
-        `• Just type normally - no need to @mention me\n` +
-        `• I remember our conversation context\n` +
-        `• Ask me anything or just chat!\n\n` +
-        `**Tips:**\n` +
-        `• For commands, you can still use @mention in other channels\n` +
-        `• I'm here 24/7, so feel free to drop by anytime\n` +
-        `• Be nice and have fun! 🎉`,
-      footer: { text: 'Your friendly AI assistant' },
-      timestamp: new Date().toISOString()
-    };
+    let welcomeEmbed;
+    
+    if (isNsfwChannel && participants.length > 0) {
+      // Multi-participant NSFW welcome
+      const participantMentions = participants.map(id => `<@${id}>`).join(', ');
+      const requesterMention = requesterId ? `<@${requesterId}>` : 'you';
+      
+      welcomeEmbed = {
+        color: 0xFF1493, // Deep pink
+        title: '🔞 Private NSFW Room Created!',
+        description: `Welcome to your private room!\n\n` +
+          `**Participants:** ${requesterMention}${participants.length > 0 ? ', ' + participantMentions : ''}\n\n` +
+          `This is a private NSFW channel where I can be much more... expressive~ 💋\n\n` +
+          `**Rules:**\n` +
+          `• Only invited participants can see this channel\n` +
+          `• I respond to every message - no @mention needed\n` +
+          `• Use the personality dropdown above to change my character\n` +
+          `• Have fun and be respectful to each other! 🔥`,
+        footer: { text: `${participants.length + 1} participants • NSFW enabled` },
+        timestamp: new Date().toISOString()
+      };
+    } else if (isNsfwChannel) {
+      // Solo NSFW welcome
+      welcomeEmbed = {
+        color: 0xFF1493,
+        title: '🔞 NSFW Chat Room Created!',
+        description: `Welcome to your private NSFW room!\n\n` +
+          `In this channel, I can be much more... expressive~ 💋\n\n` +
+          `**How to use:**\n` +
+          `• Just type normally - no @mention needed\n` +
+          `• Use the personality dropdown to change my character\n` +
+          `• I'll remember our conversation context\n` +
+          `• Let's have some fun! 🔥`,
+        footer: { text: 'NSFW enabled • Your naughty AI assistant' },
+        timestamp: new Date().toISOString()
+      };
+    } else {
+      // Normal welcome
+      welcomeEmbed = {
+        color: 0x667eea,
+        title: '💬 Welcome to my Chat Room!',
+        description: `Hey there! This is my personal chat channel. You can talk to me here without using @mentions - I'll respond to every message!\n\n` +
+          `**How to use:**\n` +
+          `• Just type normally - no need to @mention me\n` +
+          `• I remember our conversation context\n` +
+          `• Ask me anything or just chat!\n\n` +
+          `**Tips:**\n` +
+          `• For commands, you can still use @mention in other channels\n` +
+          `• I'm here 24/7, so feel free to drop by anytime\n` +
+          `• Be nice and have fun! 🎉`,
+        footer: { text: 'Your friendly AI assistant' },
+        timestamp: new Date().toISOString()
+      };
+    }
     
     await channel.send({ embeds: [welcomeEmbed] });
+    
+    // For NSFW channels, also send the personality selector and intro
+    if (isNsfwChannel) {
+      try {
+        const { sendPersonalitySelector, sendNsfwIntroMessage } = await import('./nsfw-personality-selector.js');
+        await sendPersonalitySelector(channel, 'maid');
+        
+        // Get AI plugin for intro message
+        const { getPlugin } = await import('../../../src/core/plugin-system.js');
+        const aiPlugin = getPlugin('conversational-ai');
+        if (aiPlugin?.requestFromCore) {
+          const generateFn = async (prompt) => {
+            const genResult = await aiPlugin.requestFromCore('gemini-generate', { prompt });
+            return genResult?.result?.response?.text?.() || genResult?.text || 'Hello~ Ready to play?';
+          };
+          
+          await sendNsfwIntroMessage(channel, { 
+            guild, 
+            generateFn, 
+            personalityKey: 'maid',
+            userId: requesterId
+          });
+        }
+      } catch (e) {
+        logger.warn('Could not send NSFW components:', e.message);
+      }
+    }
   } catch (e) {
     logger.warn('Could not send welcome message:', e.message);
   }
   
-  logger.info(`Created AI chat channel: ${channel.name} in category ${category.name} for ${guild.name}`);
+  logger.info(`Created AI chat channel: ${channel.name} in category ${category.name} for ${guild.name}` +
+    (isNsfwChannel ? ` (NSFW, ${participants.length + 1} participants)` : ''));
   
   return {
     channel,
@@ -443,7 +581,9 @@ export async function setupAIChatChannel(guild, options = {}) {
     config: {
       isAIChatChannel: true,
       channelName: channel.name,
-      categoryName: category.name
+      categoryName: category.name,
+      isNsfw: isNsfwChannel,
+      participants: participants.length > 0 ? [requesterId, ...participants].filter(Boolean) : []
     },
     existed: false
   };
